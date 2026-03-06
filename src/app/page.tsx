@@ -11,7 +11,10 @@ import {
   SidebarMenuItem, 
   SidebarMenuButton,
   SidebarInset,
-  SidebarTrigger
+  SidebarTrigger,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent
 } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
@@ -146,48 +149,55 @@ export default function AppShell() {
             </div>
           </SidebarHeader>
           <SidebarContent className="px-3">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={activeView === "dashboard"} 
-                  onClick={() => setActiveView("dashboard")}
-                  className="rounded-xl h-11 px-4"
-                >
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  <span className="font-bold text-xs uppercase tracking-wider">Dashboard</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={activeView === "employees"} 
-                  onClick={() => setActiveView("employees")}
-                  className="rounded-xl h-11 px-4"
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  <span className="font-bold text-xs uppercase tracking-wider">Employees</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={activeView === "payroll"} 
-                  onClick={() => setActiveView("payroll")}
-                  className="rounded-xl h-11 px-4"
-                >
-                  <Receipt className="mr-2 h-4 w-4" />
-                  <span className="font-bold text-xs uppercase tracking-wider">Payroll Runs</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  isActive={activeView === "routes"} 
-                  onClick={() => setActiveView("routes")}
-                  className="rounded-xl h-11 px-4"
-                >
-                  <Route className="mr-2 h-4 w-4" />
-                  <span className="font-bold text-xs uppercase tracking-wider">Route Tracker</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 px-4">
+                Main Navigation
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={activeView === "dashboard"} 
+                      onClick={() => setActiveView("dashboard")}
+                      className="rounded-xl h-11 px-4"
+                    >
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <span className="font-bold text-xs uppercase tracking-wider">Dashboard</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={activeView === "employees"} 
+                      onClick={() => setActiveView("employees")}
+                      className="rounded-xl h-11 px-4"
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      <span className="font-bold text-xs uppercase tracking-wider">Employees</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={activeView === "payroll"} 
+                      onClick={() => setActiveView("payroll")}
+                      className="rounded-xl h-11 px-4"
+                    >
+                      <Receipt className="mr-2 h-4 w-4" />
+                      <span className="font-bold text-xs uppercase tracking-wider">Payroll Runs</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={activeView === "routes"} 
+                      onClick={() => setActiveView("routes")}
+                      className="rounded-xl h-11 px-4"
+                    >
+                      <Route className="mr-2 h-4 w-4" />
+                      <span className="font-bold text-xs uppercase tracking-wider">Route Tracker</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           </SidebarContent>
         </Sidebar>
 
@@ -197,7 +207,7 @@ export default function AppShell() {
               <SidebarTrigger />
               <div className="h-4 w-px bg-slate-200 mx-2" />
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-                {activeView.replace(/([A-Z])/g, ' $1').trim()}
+                {activeView === "payroll" ? "Payroll Runs" : activeView === "routes" ? "Route Tracker" : activeView.toUpperCase()}
               </h2>
             </div>
             

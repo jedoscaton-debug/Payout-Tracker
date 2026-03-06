@@ -34,6 +34,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
   const handleShare = async () => {
     const shareText = `Paystub for ${item.employeeNameSnapshot} for period ${shortDate(run.payPeriodStart)} to ${shortDate(run.payPeriodEnd)}. Net Pay: ${currency(totals.netPay)}`;
     
+    // Check if navigator.share exists and try to use it
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
@@ -43,10 +44,11 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
         });
         return;
       } catch (err) {
-        // Fall through to clipboard
+        // If user cancels or permission is denied, fallback to clipboard
       }
     }
 
+    // Fallback: Clipboard copy
     try {
       await navigator.clipboard.writeText(`${shareText}\nLink: ${window.location.href}`);
       toast({
@@ -66,7 +68,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
     <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white">
       {/* Main Content Area */}
       <div className="flex-1 h-full overflow-hidden bg-slate-50/50 border-r border-slate-100">
-        <ScrollArea className="h-full p-4 sm:p-12 print:p-0 print:bg-white overflow-y-auto">
+        <ScrollArea className="h-full p-4 sm:p-12 print:p-0 print:bg-white">
           {/* Print specific styles to ensure single page and proper visibility */}
           <style jsx global>{`
             @media print {
