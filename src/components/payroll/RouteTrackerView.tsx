@@ -40,7 +40,8 @@ import {
   TRUCK_RENTAL_FIXED
 } from "@/app/lib/payroll-utils";
 import { cn } from "@/lib/utils";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Calendar as CalendarIcon, Download } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Calendar as CalendarIcon, Download, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface RouteTrackerViewProps {
   routeTracker: RouteTrackerRow[];
@@ -80,7 +81,7 @@ export function RouteTrackerView({
 
   const currentRoute = isEditOpen ? editingRoute : newRoute;
   
-  // Logic: Use manually entered pay if > 0, otherwise calculate based on stops
+  // Logical calculation for EST.PAY: Manual if > 0, else Auto based on stops
   const estPayValue = currentRoute?.estimatedPay && currentRoute.estimatedPay > 0 
     ? currentRoute.estimatedPay 
     : estimatePay(currentRoute?.stops || 0);
@@ -343,13 +344,25 @@ export function RouteTrackerView({
                     <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.stops || 0} onChange={(e) => setNewRoute({...newRoute, stops: Number(e.target.value)})} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Pay (Manual override)</Label>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Pay (Override)</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-slate-300 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-[10px] font-bold">Leave as 0 to auto-calculate based on stops.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Input 
                       type="number" 
                       className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
                       placeholder={estimatePay(newRoute.stops || 0).toString()}
-                      value={newRoute.estimatedPay || 0} 
-                      onChange={(e) => setNewRoute({...newRoute, estimatedPay: Number(e.target.value)})} 
+                      value={newRoute.estimatedPay === 0 ? "" : newRoute.estimatedPay} 
+                      onChange={(e) => setNewRoute({...newRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} 
                     />
                   </div>
                   <div className="space-y-2">
@@ -409,9 +422,11 @@ export function RouteTrackerView({
                 <div className="bg-slate-900 rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl shadow-slate-900/20">
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Profit Calculation</p>
-                    <p className="text-[9px] font-bold text-slate-500 italic">Est. Pay - (Expenses + Driver Pay + Helper Pay)</p>
+                    <p className="text-[9px] font-bold text-slate-500 italic">
+                      {currentRoute?.estimatedPay && currentRoute.estimatedPay > 0 ? "Using manual EST.PAY override" : "Using auto-calculated EST.PAY"}
+                    </p>
                   </div>
-                  <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-white" : "text-emerald-400")}>
+                  <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-rose-400" : "text-emerald-400")}>
                     {currency(netProfitValue)}
                   </div>
                 </div>
@@ -469,7 +484,11 @@ export function RouteTrackerView({
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200 uppercase">{getDayOfWeek(row.date)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{row.miles || ""}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{row.stops}</td>
-                        <td className="px-3 py-2 text-[10px] font-black text-center border-r border-slate-200 italic">{currency(estRev)}</td>
+                        <td className="px-3 py-2 text-[10px] font-black text-center border-r border-slate-200 italic">
+                          {row.estimatedPay && row.estimatedPay > 0 ? (
+                            <span className="text-primary">{currency(estRev)}*</span>
+                          ) : currency(estRev)}
+                        </td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200 whitespace-nowrap bg-slate-50/20">{row.driver}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200 whitespace-nowrap bg-slate-50/20">{row.helper || ""}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(dPay)}</td>
@@ -583,13 +602,25 @@ export function RouteTrackerView({
                   <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.stops || 0} onChange={(e) => setEditingRoute({...editingRoute, stops: Number(e.target.value)})} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Pay (Manual override)</Label>
+                  <div className="flex items-center gap-1">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Pay (Override)</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-slate-300 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-[10px] font-bold">Leave as 0 to auto-calculate based on stops.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Input 
                     type="number" 
                     className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
                     placeholder={estimatePay(editingRoute.stops || 0).toString()}
-                    value={editingRoute.estimatedPay || 0} 
-                    onChange={(e) => setEditingRoute({...editingRoute, estimatedPay: Number(e.target.value)})} 
+                    value={editingRoute.estimatedPay === 0 ? "" : editingRoute.estimatedPay} 
+                    onChange={(e) => setEditingRoute({...editingRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} 
                   />
                 </div>
                 <div className="space-y-2">
@@ -649,9 +680,11 @@ export function RouteTrackerView({
               <div className="bg-slate-900 rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl shadow-slate-900/20">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Profit Calculation</p>
-                  <p className="text-[9px] font-bold text-slate-500 italic">Est. Pay - (Expenses + Driver Pay + Helper Pay)</p>
+                  <p className="text-[9px] font-bold text-slate-500 italic">
+                    {editingRoute.estimatedPay && editingRoute.estimatedPay > 0 ? "Using manual EST.PAY override" : "Using auto-calculated EST.PAY"}
+                  </p>
                 </div>
-                <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-white" : "text-emerald-400")}>
+                <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-rose-400" : "text-emerald-400")}>
                   {currency(netProfitValue)}
                 </div>
               </div>
