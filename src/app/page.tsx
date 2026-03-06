@@ -14,7 +14,9 @@ import {
   LogOut,
   ShieldAlert,
   ShieldCheck,
-  Shield
+  Shield,
+  UserCircle,
+  History
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +40,9 @@ import { PayrollRunsView } from "@/components/payroll/PayrollRunsView";
 import { RouteTrackerView } from "@/components/payroll/RouteTrackerView";
 import { LoginView } from "@/components/auth/LoginView";
 import { MyPaystubsView } from "@/components/employees/MyPaystubsView";
+import { EmployeeDashboard } from "@/components/employees/EmployeeDashboard";
+import { MyRoutesView } from "@/components/employees/MyRoutesView";
+import { EmployeeProfileView } from "@/components/employees/EmployeeProfileView";
 
 import { 
   useFirestore, 
@@ -53,7 +58,16 @@ import {
 import { collection, doc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 
-type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "my-stubs" | "admin-board";
+type ActiveView = 
+  | "dashboard" 
+  | "employees" 
+  | "payroll" 
+  | "routes" 
+  | "admin-board"
+  | "emp-dashboard"
+  | "emp-payslips"
+  | "emp-routes"
+  | "emp-profile";
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
@@ -76,7 +90,7 @@ export default function AppShell() {
   // Set initial view based on role
   useEffect(() => {
     if (isAdmin) setActiveView("dashboard");
-    else if (isEmployee) setActiveView("my-stubs");
+    else if (isEmployee) setActiveView("emp-dashboard");
   }, [isAdmin, isEmployee]);
   
   // Firestore Subscriptions (Admins only for general collections)
@@ -291,8 +305,24 @@ export default function AppShell() {
     { id: "routes", label: "Route Tracker", icon: Route },
     { id: "admin-board", label: "Admin Board", icon: Shield },
   ] : [
-    { id: "my-stubs", label: "My Paystubs", icon: Receipt },
+    { id: "emp-dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "emp-payslips", label: "My Payslips", icon: Receipt },
+    { id: "emp-routes", label: "My Routes", icon: History },
+    { id: "emp-profile", label: "Profile", icon: UserCircle },
   ];
+
+  const getActiveViewTitle = () => {
+    switch(activeView) {
+      case "payroll": return "Payroll Runs";
+      case "routes": return "Route Tracker";
+      case "admin-board": return "Admin Access Board";
+      case "emp-dashboard": return "Employee Portal";
+      case "emp-payslips": return "My Statements";
+      case "emp-routes": return "Route History";
+      case "emp-profile": return "Account Settings";
+      default: return activeView.toUpperCase();
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-slate-50/50 flex flex-col">
@@ -360,7 +390,7 @@ export default function AppShell() {
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">System</span>
         <ChevronRight className="h-3 w-3 text-slate-300" />
         <h2 className="text-[10px] font-black uppercase tracking-widest text-primary">
-          {activeView === "payroll" ? "Payroll Runs" : activeView === "routes" ? "Route Tracker" : activeView === "my-stubs" ? "My Statements" : activeView === "admin-board" ? "Admin Access Board" : activeView.toUpperCase()}
+          {getActiveViewTitle()}
         </h2>
       </div>
 
@@ -411,7 +441,12 @@ export default function AppShell() {
               )}
             </>
           ) : (
-            <MyPaystubsView employee={employeeProfile || null} />
+            <>
+              {activeView === "emp-dashboard" && <EmployeeDashboard employee={employeeProfile} />}
+              {activeView === "emp-payslips" && <MyPaystubsView employee={employeeProfile || null} />}
+              {activeView === "emp-routes" && <MyRoutesView employee={employeeProfile || null} />}
+              {activeView === "emp-profile" && <EmployeeProfileView employee={employeeProfile || null} />}
+            </>
           )}
         </div>
       </main>
