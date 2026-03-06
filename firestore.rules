@@ -17,8 +17,11 @@ service cloud.firestore {
       allow read: if true;
     }
 
+    // Allow public verification of Access Keys (System UIDs)
+    // IDs are treated as secrets/passwords; listing is still prohibited.
     match /system_users/{userId} {
-      allow read: if request.auth != null;
+      allow get: if true;
+      allow list: if isAdmin();
       allow write: if isAdmin();
     }
 

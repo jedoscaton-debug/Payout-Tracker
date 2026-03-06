@@ -94,7 +94,6 @@ export default function AppShell() {
   const isEmployee = !!employeeProfile;
 
   // 3. System Freshness Check (Bootstrap state)
-  // This ref is public-readable in security rules to avoid permission errors when unauthenticated
   const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
   const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef);
   const isSystemFresh = !bootstrapLoading && !bootstrapDoc;
@@ -192,13 +191,13 @@ export default function AppShell() {
   const handleBootstrapMaster = () => {
     if (!user) return;
     const adminRef = doc(db, "roles_admin", user.uid);
-    // For bootstrapping, we use a placeholder System UID to link back to this user
-    const systemUid = `MASTER-${user.uid.slice(-4)}`;
-    const userRef = doc(db, "system_users", systemUid);
+    // Persist the STUDIO-MASTER-2026 UID for the Master Admin
+    const rootSystemUid = "STUDIO-MASTER-2026";
+    const userRef = doc(db, "system_users", rootSystemUid);
     const placeholderRef = doc(db, "roles_admin", "first_admin_placeholder");
     
     setDocumentNonBlocking(adminRef, { role: "master", createdAt: new Date().toISOString() }, { merge: true });
-    setDocumentNonBlocking(userRef, { id: systemUid, username: "MasterAdmin", authUid: user.uid }, { merge: true });
+    setDocumentNonBlocking(userRef, { id: rootSystemUid, username: "MasterAdmin", authUid: user.uid }, { merge: true });
     setDocumentNonBlocking(placeholderRef, { active: true }, { merge: true });
     
     toast({ title: "System Initialized", description: "You are now the Master Admin." });

@@ -46,11 +46,11 @@ export function LoginView() {
       // 0. Handle System Initialization Bypass
       if (isSystemFresh && cleanUsername === "masteradmin" && systemUid === "STUDIO-MASTER-2026") {
         const email = "masteradmin@system.oriented";
-        let userCredential;
         try {
-          userCredential = await initiateEmailSignIn(auth, email, systemUid);
-        } catch {
-          userCredential = await initiateEmailSignUp(auth, email, systemUid);
+          await initiateEmailSignIn(auth, email, systemUid);
+        } catch (signInError: any) {
+          // If login fails during bootstrap, try signing up
+          await initiateEmailSignUp(auth, email, systemUid);
         }
         toast({
           title: "Master Node Accessed",
@@ -61,6 +61,7 @@ export function LoginView() {
       }
 
       // 1. Verify the System UID exists in our registry first
+      // This is now possible thanks to the updated public read rules for system_users/{id}
       const userDocRef = doc(db, "system_users", systemUid);
       const userDoc = await getDoc(userDocRef);
       
@@ -91,15 +92,15 @@ export function LoginView() {
       try {
         userCredential = await initiateEmailSignIn(auth, email, systemUid);
       } catch (signInError: any) {
+        // Handle standard Firebase Auth errors or attempt auto-registration for valid UIDs
         if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-email') {
-          // Automatic registration for the first time
           userCredential = await initiateEmailSignUp(auth, email, systemUid);
         } else {
           throw signInError;
         }
       }
 
-      // 3. Update the mapping between System UID and Firebase UID
+      // 3. Update the mapping between System UID and Firebase UID if necessary
       if (userCredential?.user) {
         updateDocumentNonBlocking(userDocRef, { authUid: userCredential.user.uid });
       }
