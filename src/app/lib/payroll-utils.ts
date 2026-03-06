@@ -15,13 +15,10 @@ export function currency(value: number) {
 
 export function shortDate(input: string) {
   if (!input) return "";
-  const d = new Date(`${input}T00:00:00`);
-  if (isNaN(d.getTime())) return input;
-  return d.toLocaleDateString("en-US", {
-    month: "numeric",
-    day: "numeric",
-    year: "numeric"
-  });
+  const parts = input.split("-");
+  if (parts.length !== 3) return input;
+  const [year, month, day] = parts;
+  return `${parseInt(month)}/${parseInt(day)}/${year}`;
 }
 
 export function getDayOfWeek(input: string) {

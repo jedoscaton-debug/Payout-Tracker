@@ -120,11 +120,21 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             </div>
             <div className="border-2 border-slate-900 rounded-xl overflow-hidden shadow-sm bg-white">
               <div className="bg-slate-900 py-1.5 px-4 text-center">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">Net Pay Summary</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">Payslip Summary</span>
               </div>
-              <div className="grid grid-cols-[1fr_90px] bg-white text-slate-900">
-                <span className="px-4 py-2 text-[9px] font-black uppercase tracking-[0.3em]">Net Pay</span>
-                <span className="px-4 py-2 text-xs font-black text-right border-l-2 border-slate-900">{currency(totals.netPay)}</span>
+              <div className="flex flex-col bg-white text-slate-900">
+                <div className="grid grid-cols-[1fr_90px] border-b border-slate-200">
+                  <span className="px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Total Gross</span>
+                  <span className="px-4 py-2 text-xs font-bold text-right border-l-2 border-slate-900">{currency(totals.grossPay)}</span>
+                </div>
+                <div className="grid grid-cols-[1fr_90px] border-b border-slate-200">
+                  <span className="px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Total Deductions</span>
+                  <span className="px-4 py-2 text-xs font-bold text-right border-l-2 border-slate-900 text-rose-600">{currency(totals.totalDeductions)}</span>
+                </div>
+                <div className="grid grid-cols-[1fr_90px] bg-slate-50">
+                  <span className="px-4 py-3 text-[9px] font-black uppercase tracking-[0.3em] text-slate-900">Net Pay</span>
+                  <span className="px-4 py-3 text-sm font-black text-right border-l-2 border-slate-900">{currency(totals.netPay)}</span>
+                </div>
               </div>
             </div>
           </div>
