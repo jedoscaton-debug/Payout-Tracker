@@ -88,7 +88,6 @@ export default function AppShell() {
   const isEmployee = !!employeeProfile;
 
   // Firestore Subscriptions
-  // Note: Standard users need to be able to see if the system is empty to show the initialization screen
   const adminsQuery = useMemoFirebase(() => user ? collection(db, "roles_admin") : null, [db, user]);
   const { data: allAdminsData, isLoading: allAdminsLoading } = useCollection(adminsQuery);
   const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
@@ -101,7 +100,6 @@ export default function AppShell() {
       } else if (isEmployee) {
         setActiveView("emp-dashboard");
       } else if (allAdmins.length > 0) {
-        // Logged in but not assigned a role yet
         setActiveView("emp-profile");
       }
     }
@@ -123,17 +121,12 @@ export default function AppShell() {
   const systemUsers = useMemo(() => (systemUsersData || []), [systemUsersData]);
   const routeTracker = useMemo(() => (routesData || []) as RouteTrackerRow[], [routesData]);
 
-  // Reactive synchronization: Automatically remove or add payroll items based on the employee directory
   useEffect(() => {
     if (!isAdmin) return;
     
     setPayrollItems(prevItems => {
       const currentEmployeeIds = new Set(employees.map(e => e.id));
-      
-      // Filter out items for employees that no longer exist (DELETION SYNC)
       const syncedItems = prevItems.filter(item => currentEmployeeIds.has(item.employeeId));
-      
-      // Add items for new employees that aren't in the list yet
       const existingItemEmployeeIds = new Set(syncedItems.map(item => item.employeeId));
       const newEmployeeItems = employees
         .filter(e => !existingItemEmployeeIds.has(e.id))
@@ -141,7 +134,6 @@ export default function AppShell() {
         
       const finalItems = [...syncedItems, ...newEmployeeItems];
       
-      // Only update state if the structure has actually changed to avoid re-render loops
       if (JSON.stringify(finalItems.map(i => i.employeeId)) !== JSON.stringify(prevItems.map(i => i.employeeId))) {
         return finalItems;
       }
@@ -160,7 +152,6 @@ export default function AppShell() {
     };
   }, [payrollItems]);
 
-  // Handlers
   const handleRegisterAccess = (id: string, username: string) => {
     const docRef = doc(db, "system_users", id);
     setDocumentNonBlocking(docRef, { id, username }, { merge: true });
@@ -173,16 +164,14 @@ export default function AppShell() {
       return toast({ title: "Operation Denied", description: "The Master Admin node cannot be terminated.", variant: "destructive" });
     }
     
-    // Wipe all traces of the user
+    // Revoke system access but preserve HR record as requested
     const userRef = doc(db, "system_users", id);
     const adminRef = doc(db, "roles_admin", id);
-    const employeeRef = doc(db, "employees", id);
     
     deleteDocumentNonBlocking(userRef);
     deleteDocumentNonBlocking(adminRef);
-    deleteDocumentNonBlocking(employeeRef);
     
-    toast({ title: "Access Revoked", description: "All system privileges and HR records for this node have been terminated.", variant: "destructive" });
+    toast({ title: "Access Revoked", description: "System privileges for this node have been terminated. The employee record remains active." });
   };
 
   const handleBootstrapMaster = () => {
@@ -205,11 +194,9 @@ export default function AppShell() {
   };
 
   const handleLinkProfile = (uid: string, employee: Employee) => {
-    // 1. Create the new record at the correct UID
     const newDocRef = doc(db, "employees", uid);
     setDocumentNonBlocking(newDocRef, { ...employee, id: uid }, { merge: true });
     
-    // 2. Delete the old record if the ID is different
     if (employee.id !== uid) {
       const oldDocRef = doc(db, "employees", employee.id);
       deleteDocumentNonBlocking(oldDocRef);
@@ -300,7 +287,6 @@ export default function AppShell() {
 
   if (!user) return <LoginView />;
 
-  // Initial Setup Guard - Only show if absolutely no admins exist and we aren't loading
   if (!isAdmin && !isEmployee && allAdmins.length === 0) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">
