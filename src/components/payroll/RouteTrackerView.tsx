@@ -39,7 +39,7 @@ import {
   TRUCK_RENTAL_FIXED
 } from "@/app/lib/payroll-utils";
 import { cn } from "@/lib/utils";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Calendar as CalendarIcon } from "lucide-react";
 
 interface RouteTrackerViewProps {
   routeTracker: RouteTrackerRow[];
@@ -59,6 +59,8 @@ export function RouteTrackerView({
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [editingRoute, setEditingRoute] = useState<RouteTrackerRow | null>(null);
   
   const [newRoute, setNewRoute] = useState<Partial<RouteTrackerRow>>({
@@ -85,7 +87,7 @@ export function RouteTrackerView({
 
   const headers = [
     "Route",
-    "Route Type",
+    "Ite Type",
     "Vehicle #",
     "Date",
     "Day of Week",
@@ -105,11 +107,15 @@ export function RouteTrackerView({
     "Actions"
   ];
 
-  const filtered = routeTracker.filter(r => 
-    r.route.toLowerCase().includes(search.toLowerCase()) ||
-    r.driver.toLowerCase().includes(search.toLowerCase()) ||
-    (r.helper && r.helper.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filtered = routeTracker.filter(r => {
+    const matchesSearch = r.route.toLowerCase().includes(search.toLowerCase()) ||
+      r.driver.toLowerCase().includes(search.toLowerCase()) ||
+      (r.helper && r.helper.toLowerCase().includes(search.toLowerCase()));
+    
+    const matchesDate = (!startDate || r.date >= startDate) && (!endDate || r.date <= endDate);
+    
+    return matchesSearch && matchesDate;
+  });
 
   const totals = useMemo(() => {
     return filtered.reduce((acc, row) => {
@@ -181,7 +187,28 @@ export function RouteTrackerView({
           <p className="text-sm text-slate-500 font-medium">Log and analyze daily route profitability and performance.</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex items-center px-3 py-1 gap-2">
+              <CalendarIcon className="h-4 w-4 text-slate-400" />
+              <div className="flex items-center gap-2">
+                <Input 
+                  type="date" 
+                  className="h-8 w-36 border-none bg-transparent p-0 text-[10px] font-bold uppercase" 
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+                <span className="text-[10px] font-black text-slate-300">TO</span>
+                <Input 
+                  type="date" 
+                  className="h-8 w-36 border-none bg-transparent p-0 text-[10px] font-bold uppercase" 
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input 
@@ -431,7 +458,6 @@ export function RouteTrackerView({
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-[1000px] p-0 border-none shadow-2xl rounded-[2rem] overflow-hidden bg-white">
           <DialogHeader className="sr-only">
