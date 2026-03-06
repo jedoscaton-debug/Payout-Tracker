@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -38,25 +39,33 @@ const employeesSeed: Employee[] = [
   { id: "emp-1", fullName: "Jose Nolasco", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
   { id: "emp-2", fullName: "Geovani", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
   { id: "emp-3", fullName: "Steven Howard", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
-  { id: "emp-4", fullName: "Dominique", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
-  { id: "emp-5", fullName: "Edildo Geovani Morataya", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
+  { id: "emp-4", fullName: "Labrinkley Marshall", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
+  { id: "emp-5", fullName: "Dominique Roche", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
+  { id: "emp-6", fullName: "Diego Guevara", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
+  { id: "emp-7", fullName: "Edildo Geovani Morataya", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
 ];
 
 const routeTrackerSeed: RouteTrackerRow[] = [
-  { id: "rt-1", date: "2026-03-01", client: "IKEA", miles: 68, stops: 27, driver: "Jose Nolasco", helper: "Geovani" },
-  { id: "rt-2", date: "2026-03-02", client: "IKEA", miles: 71, stops: 29, driver: "Jose Nolasco", helper: "Jose Nolasco" },
-  { id: "rt-3", date: "2026-03-03", client: "IKEA", miles: 63, stops: 24, driver: "Steven Howard", helper: "Dominique" },
-  { id: "rt-4", date: "2026-03-04", client: "IKEA", miles: 75, stops: 31, driver: "Geovani", helper: "Geovani" },
-  { id: "rt-5", date: "2026-03-05", client: "IKEA", miles: 58, stops: 22, driver: "Jose Nolasco", helper: "Geovani" },
-  { id: "rt-6", date: "2026-03-06", client: "IKEA", miles: 79, stops: 35, driver: "Edildo Geovani Morataya", helper: "Geovani" },
-  { id: "rt-7", date: "2026-03-07", client: "IKEA", miles: 55, stops: 20, driver: "Steven Howard", helper: "Steven Howard" },
+  { id: "rt-1", date: "2026-02-22", client: "IKEA", miles: 104, stops: 23, driver: "Steven Howard", helper: "Labrinkley Marshall" },
+  { id: "rt-2", date: "2026-02-23", client: "IKEA", miles: 179, stops: 10, driver: "Labrinkley Marshall", helper: "Steven Howard" },
+  { id: "rt-3", date: "2026-02-23", client: "IKEA", miles: 0, stops: 16, driver: "Jose Nolasco", helper: "Geovani" },
+  { id: "rt-4", date: "2026-02-24", client: "IKEA", miles: 0, stops: 18, driver: "Jose Nolasco", helper: "Geovani" },
+  { id: "rt-5", date: "2026-02-25", client: "IKEA", miles: 222, stops: 13, driver: "Labrinkley Marshall", helper: "Dominique Roche" },
+  { id: "rt-6", date: "2026-02-25", client: "IKEA", miles: 0, stops: 9, driver: "Jose Nolasco", helper: "Geovani" },
+  { id: "rt-7", date: "2026-02-26", client: "IKEA", miles: 157, stops: 14, driver: "Steven Howard", helper: "Dominique Roche" },
+  { id: "rt-8", date: "2026-02-26", client: "IKEA", miles: 77, stops: 16, driver: "Labrinkley Marshall", helper: "Labrinkley Marshall" },
+  { id: "rt-9", date: "2026-02-26", client: "IKEA", miles: 0, stops: 12, driver: "Geovani", helper: "Diego Guevara" },
+  { id: "rt-10", date: "2026-02-27", client: "IKEA", miles: 59, stops: 15, driver: "Steven Howard", helper: "Steven Howard" },
+  { id: "rt-11", date: "2026-02-27", client: "IKEA", miles: 110, stops: 16, driver: "Labrinkley Marshall", helper: "Dominique Roche" },
+  { id: "rt-12", date: "2026-02-27", client: "IKEA", miles: 0, stops: 18, driver: "Jose Nolasco", helper: "Geovani" },
+  { id: "rt-13", date: "2026-02-28", client: "IKEA", miles: 0, stops: 13, driver: "Jose Nolasco", helper: "Geovani" },
 ];
 
 const initialPayrollRun: PayrollRun = {
   id: "run-1",
-  payPeriodStart: "2026-03-01",
-  payPeriodEnd: "2026-03-07",
-  payDate: "2026-03-13",
+  payPeriodStart: "2026-02-22",
+  payPeriodEnd: "2026-02-28",
+  payDate: "2026-03-06",
   status: "Draft",
 };
 
