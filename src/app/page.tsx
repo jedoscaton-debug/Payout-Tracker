@@ -87,18 +87,26 @@ export default function AppShell() {
   const isMasterAdmin = adminRole?.role === 'master';
   const isEmployee = !!employeeProfile;
 
+  // Firestore Subscriptions
+  // Note: Standard users need to be able to see if the system is empty to show the initialization screen
+  const adminsQuery = useMemoFirebase(() => user ? collection(db, "roles_admin") : null, [db, user]);
+  const { data: allAdminsData, isLoading: allAdminsLoading } = useCollection(adminsQuery);
+  const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
+
   // Automated Redirection Logic
   useEffect(() => {
-    if (!isUserLoading && !adminLoading && !profileLoading) {
+    if (!isUserLoading && !adminLoading && !profileLoading && !allAdminsLoading) {
       if (isAdmin) {
         setActiveView("dashboard");
-      } else {
+      } else if (isEmployee) {
         setActiveView("emp-dashboard");
+      } else if (allAdmins.length > 0) {
+        // Logged in but not assigned a role yet
+        setActiveView("emp-profile");
       }
     }
-  }, [isAdmin, isUserLoading, adminLoading, profileLoading]);
+  }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, allAdminsLoading, allAdmins.length]);
   
-  // Firestore Subscriptions
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
   const { data: employeesData } = useCollection<Employee>(employeesQuery);
   
@@ -108,16 +116,12 @@ export default function AppShell() {
   const routesQuery = useMemoFirebase(() => isAdmin ? collection(db, "routeTrackerRows") : null, [db, isAdmin]);
   const { data: routesData } = useCollection<RouteTrackerRow>(routesQuery);
 
-  const adminsQuery = useMemoFirebase(() => isAdmin ? collection(db, "roles_admin") : null, [db, isAdmin]);
-  const { data: allAdminsData } = useCollection(adminsQuery);
-
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
 
   const employees = useMemo(() => (employeesData || []) as Employee[], [employeesData]);
   const systemUsers = useMemo(() => (systemUsersData || []), [systemUsersData]);
   const routeTracker = useMemo(() => (routesData || []) as RouteTrackerRow[], [routesData]);
-  const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
 
   // Reactive synchronization: Automatically remove or add payroll items based on the employee directory
   useEffect(() => {
@@ -138,7 +142,7 @@ export default function AppShell() {
       const finalItems = [...syncedItems, ...newEmployeeItems];
       
       // Only update state if the structure has actually changed to avoid re-render loops
-      if (finalItems.length !== prevItems.length) {
+      if (JSON.stringify(finalItems.map(i => i.employeeId)) !== JSON.stringify(prevItems.map(i => i.employeeId))) {
         return finalItems;
       }
       return prevItems;
@@ -164,22 +168,31 @@ export default function AppShell() {
   };
 
   const handleTerminateAccess = (id: string) => {
-    if (allAdmins.find(a => a.id === id)?.role === 'master') {
+    const targetAdmin = allAdmins.find(a => a.id === id);
+    if (targetAdmin?.role === 'master') {
       return toast({ title: "Operation Denied", description: "The Master Admin node cannot be terminated.", variant: "destructive" });
     }
+    
+    // Wipe all traces of the user
     const userRef = doc(db, "system_users", id);
     const adminRef = doc(db, "roles_admin", id);
+    const employeeRef = doc(db, "employees", id);
+    
     deleteDocumentNonBlocking(userRef);
     deleteDocumentNonBlocking(adminRef);
-    toast({ title: "Access Revoked", description: "All system privileges for this node have been terminated.", variant: "destructive" });
+    deleteDocumentNonBlocking(employeeRef);
+    
+    toast({ title: "Access Revoked", description: "All system privileges and HR records for this node have been terminated.", variant: "destructive" });
   };
 
   const handleBootstrapMaster = () => {
     if (!user) return;
     const adminRef = doc(db, "roles_admin", user.uid);
+    const userRef = doc(db, "system_users", user.uid);
     const placeholderRef = doc(db, "roles_admin", "first_admin_placeholder");
     
     setDocumentNonBlocking(adminRef, { role: "master", createdAt: new Date().toISOString() }, { merge: true });
+    setDocumentNonBlocking(userRef, { id: user.uid, username: "MasterAdmin" }, { merge: true });
     setDocumentNonBlocking(placeholderRef, { active: true }, { merge: true });
     
     toast({ title: "System Initialized", description: "You are now the Master Admin." });
@@ -262,7 +275,7 @@ export default function AppShell() {
 
   const handleSignOut = () => signOut(auth);
 
-  if (isUserLoading || adminLoading || profileLoading) {
+  if (isUserLoading || adminLoading || profileLoading || allAdminsLoading) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -273,11 +286,11 @@ export default function AppShell() {
 
   if (!user) return <LoginView />;
 
-  // Initial Setup Guard
+  // Initial Setup Guard - Only show if absolutely no admins exist and we aren't loading
   if (!isAdmin && !isEmployee && allAdmins.length === 0) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">
-        <div className="w-full max-w-md text-center space-y-6">
+        <div className="w-full max-w-md text-center space-y-6 animate-in fade-in duration-500">
           <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
             <Shield className="h-10 w-10" />
           </div>
@@ -306,7 +319,7 @@ export default function AppShell() {
   ].filter(i => !i.hidden);
 
   return (
-    <div className="min-h-screen w-full bg-slate-50/50 flex flex-col">
+    <div className="min-h-screen w-full bg-slate-50/50 flex flex-col animate-in fade-in duration-500">
       <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-3">
@@ -346,7 +359,7 @@ export default function AppShell() {
             {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} isRoleManagement={false} />}
             {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} />}
             {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={handleAddRoute} onUpdateRoute={handleUpdateRoute} onDeleteRoute={handleDeleteRoute} employees={employees} />}
-            {activeView === "admin-board" && <EmployeeManager employees={systemUsers as any} onAddEmployee={(e) => handleRegisterAccess(e.id, e.fullName)} onUpdateEmployee={() => {}} onDeleteEmployee={handleTerminateAccess} isRoleManagement={true} allAdmins={allAdmins} onGrantAdmin={handleGrantAdmin} onRevokeAdmin={handleRevokeAdmin} />}
+            {activeView === "admin-board" && <EmployeeManager employees={systemUsers as any} onAddEmployee={(e) => handleRegisterAccess(e.id, (e as any).username || e.fullName)} onUpdateEmployee={() => {}} onDeleteEmployee={handleTerminateAccess} isRoleManagement={true} allAdmins={allAdmins} onGrantAdmin={handleGrantAdmin} onRevokeAdmin={handleRevokeAdmin} />}
           </>
         ) : (
           <>

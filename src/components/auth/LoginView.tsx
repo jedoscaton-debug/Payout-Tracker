@@ -45,13 +45,28 @@ export function LoginView() {
           description: "Syncing with your system node..."
         });
       } catch (signInError: any) {
-        // Step 2: If user doesn't exist, attempt automatic initialization
+        // Step 2: If user doesn't exist OR if authentication failed but email is in use,
+        // we might be in a re-registration scenario.
         if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
-          await initiateEmailSignUp(auth, email, password);
-          toast({
-            title: "Node Initialized",
-            description: "Your system access has been activated."
-          });
+          // Attempt automatic initialization (Sign Up)
+          try {
+            await initiateEmailSignUp(auth, email, password);
+            toast({
+              title: "Node Initialized",
+              description: "Your system access has been activated."
+            });
+          } catch (signUpError: any) {
+            // Handle specific case where Auth account exists but Firestore was deleted
+            if (signUpError.code === 'auth/email-already-in-use') {
+              toast({
+                variant: "destructive",
+                title: "Credential Conflict",
+                description: "This username exists but the UID is different. Please use the UID assigned by your admin.",
+              });
+            } else {
+              throw signUpError;
+            }
+          }
         } else {
           throw signInError;
         }
