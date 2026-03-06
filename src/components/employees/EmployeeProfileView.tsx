@@ -13,7 +13,8 @@ import {
   User,
   Fingerprint,
   Phone,
-  Briefcase
+  Briefcase,
+  AlertCircle
 } from "lucide-react";
 import { Employee } from "@/app/lib/types";
 import { useAuth } from "@/firebase";
@@ -28,17 +29,25 @@ export function EmployeeProfileView({ employee }: EmployeeProfileViewProps) {
   
   if (!employee || !employee.fullName) {
     return (
-      <div className="flex flex-col items-center justify-center p-20 text-center space-y-6 bg-white rounded-[2.5rem] shadow-sm animate-in fade-in duration-700">
-        <div className="h-20 w-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
-          <UserCircle className="h-10 w-10" />
+      <div className="flex flex-col items-center justify-center p-20 text-center space-y-8 bg-white rounded-[2.5rem] shadow-sm animate-in fade-in duration-700 max-w-2xl mx-auto border border-slate-100">
+        <div className="h-24 w-24 bg-primary/5 rounded-[2rem] flex items-center justify-center text-primary/40">
+          <Fingerprint className="h-12 w-12" />
         </div>
-        <div className="space-y-2">
-          <h3 className="text-xl font-black uppercase tracking-tighter text-slate-900">Profile Not Found</h3>
-          <p className="text-sm font-medium text-slate-500 max-w-xs mx-auto">Your node is active, but your HR record is not yet connected. Please contact an administrator to link your profile.</p>
+        <div className="space-y-4">
+          <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-900">Connection Pending</h3>
+          <p className="text-sm font-medium text-slate-500 max-w-sm mx-auto leading-relaxed">
+            Your system node is active, but your official HR profile has not yet been linked to this access key.
+          </p>
+          <div className="flex items-center justify-center gap-2 p-4 bg-slate-50 rounded-2xl text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+            Please notify an administrator to link your profile
+          </div>
         </div>
-        <Button variant="outline" className="rounded-xl h-12 px-8 font-bold text-xs uppercase tracking-widest" onClick={() => signOut(auth)}>
-          <LogOut className="mr-2 h-4 w-4" /> Sign Out
-        </Button>
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <Button variant="outline" className="rounded-xl h-14 font-bold text-xs uppercase tracking-widest border-slate-200" onClick={() => signOut(auth)}>
+            <LogOut className="mr-3 h-4 w-4" /> Terminate Session
+          </Button>
+        </div>
       </div>
     );
   }

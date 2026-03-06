@@ -93,23 +93,28 @@ export default function AppShell() {
   const isAdmin = !!adminRole;
   const isEmployee = !!employeeProfile;
 
-  // Query to check if ANY admin exists (used for bootstrapping check)
+  // 3. System Freshness Check (Bootstrap state)
+  const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
+  const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef);
+  const isSystemFresh = !bootstrapLoading && !bootstrapDoc;
+
   const adminsQuery = useMemoFirebase(() => user ? collection(db, "roles_admin") : null, [db, user]);
   const { data: allAdminsData, isLoading: allAdminsLoading } = useCollection(adminsQuery);
   const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
 
   // Automated Redirection Logic
   useEffect(() => {
-    if (!isUserLoading && !adminLoading && !profileLoading && !allAdminsLoading && !nodeLoading) {
+    if (!isUserLoading && !adminLoading && !profileLoading && !bootstrapLoading && !nodeLoading) {
       if (isAdmin) {
         setActiveView("dashboard");
       } else if (isEmployee) {
         setActiveView("emp-dashboard");
-      } else if (allAdmins.length > 0) {
+      } else if (!isSystemFresh) {
+        // Default view for authenticated users who are not yet linked to an employee record
         setActiveView("emp-profile");
       }
     }
-  }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, allAdminsLoading, allAdmins.length, nodeLoading]);
+  }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, bootstrapLoading, isSystemFresh, nodeLoading]);
   
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
   const { data: employeesData } = useCollection<Employee>(employeesQuery);
@@ -295,7 +300,7 @@ export default function AppShell() {
 
   const handleSignOut = () => signOut(auth);
 
-  if (isUserLoading || adminLoading || profileLoading || allAdminsLoading || nodeLoading) {
+  if (isUserLoading || adminLoading || profileLoading || bootstrapLoading || nodeLoading || allAdminsLoading) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -306,7 +311,7 @@ export default function AppShell() {
 
   if (!user) return <LoginView />;
 
-  if (!isAdmin && !isEmployee && allAdmins.length === 0) {
+  if (isSystemFresh) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">
         <div className="w-full max-w-md text-center space-y-6 animate-in fade-in duration-500">
