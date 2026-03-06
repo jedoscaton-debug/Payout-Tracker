@@ -5,8 +5,7 @@ import { PayrollItem, PayrollRun } from "@/app/lib/types";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Share2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Printer } from "lucide-react";
 
 interface PaystubPreviewProps {
   item: PayrollItem;
@@ -15,7 +14,6 @@ interface PaystubPreviewProps {
 
 export function PaystubPreview({ item, run }: PaystubPreviewProps) {
   const totals = computeTotals(item);
-  const { toast } = useToast();
 
   const handlePrint = () => {
     window.print();
@@ -27,25 +25,39 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
         @media print {
           @page {
             size: portrait;
-            margin: 20mm;
+            margin: 10mm;
           }
-          body * {
-            visibility: hidden !important;
-          }
-          #paystub-document, #paystub-document * {
-            visibility: visible !important;
-          }
-          #paystub-document {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
+          body {
             margin: 0 !important;
             padding: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
+            background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .no-print {
+            display: none !important;
+          }
+          /* Ensure the dialog content is the only thing visible and positioned correctly */
+          div[role="dialog"] {
+            position: static !important;
+            display: block !important;
+            overflow: visible !important;
+          }
+          #paystub-document {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 15mm !important;
+            box-shadow: none !important;
+            border: none !important;
+            visibility: visible !important;
+            z-index: 9999 !important;
+          }
+          /* Hide all other app elements */
+          body > *:not(div[role="dialog"]) {
             display: none !important;
           }
         }
@@ -79,16 +91,16 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
           <div className="grid grid-cols-[1fr_260px] gap-8 items-start">
             {/* Left: Info */}
             <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-4 text-sm pt-4">
-              <span className="font-bold">Name</span>
-              <span>{item.employeeNameSnapshot}</span>
+              <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Employee</span>
+              <span className="font-bold">{item.employeeNameSnapshot}</span>
               
-              <span className="font-bold">Daily Rate</span>
-              <span>{item.dailyRateSnapshot || "150"}</span>
+              <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Daily Rate</span>
+              <span>{item.dailyRateSnapshot || "Varies"}</span>
               
-              <span className="font-bold">Pay Period</span>
-              <span>{run.payPeriodStart} - {run.payPeriodEnd}</span>
+              <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Pay Period</span>
+              <span>{shortDate(run.payPeriodStart)} - {shortDate(run.payPeriodEnd)}</span>
               
-              <span className="font-bold">Pay Date</span>
+              <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Pay Date</span>
               <span>{run.payDate}</span>
             </div>
 
@@ -112,19 +124,18 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             </div>
           </div>
 
-          <div className="w-full h-8 bg-slate-100/50" />
-
           {/* Breakdown Header */}
-          <h2 className="text-2xl font-black tracking-tighter">Payslip Breakdown</h2>
+          <h2 className="text-2xl font-black tracking-tighter uppercase">Payslip Breakdown</h2>
 
           {/* Breakdown Table */}
           <div className="border-2 border-slate-300 rounded-sm overflow-hidden flex flex-col">
-            {/* Headers */}
+            {/* Main Section Headers */}
             <div className="grid grid-cols-2 bg-slate-200 border-b-2 border-slate-300">
               <div className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider border-r-2 border-slate-300">Earnings</div>
               <div className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider">Deductions</div>
             </div>
             
+            {/* Column Labels */}
             <div className="grid grid-cols-2 text-[10px] font-black uppercase tracking-widest bg-slate-50 border-b-2 border-slate-300">
               <div className="grid grid-cols-[1fr_100px] border-r-2 border-slate-300">
                 <span className="px-4 py-2">DAYS WORKED</span>
@@ -136,50 +147,46 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
               </div>
             </div>
 
-            {/* Content Rows */}
-            <div className="flex-1 min-h-[300px] flex">
+            {/* Content Body */}
+            <div className="flex-1 min-h-[350px] flex">
               {/* Earnings Column */}
               <div className="flex-1 border-r-2 border-slate-300">
                 <div className="flex flex-col h-full">
                   {item.earningsLines.map((line) => (
-                    <div key={line.id} className="grid grid-cols-[1fr_100px] border-b border-slate-100 text-[11px]">
-                      <span className="px-4 py-2 font-medium text-slate-600">{line.description} - {currency(line.amount)}</span>
-                      <span className="px-4 py-2 text-right font-black border-l-2 border-slate-300"></span>
+                    <div key={line.id} className="grid grid-cols-[1fr_100px] text-[11px]">
+                      <span className="px-4 py-2 font-medium text-slate-600">{line.description}</span>
+                      <span className="px-4 py-2 text-right font-black border-l-2 border-slate-300">{currency(line.amount)}</span>
                     </div>
                   ))}
-                  {/* Fill remaining space */}
-                  <div className="flex-1 border-b border-slate-100 grid grid-cols-[1fr_100px]">
-                    <span className="px-4 py-2"></span>
-                    <span className="border-l-2 border-slate-300"></span>
-                  </div>
+                  {item.otherEarningsLines.map((line) => (
+                    <div key={line.id} className="grid grid-cols-[1fr_100px] text-[11px]">
+                      <span className="px-4 py-2 font-medium text-slate-600">{line.description}</span>
+                      <span className="px-4 py-2 text-right font-black border-l-2 border-slate-300">{currency(line.amount)}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
               {/* Deductions Column */}
               <div className="flex-1">
                 <div className="flex flex-col h-full">
                   {item.deductionsLines.map((line) => (
-                    <div key={line.id} className="grid grid-cols-[1fr_100px] border-b border-slate-100 text-[11px]">
+                    <div key={line.id} className="grid grid-cols-[1fr_100px] text-[11px]">
                       <span className="px-4 py-2 font-medium text-slate-600">{line.deductionName}</span>
                       <span className="px-4 py-2 text-right font-black border-l-2 border-slate-300">{currency(line.amount)}</span>
                     </div>
                   ))}
-                  {/* Fill remaining space */}
-                  <div className="flex-1 border-b border-slate-100 grid grid-cols-[1fr_100px]">
-                    <span className="px-4 py-2"></span>
-                    <span className="border-l-2 border-slate-300"></span>
-                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Totals Row */}
+            {/* Totals Summary Row (Bottom) */}
             <div className="grid grid-cols-2 bg-slate-50 border-t-2 border-slate-300 text-[11px] font-black">
               <div className="grid grid-cols-[1fr_100px] border-r-2 border-slate-300">
-                <span className="px-4 py-3">Total</span>
+                <span className="px-4 py-3 uppercase tracking-tighter">TOTAL GROSS</span>
                 <span className="px-4 py-3 text-right border-l-2 border-slate-300">{currency(totals.grossPay)}</span>
               </div>
               <div className="grid grid-cols-[1fr_100px]">
-                <span className="px-4 py-3">Total</span>
+                <span className="px-4 py-3 uppercase tracking-tighter">TOTAL DEDUCTIONS</span>
                 <span className="px-4 py-3 text-right border-l-2 border-slate-300">{currency(totals.totalDeductions)}</span>
               </div>
             </div>
