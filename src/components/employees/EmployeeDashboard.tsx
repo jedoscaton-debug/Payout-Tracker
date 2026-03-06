@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo } from "react";
@@ -28,7 +27,7 @@ export function EmployeeDashboard({ employee }: EmployeeDashboardProps) {
     ) : null, 
     [db, userEmail]
   );
-  const { data: paystubs, isLoading: itemsLoading } = useCollection<PayrollItem>(itemsQuery);
+  const { data: paystubs, isLoading: itemsLoading } = useCollection<PayrollItem>(itemsQuery, { enabled: !!userEmail });
 
   // Fetch recent routes
   const routesQuery = useMemoFirebase(() => 
@@ -39,7 +38,7 @@ export function EmployeeDashboard({ employee }: EmployeeDashboardProps) {
     ) : null, 
     [db, employeeName]
   );
-  const { data: recentRoutes, isLoading: routesLoading } = useCollection<RouteTrackerRow>(routesQuery);
+  const { data: recentRoutes, isLoading: routesLoading } = useCollection<RouteTrackerRow>(routesQuery, { enabled: !!employeeName });
 
   const stats = useMemo(() => {
     if (!paystubs) return { totalNet: 0, lastCheck: 0, count: 0 };

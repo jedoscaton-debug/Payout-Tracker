@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -38,7 +37,7 @@ export default function AppShell() {
 
   // Role and Profile Checks
   const adminDocRef = useMemoFirebase(() => user ? doc(db, "roles_admin", user.uid) : null, [db, user]);
-  const { data: adminRole, isLoading: adminLoading } = useDoc(adminDocRef);
+  const { data: adminRole, isLoading: adminLoading } = useDoc(adminDocRef, { enabled: !!user });
   
   // Master Admin check via email as fallback for bootstrap phase
   const isMasterByEmail = userEmail === "admin@systemoriented.com" || userEmail === "jedocaton1997@gmail.com";
@@ -47,7 +46,7 @@ export default function AppShell() {
 
   // Employee Profile Handshake
   const employeeQuery = useMemoFirebase(() => userEmail ? query(collection(db, "employees"), where("email", "==", userEmail)) : null, [db, userEmail]);
-  const { data: employeesFound, isLoading: profileLoading } = useCollection<Employee>(employeeQuery);
+  const { data: employeesFound, isLoading: profileLoading } = useCollection<Employee>(employeeQuery, { enabled: !!userEmail });
   const employeeProfile = employeesFound?.[0] || null;
   const isEmployee = !!employeeProfile;
 
@@ -66,15 +65,15 @@ export default function AppShell() {
   
   // Guarded Admin Collections - Only query if confirmed admin
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
-  const { data: employeesData } = useCollection<Employee>(employeesQuery);
+  const { data: employeesData } = useCollection<Employee>(employeesQuery, { enabled: isAdmin });
   const employees = useMemo(() => (employeesData || []) as Employee[], [employeesData]);
 
   const routesQuery = useMemoFirebase(() => isAdmin ? collection(db, "routeTrackerRows") : null, [db, isAdmin]);
-  const { data: routesData } = useCollection<RouteTrackerRow>(routesQuery);
+  const { data: routesData } = useCollection<RouteTrackerRow>(routesQuery, { enabled: isAdmin });
   const routeTracker = useMemo(() => (routesData || []) as RouteTrackerRow[], [routesData]);
 
   const adminsQuery = useMemoFirebase(() => isAdmin ? collection(db, "roles_admin") : null, [db, isAdmin]);
-  const { data: allAdmins } = useCollection(adminsQuery);
+  const { data: allAdmins } = useCollection(adminsQuery, { enabled: isAdmin });
 
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
@@ -128,7 +127,7 @@ export default function AppShell() {
   if (isSystemFresh) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <div className="w-full max-w-md text-center space-y-6">
+        <div className="w-full max-md text-center space-y-6">
           <Shield className="h-10 w-10 mx-auto text-primary" />
           <h2 className="text-2xl font-black uppercase">System Initialization</h2>
           <Button onClick={handleBootstrapMaster} className="w-full h-14 rounded-2xl bg-slate-900 font-bold uppercase">Initialize Master Admin</Button>

@@ -1,4 +1,3 @@
-
 'use client';
     
 import { useState, useEffect } from 'react';
@@ -30,6 +29,7 @@ export interface UseDocResult<T> {
  */
 export function useDoc<T = any>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
+  options?: { enabled?: boolean }
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
 
@@ -38,7 +38,7 @@ export function useDoc<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    if (!memoizedDocRef) {
+    if (!memoizedDocRef || options?.enabled === false) {
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -81,7 +81,7 @@ export function useDoc<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef]);
+  }, [memoizedDocRef, options?.enabled]);
 
   return { data, isLoading, error };
 }
