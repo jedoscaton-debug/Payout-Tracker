@@ -13,11 +13,16 @@ export function currency(value: number) {
   }).format(value || 0);
 }
 
+/**
+ * Robust date formatter that avoids RangeError by using manual parsing.
+ * Returns date in M/D/YYYY format.
+ */
 export function shortDate(input: string) {
   if (!input) return "";
   const parts = input.split("-");
   if (parts.length !== 3) return input;
   const [year, month, day] = parts;
+  // Ensure we remove leading zeros for a cleaner professional look
   return `${parseInt(month)}/${parseInt(day)}/${year}`;
 }
 
@@ -38,12 +43,14 @@ export function estimateFuel(miles: number) {
 
 export function driverPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number) {
   const basePay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops);
+  // Special Rule: EV Route + EV Vehicle = 33% Driver Rate
   const rate = (route === "EV" && vehicle === "EV") ? 0.33 : 0.27;
   return Number((basePay * rate).toFixed(2));
 }
 
 export function helperPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number) {
   const basePay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops);
+  // Special Rule: EV Route + EV Vehicle = 27% Helper Rate
   const rate = (route === "EV" && vehicle === "EV") ? 0.27 : 0.23;
   return Number((basePay * rate).toFixed(2));
 }

@@ -9,7 +9,9 @@ import {
   Lock,
   Download,
   ChevronRight,
-  Loader2
+  Loader2,
+  LogOut,
+  User as UserIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -31,37 +33,53 @@ import { DashboardView } from "@/components/dashboard/DashboardView";
 import { EmployeeManager } from "@/components/employees/EmployeeManager";
 import { PayrollRunsView } from "@/components/payroll/PayrollRunsView";
 import { RouteTrackerView } from "@/components/payroll/RouteTrackerView";
+import { LoginView } from "@/components/auth/LoginView";
+import { MyPaystubsView } from "@/components/employees/MyPaystubsView";
 
 import { 
   useFirestore, 
   useCollection, 
+  useDoc,
   useMemoFirebase,
   updateDocumentNonBlocking,
   setDocumentNonBlocking,
   deleteDocumentNonBlocking,
   useAuth,
-  initiateAnonymousSignIn
+  useUser
 } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 
-type ActiveView = "dashboard" | "employees" | "payroll" | "routes";
+type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "my-stubs";
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
   const { toast } = useToast();
   const db = useFirestore();
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
 
-  // Ensure user is signed in for Firestore access
-  useEffect(() => {
-    initiateAnonymousSignIn(auth);
-  }, [auth]);
+  // Role Checks
+  const adminDocRef = useMemoFirebase(() => user ? doc(db, "roles_admin", user.uid) : null, [db, user]);
+  const { data: adminRole, isLoading: adminLoading } = useDoc(adminDocRef);
   
-  // Firestore Subscriptions
-  const employeesQuery = useMemoFirebase(() => collection(db, "employees"), [db]);
+  const employeeDocRef = useMemoFirebase(() => user ? doc(db, "employees", user.uid) : null, [db, user]);
+  const { data: employeeProfile, isLoading: profileLoading } = useDoc<Employee>(employeeDocRef);
+
+  const isAdmin = !!adminRole;
+  const isEmployee = !!employeeProfile && !isAdmin;
+
+  // Set initial view based on role
+  useEffect(() => {
+    if (isAdmin) setActiveView("dashboard");
+    else if (isEmployee) setActiveView("my-stubs");
+  }, [isAdmin, isEmployee]);
+  
+  // Firestore Subscriptions (Admins only for general collections)
+  const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
   const { data: employeesData, isLoading: empsLoading } = useCollection<Employee>(employeesQuery);
   
-  const routesQuery = useMemoFirebase(() => collection(db, "routeTrackerRows"), [db]);
+  const routesQuery = useMemoFirebase(() => isAdmin ? collection(db, "routeTrackerRows") : null, [db, isAdmin]);
   const { data: routesData, isLoading: routesLoading } = useCollection<RouteTrackerRow>(routesQuery);
 
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
@@ -71,10 +89,10 @@ export default function AppShell() {
   const routeTracker = (routesData || []) as RouteTrackerRow[];
 
   useEffect(() => {
-    if (employees.length > 0) {
+    if (isAdmin && employees.length > 0) {
       setPayrollItems(employees.map(e => createPayrollItem(e, payrollRun, routeTracker)));
     }
-  }, [employees, payrollRun, routeTracker]);
+  }, [employees, payrollRun, routeTracker, isAdmin]);
 
   const payrollSummary = useMemo(() => {
     const totals = payrollItems.map(computeTotals);
@@ -176,20 +194,31 @@ export default function AppShell() {
     });
   };
 
-  const navItems = [
+  const handleSignOut = () => {
+    signOut(auth);
+    setActiveView("dashboard");
+  };
+
+  const navItems = isAdmin ? [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "employees", label: "Employees", icon: Users },
     { id: "payroll", label: "Payroll Runs", icon: Receipt },
     { id: "routes", label: "Route Tracker", icon: Route },
+  ] : [
+    { id: "my-stubs", label: "My Paystubs", icon: Receipt },
   ];
 
-  if (empsLoading || routesLoading) {
+  if (isUserLoading || adminLoading || profileLoading) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Synchronizing System Data...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Authenticating Session...</p>
       </div>
     );
+  }
+
+  if (!user) {
+    return <LoginView />;
   }
 
   return (
@@ -230,12 +259,26 @@ export default function AppShell() {
           </div>
           
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" className="rounded-xl h-9 border-slate-200 font-bold text-[10px] uppercase tracking-wider" onClick={exportCsv}>
-              <Download className="mr-2 h-3 w-3" /> Export
-            </Button>
-            <Button size="sm" className="rounded-xl h-9 bg-accent hover:bg-accent/90 text-white font-bold text-[10px] uppercase tracking-wider" onClick={finalizeRun} disabled={payrollRun.status === "Finalized"}>
-              <Lock className="mr-2 h-3 w-3" /> Finalize
-            </Button>
+            {isAdmin && (
+              <>
+                <Button variant="outline" size="sm" className="rounded-xl h-9 border-slate-200 font-bold text-[10px] uppercase tracking-wider" onClick={exportCsv}>
+                  <Download className="mr-2 h-3 w-3" /> Export
+                </Button>
+                <Button size="sm" className="rounded-xl h-9 bg-accent hover:bg-accent/90 text-white font-bold text-[10px] uppercase tracking-wider" onClick={finalizeRun} disabled={payrollRun.status === "Finalized"}>
+                  <Lock className="mr-2 h-3 w-3" /> Finalize
+                </Button>
+              </>
+            )}
+            <div className="h-8 w-px bg-slate-200 mx-2" />
+            <div className="flex items-center gap-3 pl-2">
+              <div className="text-right hidden sm:block">
+                <p className="text-[10px] font-black text-slate-900 uppercase leading-none">{user.email?.split('@')[0]}</p>
+                <p className="text-[9px] font-bold text-slate-400 uppercase">{isAdmin ? "Administrator" : "Employee"}</p>
+              </div>
+              <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-slate-400 hover:text-rose-600 hover:bg-rose-50" onClick={handleSignOut}>
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -244,41 +287,45 @@ export default function AppShell() {
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">System</span>
         <ChevronRight className="h-3 w-3 text-slate-300" />
         <h2 className="text-[10px] font-black uppercase tracking-widest text-primary">
-          {activeView === "payroll" ? "Payroll Runs" : activeView === "routes" ? "Route Tracker" : activeView.toUpperCase()}
+          {activeView === "payroll" ? "Payroll Runs" : activeView === "routes" ? "Route Tracker" : activeView === "my-stubs" ? "My Statements" : activeView.toUpperCase()}
         </h2>
       </div>
 
       <main className="flex-1 p-8 overflow-x-hidden">
         <div className="max-w-[1600px] mx-auto">
-          {activeView === "dashboard" && (
-            <DashboardView summary={payrollSummary} />
-          )}
-          {activeView === "employees" && (
-            <EmployeeManager 
-              employees={employees} 
-              onAddEmployee={handleAddEmployee}
-              onUpdateEmployee={handleUpdateEmployee}
-              onDeleteEmployee={handleDeleteEmployee}
-            />
-          )}
-          {activeView === "payroll" && (
-            <PayrollRunsView 
-              payrollRun={payrollRun} 
-              setPayrollRun={setPayrollRun}
-              payrollItems={payrollItems}
-              setPayrollItems={setPayrollItems}
-              employees={employees}
-              routeTracker={routeTracker}
-            />
-          )}
-          {activeView === "routes" && (
-            <RouteTrackerView 
-              routeTracker={routeTracker} 
-              onAddRoute={handleAddRoute}
-              onUpdateRoute={handleUpdateRoute}
-              onDeleteRoute={handleDeleteRoute}
-              employees={employees}
-            />
+          {isAdmin ? (
+            <>
+              {activeView === "dashboard" && <DashboardView summary={payrollSummary} />}
+              {activeView === "employees" && (
+                <EmployeeManager 
+                  employees={employees} 
+                  onAddEmployee={handleAddEmployee}
+                  onUpdateEmployee={handleUpdateEmployee}
+                  onDeleteEmployee={handleDeleteEmployee}
+                />
+              )}
+              {activeView === "payroll" && (
+                <PayrollRunsView 
+                  payrollRun={payrollRun} 
+                  setPayrollRun={setPayrollRun}
+                  payrollItems={payrollItems}
+                  setPayrollItems={setPayrollItems}
+                  employees={employees}
+                  routeTracker={routeTracker}
+                />
+              )}
+              {activeView === "routes" && (
+                <RouteTrackerView 
+                  routeTracker={routeTracker} 
+                  onAddRoute={handleAddRoute}
+                  onUpdateRoute={handleUpdateRoute}
+                  onDeleteRoute={handleDeleteRoute}
+                  employees={employees}
+                />
+              )}
+            </>
+          ) : (
+            <MyPaystubsView employee={employeeProfile as Employee} />
           )}
         </div>
       </main>
