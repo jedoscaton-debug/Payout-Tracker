@@ -10,14 +10,14 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { Employee, PayrollItem, PayrollRun } from "@/app/lib/types";
-import { FileText, Download, Calendar, Search } from "lucide-react";
+import { FileText, Receipt, Loader2 } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collectionGroup, query, where, collection } from "firebase/firestore";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { PaystubPreview } from "@/components/payroll/PaystubPreview";
 
 interface MyPaystubsViewProps {
-  employee: Employee;
+  employee: Employee | null;
 }
 
 export function MyPaystubsView({ employee }: MyPaystubsViewProps) {
@@ -25,16 +25,31 @@ export function MyPaystubsView({ employee }: MyPaystubsViewProps) {
   const [selectedRun, setSelectedRun] = useState<PayrollRun | null>(null);
   const db = useFirestore();
 
+  // Safely extract employee ID for the query
+  const employeeId = employee?.id;
+
   // Fetch all payroll items across all runs for this employee
   const itemsQuery = useMemoFirebase(() => 
-    query(collectionGroup(db, "payrollItems"), where("employeeId", "==", employee.id)), 
-    [db, employee.id]
+    employeeId ? query(collectionGroup(db, "payrollItems"), where("employeeId", "==", employeeId)) : null, 
+    [db, employeeId]
   );
-  const { data: paystubs, isLoading } = useCollection<PayrollItem>(itemsQuery);
+  const { data: paystubs, isLoading: itemsLoading } = useCollection<PayrollItem>(itemsQuery);
 
   // Fetch all payroll runs to associate dates
   const runsQuery = useMemoFirebase(() => collection(db, "payrollRuns"), [db]);
-  const { data: runs } = useCollection<PayrollRun>(runsQuery);
+  const { data: runs, isLoading: runsLoading } = useCollection<PayrollRun>(runsQuery);
+
+  if (!employee) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center animate-in fade-in duration-500">
+        <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4">
+          <Receipt className="h-8 w-8" />
+        </div>
+        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter">Profile Not Found</h3>
+        <p className="text-sm text-slate-500 max-w-xs mt-2 font-medium">Your account is authenticated, but no employee record matches your ID. Please contact your system administrator.</p>
+      </div>
+    );
+  }
 
   const handlePreview = (item: PayrollItem) => {
     const run = (runs || []).find(r => r.id === item.payrollRunId);
@@ -43,6 +58,8 @@ export function MyPaystubsView({ employee }: MyPaystubsViewProps) {
       setPreviewItem(item);
     }
   };
+
+  const isLoading = itemsLoading || runsLoading;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -59,7 +76,7 @@ export function MyPaystubsView({ employee }: MyPaystubsViewProps) {
           <CardContent className="p-0">
             {isLoading ? (
               <div className="p-12 flex justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-slate-200" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
               </div>
             ) : !paystubs || paystubs.length === 0 ? (
               <div className="p-12 text-center">
@@ -123,5 +140,3 @@ export function MyPaystubsView({ employee }: MyPaystubsViewProps) {
     </div>
   );
 }
-
-import { Loader2 } from "lucide-react";

@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Loader2,
   LogOut,
-  User as UserIcon
+  ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -77,10 +77,10 @@ export default function AppShell() {
   
   // Firestore Subscriptions (Admins only for general collections)
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
-  const { data: employeesData, isLoading: empsLoading } = useCollection<Employee>(employeesQuery);
+  const { data: employeesData } = useCollection<Employee>(employeesQuery);
   
   const routesQuery = useMemoFirebase(() => isAdmin ? collection(db, "routeTrackerRows") : null, [db, isAdmin]);
-  const { data: routesData, isLoading: routesLoading } = useCollection<RouteTrackerRow>(routesQuery);
+  const { data: routesData } = useCollection<RouteTrackerRow>(routesQuery);
 
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
@@ -199,15 +199,6 @@ export default function AppShell() {
     setActiveView("dashboard");
   };
 
-  const navItems = isAdmin ? [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "employees", label: "Employees", icon: Users },
-    { id: "payroll", label: "Payroll Runs", icon: Receipt },
-    { id: "routes", label: "Route Tracker", icon: Route },
-  ] : [
-    { id: "my-stubs", label: "My Paystubs", icon: Receipt },
-  ];
-
   if (isUserLoading || adminLoading || profileLoading) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
@@ -220,6 +211,35 @@ export default function AppShell() {
   if (!user) {
     return <LoginView />;
   }
+
+  // Handle users that are neither admin nor have an employee profile
+  if (!isAdmin && !isEmployee && !profileLoading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-3xl bg-rose-50 text-rose-500">
+            <ShieldAlert className="h-10 w-10" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Access Pending</h1>
+            <p className="text-sm text-slate-500 font-medium">Your account ({user.email}) is not yet registered in the workforce directory. Please contact your administrator to set up your profile.</p>
+          </div>
+          <Button variant="outline" className="rounded-xl h-12 w-full font-bold uppercase tracking-wider" onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" /> Sign Out
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const navItems = isAdmin ? [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "employees", label: "Employees", icon: Users },
+    { id: "payroll", label: "Payroll Runs", icon: Receipt },
+    { id: "routes", label: "Route Tracker", icon: Route },
+  ] : [
+    { id: "my-stubs", label: "My Paystubs", icon: Receipt },
+  ];
 
   return (
     <div className="min-h-screen w-full bg-slate-50/50 flex flex-col">
@@ -325,7 +345,7 @@ export default function AppShell() {
               )}
             </>
           ) : (
-            <MyPaystubsView employee={employeeProfile as Employee} />
+            <MyPaystubsView employee={employeeProfile || null} />
           )}
         </div>
       </main>
