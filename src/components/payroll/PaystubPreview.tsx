@@ -73,7 +73,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg">
              <svg viewBox="0 0 100 100" className="h-6 w-6 fill-white">
               <circle cx="50" cy="50" r="40" fill="#4461B5"/>
-              <text x="35" y="68" style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '50px' }} fill="white">S</text>
+              <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="50px" fill="white">S</text>
             </svg>
           </div>
           <div>
@@ -98,7 +98,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl">
                <svg viewBox="0 0 100 100" className="h-10 w-10 fill-white">
                 <circle cx="50" cy="50" r="40" fill="#4461B5"/>
-                <text x="35" y="68" style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '50px' }} fill="white">S</text>
+                <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="50px" fill="white">S</text>
               </svg>
             </div>
             <div className="text-center">
