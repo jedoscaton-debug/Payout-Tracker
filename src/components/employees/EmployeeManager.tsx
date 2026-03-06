@@ -22,8 +22,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Employee } from "@/app/lib/types";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Shield, UserMinus, ShieldAlert, Key } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Shield, UserMinus, Key, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmployeeManagerProps {
   employees: Employee[];
@@ -50,9 +51,10 @@ export function EmployeeManager({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { toast } = useToast();
   
   const [newAccess, setNewAccess] = useState({
-    id: "",
     username: "",
   });
 
@@ -66,16 +68,37 @@ export function EmployeeManager({
     (isRoleManagement ? (e.fullName || (e as any).username || e.id) : e.fullName).toLowerCase().includes(search.toLowerCase())
   );
 
+  const generateUID = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 12; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const handleCopy = (id: string) => {
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    toast({ title: "UID Copied", description: "System UID copied to clipboard." });
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const handleSubmitAccess = (e: React.FormEvent) => {
     e.preventDefault();
+    const generatedId = generateUID();
     onAddEmployee({
-      id: newAccess.id,
-      fullName: newAccess.username, // Using fullName prop to carry username for the Generic Handler
+      id: generatedId,
+      fullName: newAccess.username, // Generic handler uses fullName for display
       defaultDailyRate: "Varies",
       paymentMethod: "Direct Deposit"
     });
-    setNewAccess({ id: "", username: "" });
+    setNewAccess({ username: "" });
     setIsAddOpen(false);
+    toast({ 
+      title: "Access Node Created", 
+      description: `User "${newAccess.username}" registered with UID: ${generatedId}. Provide this UID as their password.`,
+    });
   };
 
   const handleSubmitStaff = (e: React.FormEvent) => {
@@ -140,12 +163,9 @@ export function EmployeeManager({
               {isRoleManagement ? (
                 <form onSubmit={handleSubmitAccess} className="space-y-6 mt-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">User Name</Label>
-                    <Input required placeholder="e.g. alemer" className="h-12 rounded-xl" value={newAccess.username} onChange={(e) => setNewAccess({...newAccess, username: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">User UID (Node ID)</Label>
-                    <Input required placeholder="pEdBZ1Y8AbeTrUKSC4..." className="h-12 rounded-xl font-mono text-[11px]" value={newAccess.id} onChange={(e) => setNewAccess({...newAccess, id: e.target.value})} />
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Username</Label>
+                    <Input required placeholder="e.g. alemer" className="h-12 rounded-xl" value={newAccess.username} onChange={(e) => setNewAccess({username: e.target.value})} />
+                    <p className="text-[10px] font-medium text-slate-400 italic">The System UID (Password) will be generated automatically upon registration.</p>
                   </div>
                   <DialogFooter className="pt-4">
                     <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold">Authorize Access Node</Button>
@@ -182,11 +202,11 @@ export function EmployeeManager({
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50/80 border-b">
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{isRoleManagement ? "User Name" : "Staff Member"}</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{isRoleManagement ? "Username" : "Staff Member"}</th>
                 {isRoleManagement ? (
                   <>
                     <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Tier</th>
-                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Node ID</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">System UID (Password)</th>
                   </>
                 ) : (
                   <>
@@ -208,7 +228,20 @@ export function EmployeeManager({
                         <td className="px-8 py-5">
                           {isSystemAdmin ? <Badge className="rounded-full bg-slate-900 text-white text-[10px] font-black px-3 py-1 uppercase"><Shield className="mr-1 h-3 w-3" /> Admin</Badge> : <Badge variant="outline" className="text-[10px] font-bold uppercase">Standard</Badge>}
                         </td>
-                        <td className="px-8 py-5 font-mono text-[10px] text-slate-400"><Key className="mr-2 inline h-3 w-3" />{emp.id}</td>
+                        <td className="px-8 py-5 font-mono text-[10px] text-slate-400">
+                          <div className="flex items-center gap-2">
+                            <Key className="h-3 w-3" />
+                            <span>{emp.id}</span>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 text-slate-300 hover:text-primary"
+                              onClick={() => handleCopy(emp.id)}
+                            >
+                              {copiedId === emp.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                            </Button>
+                          </div>
+                        </td>
                       </>
                     ) : (
                       <>
@@ -240,7 +273,9 @@ export function EmployeeManager({
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white">
-          <DialogHeader><DialogTitle className="sr-only">Edit Record</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Edit Record</DialogTitle>
+          </DialogHeader>
           {editingEmployee && (
             <form onSubmit={handleSubmitEdit} className="space-y-6 mt-4">
               <div className="space-y-2"><Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label><Input required value={editingEmployee.fullName} onChange={(e) => setEditingEmployee({...editingEmployee, fullName: e.target.value})} /></div>

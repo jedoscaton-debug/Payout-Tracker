@@ -8,14 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/firebase";
 import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
-import { Loader2, ShieldCheck, User, Lock, UserPlus, AlertCircle } from "lucide-react";
+import { Loader2, ShieldCheck, User, Lock, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function LoginView() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
   const { toast } = useToast();
   const auth = useAuth();
 
@@ -25,8 +24,8 @@ export function LoginView() {
     if (password.length < 6) {
       toast({
         variant: "destructive",
-        title: "Weak System UID",
-        description: "The System UID must be at least 6 characters long for security purposes.",
+        title: "Invalid System UID",
+        description: "The System UID must be exactly 12 characters as provided by your administrator.",
       });
       return;
     }
@@ -37,33 +36,37 @@ export function LoginView() {
     const email = `${username.toLowerCase().trim()}@system.oriented`;
     
     try {
-      if (isSignUp) {
-        await initiateEmailSignUp(auth, email, password);
-        toast({
-          title: "Registration Success",
-          description: "System node created. Waiting for admin authorization."
-        });
-      } else {
-        // Attempt sign in
+      // Automatic Login & Registration Flow
+      // Step 1: Attempt to Sign In
+      try {
         await initiateEmailSignIn(auth, email, password);
         toast({
           title: "Access Granted",
           description: "Authenticated successfully. Syncing roles..."
         });
+      } catch (signInError: any) {
+        // Step 2: If user doesn't exist, attempt automatic background registration
+        if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
+          // Note: We don't pre-check existence to satisfy "no sign up" requirement
+          // The AppShell will handle "Access Pending" if the node isn't registered by Admin
+          await initiateEmailSignUp(auth, email, password);
+          toast({
+            title: "First-Time Initialization",
+            description: "System node created. Syncing with administrator board..."
+          });
+        } else {
+          throw signInError;
+        }
       }
     } catch (error: any) {
-      // Do not use console.error() to prevent triggering unhandled exception overlays
       let message = "An error occurred during authentication.";
       
-      // Handle Firebase error codes to prevent system-level crashes
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        message = isSignUp 
-          ? "This node may already be registered. Try Logging In instead." 
-          : "Invalid username or system UID. If this is your first time, please Register your node first.";
-      } else if (error.code === 'auth/weak-password') {
-        message = "The System UID must be at least 6 characters long.";
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        message = "Incorrect System UID. Please verify your access key with an administrator.";
       } else if (error.code === 'auth/email-already-in-use') {
-        message = "This username is already registered in the system. Try logging in.";
+        message = "This username is already initialized. Please use the correct System UID.";
+      } else if (error.code === 'auth/network-request-failed') {
+        message = "Network error. Please check your connection.";
       }
 
       toast({
@@ -95,12 +98,10 @@ export function LoginView() {
         <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-10 pb-8 text-center">
             <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-              {isSignUp ? "Register Node" : "Secure Authentication"}
+              Secure Authentication
             </CardTitle>
             <CardDescription className="text-xs font-medium text-slate-500 mt-2">
-              {isSignUp 
-                ? "First-time setup: Create your professional system identity." 
-                : "Enter your professional credentials to manage payroll logs."}
+              Enter your professional credentials to manage payroll logs. No registration required.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-10 pt-8">
@@ -121,14 +122,14 @@ export function LoginView() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">System UID (Password)</Label>
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">System UID (Access Key)</Label>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input 
                     required
                     type="password"
-                    placeholder="Minimum 6 characters"
+                    placeholder="Enter 12-character key"
                     className="h-14 rounded-2xl pl-12 border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -136,7 +137,7 @@ export function LoginView() {
                 </div>
                 {password.length > 0 && password.length < 6 && (
                   <p className="text-[9px] font-bold text-rose-500 uppercase px-1 mt-1 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> UID too short (Min 6 chars)
+                    <AlertCircle className="h-3 w-3" /> Key invalid (Min 6 chars)
                   </p>
                 )}
               </div>
@@ -145,32 +146,19 @@ export function LoginView() {
                 <Button type="submit" className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-xl shadow-primary/20 hover:-translate-y-0.5 transition-all" disabled={isLoading}>
                   {isLoading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : isSignUp ? (
-                    <>
-                      <UserPlus className="mr-2 h-5 w-5" /> Register Account
-                    </>
                   ) : (
                     <>
                       <ShieldCheck className="mr-2 h-5 w-5" /> Authenticate Account
                     </>
                   )}
                 </Button>
-                
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  className="w-full text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary hover:bg-slate-50 rounded-xl"
-                  onClick={() => setIsSignUp(!isSignUp)}
-                >
-                  {isSignUp ? "Already registered? Log In" : "Need to register for the first time? Sign Up"}
-                </Button>
               </div>
             </form>
           </CardContent>
         </Card>
         
-        <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          Authorized Personnel Only. Contact system administrator for access.
+        <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+          Authorized Personnel Only. Account initialization occurs automatically upon first authenticated login.
         </p>
       </div>
     </div>
