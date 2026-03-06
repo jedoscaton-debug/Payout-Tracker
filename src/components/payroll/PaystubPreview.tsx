@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PayrollItem, PayrollRun } from "@/app/lib/types";
@@ -23,37 +24,37 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
 
   const handleDownloadPDF = () => {
     toast({
-      title: "Generating PDF...",
-      description: "Please select 'Save as PDF' in the destination dropdown of the print dialog.",
+      title: "Opening Print Dialog",
+      description: "Select 'Save as PDF' in your browser's print destination to download this paystub.",
     });
-    setTimeout(() => {
-      window.print();
-    }, 500);
+    window.print();
   };
 
   const handleShare = async () => {
-    const shareData = {
-      title: `Paystub - ${item.employeeNameSnapshot}`,
-      text: `Paystub for ${item.employeeNameSnapshot} for period ${shortDate(run.payPeriodStart)} to ${shortDate(run.payPeriodEnd)}. Net Pay: ${currency(totals.netPay)}`,
-      url: window.location.href,
-    };
-
+    const shareText = `Paystub for ${item.employeeNameSnapshot} for period ${shortDate(run.payPeriodStart)} to ${shortDate(run.payPeriodEnd)}. Net Pay: ${currency(totals.netPay)}`;
+    
     const copyToClipboard = () => {
-      navigator.clipboard.writeText(`${shareData.text}\nView at: ${shareData.url}`);
+      navigator.clipboard.writeText(`${shareText}\nLink: ${window.location.href}`);
       toast({
-        title: "Link Copied!",
-        description: "Paystub details and link copied to clipboard.",
+        title: "Copied to Clipboard",
+        description: "Paystub details and link copied. You can now paste them into a message.",
       });
     };
 
+    // Environment check for Share API
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share(shareData);
-      } catch (err) {
-        // Fallback if the user cancels or if permission is denied (NotAllowedError)
+        await navigator.share({
+          title: `Paystub - ${item.employeeNameSnapshot}`,
+          text: shareText,
+          url: window.location.href,
+        });
+      } catch (err: any) {
+        // If it's a permission error or user cancel, we fall back to clipboard
         copyToClipboard();
       }
     } else {
+      // Fallback for browsers that don't support Web Share API
       copyToClipboard();
     }
   };
@@ -172,7 +173,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
         </div>
       </ScrollArea>
 
-      <div className="hidden flex-col gap-4 border-l border-slate-200 bg-white p-6 lg:flex print:hidden">
+      <div className="flex flex-col gap-4 border-l border-slate-200 bg-white p-6 print:hidden">
         <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Quick Actions</h3>
         <Button className="w-full rounded-2xl h-12 bg-primary font-semibold hover:shadow-lg transition-all" onClick={handlePrint}>
           <Printer className="mr-2 h-4 w-4" /> Print Paystub
