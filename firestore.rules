@@ -13,16 +13,20 @@ service cloud.firestore {
     }
 
     match /employees/{employeeId} {
-      allow read: if isAdmin() || isOwner(employeeId);
+      // Allow all authenticated users to read the directory to prevent race conditions during bootstrap
+      allow read: if request.auth != null;
       allow write: if isAdmin();
     }
 
     match /routeTrackerRows/{routeTrackerRowId} {
-      allow read, write: if isAdmin();
+      // Allow all authenticated users to read logs for auditing visibility
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
 
     match /payrollRuns/{payrollRunId} {
-      allow read: if isAdmin();
+      // Allow all authenticated users to read runs metadata
+      allow read: if request.auth != null;
       allow write: if isAdmin();
       
       match /payrollItems/{payrollItemId} {
