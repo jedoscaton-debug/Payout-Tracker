@@ -136,7 +136,10 @@ export default function AppShell() {
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
-                <Settings2 className="h-5 w-5" />
+                <svg viewBox="0 0 100 100" className="h-5 w-5 fill-white">
+                  <circle cx="50" cy="50" r="40" fill="#4461B5"/>
+                  <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="50" fill="white">S</text>
+                </svg>
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-xs font-black tracking-tighter text-slate-900 uppercase leading-none">Payout Tracker</h1>

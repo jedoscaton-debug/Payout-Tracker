@@ -79,13 +79,36 @@ export function PayrollRunsView({
     });
   };
 
+  const headers = [
+    "Employee Name",
+    "Daily Rate",
+    "Earning Description",
+    "Earning Amount",
+    "Other Earning Description",
+    "Other Earning Amount",
+    "Deductions 1",
+    "Amt 1",
+    "Deductions 2",
+    "Amt 2",
+    "Deductions 3",
+    "Amt 3",
+    "Deductions 4",
+    "Amt 4",
+    "Total Deductions",
+    "Total Earning",
+    "Total Gross",
+    "Pay Period",
+    "Pay Date",
+    "Actions"
+  ];
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
           <div className="flex items-center gap-2">
             <div className="h-6 w-1 bg-primary rounded-full" />
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Active Run Period Configuration</CardTitle>
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Active Run Configuration</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="p-8">
@@ -103,7 +126,7 @@ export function PayrollRunsView({
               <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payDate} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payDate: e.target.value }))} />
             </div>
             <Button className="h-12 w-full rounded-2xl bg-primary/10 text-primary hover:bg-primary font-bold transition-all border-none" variant="outline" onClick={refreshFromRoutes} disabled={payrollRun.status === "Finalized"}>
-              <RefreshCw className="mr-2 h-4 w-4" /> Rebuild All Earnings
+              <RefreshCw className="mr-2 h-4 w-4" /> Sync Route Earnings
             </Button>
           </div>
         </CardContent>
@@ -112,30 +135,14 @@ export function PayrollRunsView({
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto relative">
-            <div className="min-w-[1900px]">
+            <div className="min-w-[2400px]">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80">
                     <th className="sticky left-0 z-30 bg-white border-b border-r border-slate-200 px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 whitespace-nowrap shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                      Employee
+                      {headers[0]}
                     </th>
-                    {[
-                      "Daily Rate",
-                      "Earnings Breakdown",
-                      "Earning Amount",
-                      "Other Earnings",
-                      "Other Amount",
-                      "Deduction 1",
-                      "Amt 1",
-                      "Deduction 2",
-                      "Amt 2",
-                      "Deduction 3",
-                      "Amt 3",
-                      "Deduction 4",
-                      "Amt 4",
-                      "Net Total",
-                      "Actions",
-                    ].map((header) => (
+                    {headers.slice(1).map((header) => (
                       <th 
                         key={header} 
                         className="border-b border-slate-100 px-4 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap"
@@ -183,14 +190,14 @@ export function PayrollRunsView({
                               <Input
                                 key={line.id}
                                 value={line.description}
-                                placeholder="Other earning..."
+                                placeholder="Earning label..."
                                 className="h-8 text-[11px] rounded-lg border-slate-100 font-medium"
                                 onChange={(e) => updateItem(item.id, (c) => ({ ...c, otherEarningsLines: c.otherEarningsLines.map(x => x.id === line.id ? { ...x, description: e.target.value } : x) }))}
                                 disabled={payrollRun.status === "Finalized"}
                               />
                             ))}
                             <Button variant="ghost" size="sm" className="h-6 rounded-lg text-[10px] font-bold text-primary hover:bg-primary/10" onClick={() => addOtherEarning(item.id)} disabled={payrollRun.status === "Finalized"}>
-                              <Plus className="mr-1 h-3 w-3" /> Add Item
+                              <Plus className="mr-1 h-3 w-3" /> Add Other
                             </Button>
                           </div>
                         </td>
@@ -230,10 +237,18 @@ export function PayrollRunsView({
                             </td>
                           </React.Fragment>
                         ))}
+                        <td className="px-4 py-6 font-black text-rose-600 text-xs">{currency(totals.totalDeductions)}</td>
+                        <td className="px-4 py-6 font-black text-slate-900 text-xs">{currency(totals.totalEarnings)}</td>
                         <td className="px-4 py-6">
-                          <div className="bg-indigo-600 text-white rounded-xl px-4 py-2 font-black text-xs shadow-lg shadow-indigo-200">
-                            {currency(totals.netPay)}
+                          <div className="bg-primary text-white rounded-xl px-4 py-2 font-black text-xs shadow-lg shadow-primary/20">
+                            {currency(totals.grossPay)}
                           </div>
+                        </td>
+                        <td className="px-4 py-6 text-[10px] font-bold text-slate-400 whitespace-nowrap">
+                          {shortDate(payrollRun.payPeriodStart)} - {shortDate(payrollRun.payPeriodEnd)}
+                        </td>
+                        <td className="px-4 py-6 text-[10px] font-bold text-slate-400 whitespace-nowrap">
+                          {payrollRun.payDate}
                         </td>
                         <td className="px-4 py-6">
                           <div className="flex flex-col gap-2">

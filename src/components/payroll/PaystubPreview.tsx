@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { PayrollItem, PayrollRun } from "@/app/lib/types";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,6 +17,12 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
   const totals = computeTotals(item);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  const mmddyy = useMemo(() => {
+    const dateParts = run.payDate.split('-');
+    if (dateParts.length < 3) return "000000";
+    return dateParts[1] + dateParts[2] + dateParts[0].slice(2);
+  }, [run.payDate]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -31,9 +37,6 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
       // @ts-ignore
       const html2pdf = (await import('html2pdf.js')).default;
       
-      // Format Date for filename: YYYY-MM-DD -> MMDDYY
-      const dateParts = run.payDate.split('-');
-      const mmddyy = dateParts[1] + dateParts[2] + dateParts[0].slice(2);
       const fileName = `${item.employeeNameSnapshot.replace(/\s+/g, ' ')}_${mmddyy}.pdf`;
       
       const opt = {
@@ -52,10 +55,13 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
         pagebreak: { mode: 'avoid-all' }
       };
 
-      await html2pdf().from(element).set(opt).save();
+      // Add a slight delay to ensure images render
+      setTimeout(async () => {
+        await html2pdf().from(element).set(opt).save();
+        setIsDownloading(false);
+      }, 300);
     } catch (error) {
       console.error("PDF generation failed:", error);
-    } finally {
       setIsDownloading(false);
     }
   };
@@ -111,11 +117,14 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
       <div className="no-print flex items-center justify-between p-6 border-b bg-slate-50/50 sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg">
-            <span className="text-xl font-black">S</span>
+             <svg viewBox="0 0 100 100" className="h-6 w-6 fill-white">
+              <circle cx="50" cy="50" r="40" fill="#4461B5"/>
+              <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="50" fill="white">S</text>
+            </svg>
           </div>
           <div>
-            <h3 className="text-sm font-black uppercase tracking-tighter">Payslip Statement</h3>
-            <p className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">System Oriented LLC</p>
+            <h3 className="text-sm font-black uppercase tracking-tighter text-slate-900">Payslip Statement</h3>
+            <p className="text-[10px] text-slate-500 font-bold tracking-wider uppercase">System Oriented LLC</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -150,12 +159,15 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
         >
           {/* Header Branding */}
           <div className="flex flex-col items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl">
-               <span className="text-2xl font-black">S</span>
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl">
+               <svg viewBox="0 0 100 100" className="h-10 w-10 fill-white">
+                <circle cx="50" cy="50" r="40" fill="#4461B5"/>
+                <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="50" fill="white">S</text>
+              </svg>
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-black tracking-tight uppercase text-slate-900 leading-none">SYSTEM ORIENTED LLC</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Upper Marlboro, MD</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Upper Marlboro, MD</p>
             </div>
           </div>
 
@@ -198,8 +210,8 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
           <div className="flex flex-col">
             <h2 className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 mb-2">Payslip Breakdown</h2>
             
-            <div className="border-2 border-slate-900 rounded-xl overflow-hidden flex flex-col bg-white shadow-sm min-h-[300px] relative">
-              {/* Vertical Divider Lines (Absolute positioning for continuity) */}
+            <div className="border-2 border-slate-900 rounded-xl overflow-hidden flex flex-col bg-white shadow-sm min-h-[350px] relative">
+              {/* Vertical Divider Lines (Continuous) */}
               <div className="absolute top-0 bottom-0 left-[calc(50%-90px)] w-0.5 bg-slate-900 z-20" />
               <div className="absolute top-0 bottom-0 left-[50%] w-0.5 bg-slate-900 z-20" />
               <div className="absolute top-0 bottom-0 right-[90px] w-0.5 bg-slate-900 z-20" />
@@ -267,29 +279,17 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             </div>
           </div>
 
-          {/* Statement Footer Summary */}
+          {/* Statement Footer Summary - Compact Branding Only */}
           <div className="flex flex-col gap-3 mt-auto">
-             <div className="grid grid-cols-3 border-2 border-slate-900 rounded-xl overflow-hidden text-center bg-white shadow-sm">
-                <div className="flex flex-col border-r-2 border-slate-900">
-                  <div className="bg-slate-50 border-b-2 border-slate-900 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-900">Gross Amount</div>
-                  <div className="py-2.5 text-sm font-black text-slate-900">{currency(totals.grossPay)}</div>
-                </div>
-                <div className="flex flex-col border-r-2 border-slate-900">
-                  <div className="bg-slate-50 border-b-2 border-slate-900 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-900">Total Deductions</div>
-                  <div className="py-2.5 text-sm font-black text-rose-600">{currency(totals.totalDeductions)}</div>
-                </div>
-                <div className="flex flex-col bg-slate-900 text-white">
-                  <div className="border-b-2 border-white/20 py-1.5 text-[9px] font-black uppercase tracking-[0.3em]">Net Amount</div>
-                  <div className="py-2.5 text-sm font-black">{currency(totals.netPay)}</div>
-                </div>
-             </div>
-
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-t border-slate-100 pt-6">
               <div className="flex items-center gap-2">
                 <div className="h-4 w-4 rounded bg-slate-900" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">SYSTEM ORIENTED OFFICIAL STATEMENT</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">SYSTEM ORIENTED OFFICIAL STATEMENT</span>
               </div>
-              <span className="text-[9px] font-bold text-slate-300 uppercase">Page 1 of 1</span>
+              <div className="flex items-center gap-4">
+                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">ID: {mmddyy}_{item.employeeId.slice(-4)}</span>
+                <span className="text-[9px] font-bold text-slate-300 uppercase">Page 1 of 1</span>
+              </div>
             </div>
           </div>
         </div>
