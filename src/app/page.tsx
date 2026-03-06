@@ -94,11 +94,12 @@ export default function AppShell() {
   const isEmployee = !!employeeProfile;
 
   // 3. System Freshness Check (Bootstrap state)
+  // This ref is public-readable in security rules to avoid permission errors when unauthenticated
   const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
   const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef);
   const isSystemFresh = !bootstrapLoading && !bootstrapDoc;
 
-  const adminsQuery = useMemoFirebase(() => user ? collection(db, "roles_admin") : null, [db, user]);
+  const adminsQuery = useMemoFirebase(() => isAdmin ? collection(db, "roles_admin") : null, [db, isAdmin]);
   const { data: allAdminsData, isLoading: allAdminsLoading } = useCollection(adminsQuery);
   const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
 
@@ -109,12 +110,12 @@ export default function AppShell() {
         setActiveView("dashboard");
       } else if (isEmployee) {
         setActiveView("emp-dashboard");
-      } else if (!isSystemFresh) {
+      } else if (!isSystemFresh && user) {
         // Default view for authenticated users who are not yet linked to an employee record
         setActiveView("emp-profile");
       }
     }
-  }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, bootstrapLoading, isSystemFresh, nodeLoading]);
+  }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, bootstrapLoading, isSystemFresh, nodeLoading, user]);
   
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
   const { data: employeesData } = useCollection<Employee>(employeesQuery);
@@ -300,7 +301,7 @@ export default function AppShell() {
 
   const handleSignOut = () => signOut(auth);
 
-  if (isUserLoading || adminLoading || profileLoading || bootstrapLoading || nodeLoading || allAdminsLoading) {
+  if (isUserLoading || adminLoading || profileLoading || bootstrapLoading || nodeLoading || (isAdmin && allAdminsLoading)) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -314,7 +315,7 @@ export default function AppShell() {
   if (isSystemFresh) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">
-        <div className="w-full max-w-md text-center space-y-6 animate-in fade-in duration-500">
+        <div className="w-full max-md text-center space-y-6 animate-in fade-in duration-500">
           <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
             <Shield className="h-10 w-10" />
           </div>

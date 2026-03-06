@@ -12,6 +12,11 @@ service cloud.firestore {
       return request.auth != null && adminDoc != null && adminDoc.data.role == 'master';
     }
 
+    // Allow anyone to check if the system is fresh (uninitialized)
+    match /roles_admin/first_admin_placeholder {
+      allow read: if true;
+    }
+
     match /system_users/{userId} {
       allow read: if request.auth != null;
       allow write: if isAdmin();

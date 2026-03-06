@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useAuth, useFirestore, updateDocumentNonBlocking } from "@/firebase";
+import { useAuth, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from "@/firebase";
 import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
 import { Loader2, ShieldCheck, User, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { doc, getDoc } from "firebase/firestore";
-import { signOut } from "firebase/auth";
 
 export function LoginView() {
   const [username, setUsername] = useState("");
@@ -20,6 +19,11 @@ export function LoginView() {
   const { toast } = useToast();
   const auth = useAuth();
   const db = useFirestore();
+
+  // Check if system is fresh to allow master login
+  const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
+  const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef);
+  const isSystemFresh = !bootstrapLoading && !bootstrapDoc;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +40,26 @@ export function LoginView() {
     setIsLoading(true);
     
     const systemUid = password.trim();
-    const email = `${systemUid.toLowerCase()}@system.oriented`;
     const cleanUsername = username.toLowerCase().trim();
     
     try {
+      // 0. Handle System Initialization Bypass
+      if (isSystemFresh && cleanUsername === "masteradmin" && systemUid === "STUDIO-MASTER-2026") {
+        const email = "masteradmin@system.oriented";
+        let userCredential;
+        try {
+          userCredential = await initiateEmailSignIn(auth, email, systemUid);
+        } catch {
+          userCredential = await initiateEmailSignUp(auth, email, systemUid);
+        }
+        toast({
+          title: "Master Node Accessed",
+          description: "Proceed to initialize the system."
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // 1. Verify the System UID exists in our registry first
       const userDocRef = doc(db, "system_users", systemUid);
       const userDoc = await getDoc(userDocRef);
@@ -66,11 +86,12 @@ export function LoginView() {
       }
 
       // 2. Perform Authentication
+      const email = `${systemUid.toLowerCase()}@system.oriented`;
       let userCredential;
       try {
         userCredential = await initiateEmailSignIn(auth, email, systemUid);
       } catch (signInError: any) {
-        if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
+        if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-email') {
           // Automatic registration for the first time
           userCredential = await initiateEmailSignUp(auth, email, systemUid);
         } else {
