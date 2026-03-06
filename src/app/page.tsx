@@ -33,28 +33,26 @@ export default function AppShell() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
 
-  const userEmail = user?.email?.toLowerCase().trim();
-
-  // Role and Profile Checks
-  const adminDocRef = useMemoFirebase(() => user ? doc(db, "roles_admin", user.uid) : null, [db, user]);
-  const { data: adminRole, isLoading: adminLoading } = useDoc(adminDocRef, { enabled: !!user });
-  
-  // Master Admin check via email as fallback for bootstrap phase
-  const isMasterByEmail = userEmail === "admin@systemoriented.com" || userEmail === "jedocaton1997@gmail.com";
-  const isAdmin = !!adminRole || isMasterByEmail;
-
-  // Employee Profile Handshake
+  // 1. Core Profile Handshake - Safe to check when user exists
+  const userEmail = useMemo(() => user?.email?.toLowerCase().trim(), [user]);
   const employeeQuery = useMemoFirebase(() => userEmail ? query(collection(db, "employees"), where("email", "==", userEmail)) : null, [db, userEmail]);
   const { data: employeesFound, isLoading: profileLoading } = useCollection<Employee>(employeeQuery, { enabled: !!userEmail });
   const employeeProfile = employeesFound?.[0] || null;
   const isEmployee = !!employeeProfile;
 
-  // System Bootstrap Check - Gated by !!user to prevent permission errors on login screen
+  // 2. Admin Role Check
+  const adminDocRef = useMemoFirebase(() => user ? doc(db, "roles_admin", user.uid) : null, [db, user]);
+  const { data: adminRoleData, isLoading: adminLoading } = useDoc(adminDocRef, { enabled: !!user });
+  
+  const isMasterByEmail = userEmail === "admin@systemoriented.com" || userEmail === "jedocaton1997@gmail.com";
+  const isAdmin = !!adminRoleData || isMasterByEmail;
+
+  // 3. System Bootstrap Check
   const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
   const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef, { enabled: !!user });
   const isSystemFresh = !bootstrapLoading && !bootstrapDoc && !isMasterByEmail && !isAdmin && !isEmployee && user;
 
-  // Redirection Logic
+  // 4. Redirection Logic
   useEffect(() => {
     if (isUserLoading || adminLoading || profileLoading || bootstrapLoading || !user) return;
 
@@ -71,8 +69,8 @@ export default function AppShell() {
     }
   }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, bootstrapLoading, user, activeView]);
   
-  // Guarded Admin Collections - Only query if confirmed admin
-  const shouldLoadAdminData = isAdmin && !adminLoading;
+  // 5. Admin Data Collections
+  const shouldLoadAdminData = isAdmin && !!user;
   
   const employeesQuery = useMemoFirebase(() => shouldLoadAdminData ? collection(db, "employees") : null, [db, shouldLoadAdminData]);
   const { data: employeesData } = useCollection<Employee>(employeesQuery, { enabled: shouldLoadAdminData });
