@@ -39,7 +39,7 @@ import {
   TRUCK_RENTAL_FIXED
 } from "@/app/lib/payroll-utils";
 import { cn } from "@/lib/utils";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Calendar as CalendarIcon, Download } from "lucide-react";
 
 interface RouteTrackerViewProps {
   routeTracker: RouteTrackerRow[];
@@ -65,7 +65,7 @@ export function RouteTrackerView({
   
   const [newRoute, setNewRoute] = useState<Partial<RouteTrackerRow>>({
     route: "",
-    routeType: "IKEA",
+    routeType: "EA",
     vehicleNumber: "",
     date: new Date().toISOString().split('T')[0],
     miles: 0,
@@ -87,7 +87,7 @@ export function RouteTrackerView({
 
   const headers = [
     "Route",
-    "Route Type",
+    "E Type",
     "Vehicle #",
     "Date",
     "Day of Week",
@@ -142,6 +142,57 @@ export function RouteTrackerView({
     });
   }, [filtered]);
 
+  const handleExportAudit = () => {
+    const csvHeaders = [
+      "Route", "Route Type", "Vehicle #", "Date", "Day of Week", 
+      "Miles", "Stops", "Estimated Pay", "Driver", "Helper(s)", 
+      "Driver Pay", "Helper(s) Pay", "Truck Rental", "Mileage Cost", 
+      "Insurance", "Est. Fuel", "Total Expenses", "Net Profit"
+    ];
+
+    const rows = filtered.map(row => {
+      const estRev = estimatePay(row.stops);
+      const dPay = driverPay(row.stops);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops) : 0;
+      const mileageCost = truckRentalMileageCost(row.miles);
+      const fuel = estimateFuel(row.miles);
+      const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
+      const netProfit = estRev - totalExp - dPay - hPay;
+
+      return [
+        row.route,
+        row.routeType,
+        row.vehicleNumber,
+        row.date,
+        getDayOfWeek(row.date),
+        row.miles || 0,
+        row.stops,
+        estRev.toFixed(2),
+        row.driver,
+        row.helper || "",
+        dPay.toFixed(2),
+        hPay.toFixed(2),
+        (row.truckRental || 0).toFixed(2),
+        mileageCost.toFixed(2),
+        (row.insurance || 0).toFixed(2),
+        fuel.toFixed(2),
+        totalExp.toFixed(2),
+        netProfit.toFixed(2)
+      ];
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [csvHeaders.join(","), ...rows.map(r => r.join(","))].join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `route_audit_export_${startDate || 'all'}_to_${endDate || 'all'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSubmitAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (onAddRoute) {
@@ -152,7 +203,7 @@ export function RouteTrackerView({
       setIsAddOpen(false);
       setNewRoute({
         route: "",
-        routeType: "IKEA",
+        routeType: "EA",
         vehicleNumber: "",
         date: new Date().toISOString().split('T')[0],
         miles: 0,
@@ -219,6 +270,14 @@ export function RouteTrackerView({
             />
           </div>
           
+          <Button 
+            variant="outline" 
+            className="rounded-xl h-11 border-slate-200 bg-white font-bold px-6 shadow-sm transition-all hover:bg-slate-50"
+            onClick={handleExportAudit}
+          >
+            <Download className="mr-2 h-4 w-4" /> Export Audit
+          </Button>
+
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-xl h-11 bg-primary px-6 font-bold shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5">
@@ -242,6 +301,7 @@ export function RouteTrackerView({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="EA">EA</SelectItem>
                         <SelectItem value="IKEA">IKEA</SelectItem>
                         <SelectItem value="GAS">GAS</SelectItem>
                         <SelectItem value="EV">EV</SelectItem>
@@ -384,8 +444,8 @@ export function RouteTrackerView({
                     const netProfit = estRev - totalExp - dPay - hPay;
                     
                     return (
-                      <tr key={row.id} className="transition-colors group align-middle h-14 bg-white hover:bg-slate-50">
-                        <td className="sticky left-0 z-30 px-4 py-2 font-bold text-slate-900 text-center whitespace-nowrap border-r-2 border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.05)] bg-white group-hover:bg-slate-50">
+                      <tr key={row.id} className="transition-colors group align-middle h-14 bg-white hover:bg-slate-50/50">
+                        <td className="sticky left-0 z-30 px-4 py-2 font-bold text-slate-900 text-center whitespace-nowrap border-r-2 border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.05)] bg-white group-hover:bg-slate-50/80">
                           {row.route}
                         </td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{row.routeType}</td>
@@ -404,7 +464,7 @@ export function RouteTrackerView({
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200 italic text-slate-400">Included</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(fuel)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(totalExp)}</td>
-                        <td className={cn("px-4 py-2 text-[10px] font-black text-center", netProfit < 0 ? "text-rose-600" : "text-slate-900")}>
+                        <td className={cn("px-4 py-2 text-[10px] font-black text-center border-r border-slate-200", netProfit < 0 ? "text-rose-600" : "text-slate-900")}>
                           {currency(netProfit)}
                         </td>
                         <td className="px-4 py-2 text-center">
@@ -448,7 +508,7 @@ export function RouteTrackerView({
                     <td colSpan={2} className="border-r border-slate-800"></td>
                     <td className="px-3 py-2 text-center border-r border-slate-800">{currency(totals.fuel)}</td>
                     <td className="px-3 py-2 text-center border-r border-slate-800 font-mono">{currency(totals.totalExp)}</td>
-                    <td className="px-4 py-2 text-center bg-slate-800 font-black text-lg">{currency(totals.netProfit)}</td>
+                    <td className="px-4 py-2 text-center bg-slate-800 font-black text-lg border-r border-slate-800">{currency(totals.netProfit)}</td>
                     <td className="bg-slate-900"></td>
                   </tr>
                 </tfoot>
@@ -477,6 +537,7 @@ export function RouteTrackerView({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="EA">EA</SelectItem>
                       <SelectItem value="IKEA">IKEA</SelectItem>
                       <SelectItem value="GAS">GAS</SelectItem>
                       <SelectItem value="EV">EV</SelectItem>
