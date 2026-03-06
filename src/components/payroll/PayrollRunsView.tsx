@@ -1,0 +1,283 @@
+
+"use client";
+
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { FileText, Plus, RefreshCw } from "lucide-react";
+
+import { 
+  Employee, 
+  RouteTrackerRow, 
+  PayrollRun, 
+  PayrollItem 
+} from "@/app/lib/types";
+import { 
+  computeTotals, 
+  currency, 
+  DIRECT_DEPOSIT_FEE
+} from "@/app/lib/payroll-utils";
+import { createPayrollItem } from "@/app/lib/payroll-data-utils";
+
+import { PaystubPreview } from "@/components/payroll/PaystubPreview";
+import { NoteSummarizer } from "@/components/payroll/NoteSummarizer";
+
+interface PayrollRunsViewProps {
+  payrollRun: PayrollRun;
+  setPayrollRun: React.Dispatch<React.SetStateAction<PayrollRun>>;
+  payrollItems: PayrollItem[];
+  setPayrollItems: React.Dispatch<React.SetStateAction<PayrollItem[]>>;
+  employees: Employee[];
+  routeTracker: RouteTrackerRow[];
+}
+
+export function PayrollRunsView({ 
+  payrollRun, 
+  setPayrollRun, 
+  payrollItems, 
+  setPayrollItems,
+  employees,
+  routeTracker
+}: PayrollRunsViewProps) {
+  const [previewItem, setPreviewItem] = useState<PayrollItem | null>(null);
+
+  const refreshFromRoutes = () => {
+    setPayrollItems((current) =>
+      current.map((item) => {
+        const employee = employees.find((e) => e.id === item.employeeId)!;
+        const refreshed = createPayrollItem(employee, payrollRun, routeTracker);
+        return {
+          ...item,
+          earningsLines: refreshed.earningsLines,
+          deductionsLines: item.deductionsLines.length ? item.deductionsLines : refreshed.deductionsLines,
+        };
+      })
+    );
+  };
+
+  const updateItem = (itemId: string, updater: (item: PayrollItem) => PayrollItem) => {
+    if (payrollRun.status === "Finalized") return;
+    setPayrollItems((current) => current.map((item) => (item.id === itemId ? updater(item) : item)));
+  };
+
+  const addOtherEarning = (itemId: string) => {
+    updateItem(itemId, (item) => ({
+      ...item,
+      otherEarningsLines: [...item.otherEarningsLines, { id: Math.random().toString(36).substr(2, 9), description: "", amount: 0 }],
+    }));
+  };
+
+  const addDeduction = (itemId: string) => {
+    updateItem(itemId, (item) => {
+      if (item.deductionsLines.length >= 4) return item;
+      return {
+        ...item,
+        deductionsLines: [...item.deductionsLines, { id: Math.random().toString(36).substr(2, 9), deductionName: "", amount: 0, type: "Fixed" }],
+      };
+    });
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden">
+        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-1 bg-primary rounded-full" />
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Active Run Period Configuration</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="p-8">
+          <div className="grid gap-8 md:grid-cols-4 items-end">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period Start</label>
+              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodStart} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodStart: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period End</label>
+              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodEnd} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodEnd: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Pay Date</label>
+              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payDate} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payDate: e.target.value }))} />
+            </div>
+            <Button className="h-12 w-full rounded-2xl bg-primary/10 text-primary hover:bg-primary font-bold transition-all border-none" variant="outline" onClick={refreshFromRoutes} disabled={payrollRun.status === "Finalized"}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Rebuild All Earnings
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          <ScrollArea className="w-full">
+            <div className="min-w-[2000px]">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/80">
+                    {[
+                      "Employee",
+                      "Daily Rate",
+                      "Earnings Breakdown",
+                      "Earning Amount",
+                      "Other Earnings",
+                      "Other Amount",
+                      "Deduction 1",
+                      "Amt 1",
+                      "Deduction 2",
+                      "Amt 2",
+                      "Deduction 3",
+                      "Amt 3",
+                      "Deduction 4",
+                      "Amt 4",
+                      "Net Total",
+                      "Notes",
+                      "Actions",
+                    ].map((header) => (
+                      <th key={header} className="border-b border-slate-100 px-4 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {payrollItems.map((item) => {
+                    const totals = computeTotals(item);
+                    const visibleDeductions = [...item.deductionsLines];
+                    while (visibleDeductions.length < 4) {
+                      visibleDeductions.push({ id: `blank-${visibleDeductions.length}`, deductionName: "", amount: 0, type: "Fixed" });
+                    }
+
+                    return (
+                      <tr key={item.id} className="group hover:bg-slate-50/30 transition-all align-top">
+                        <td className="px-4 py-6 font-bold text-slate-900 whitespace-nowrap">{item.employeeNameSnapshot}</td>
+                        <td className="px-4 py-6 text-sm text-slate-500 italic">{item.dailyRateSnapshot}</td>
+                        <td className="px-4 py-6">
+                          <div className="space-y-1 w-48">
+                            {item.earningsLines.map((line, i) => (
+                              <div key={i} className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 truncate">
+                                {line.description}
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-6">
+                          <div className="space-y-1">
+                            {item.earningsLines.map((line, i) => (
+                              <div key={i} className="text-[10px] font-black text-slate-900 bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50">
+                                {currency(line.amount)}
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-6">
+                          <div className="space-y-2 w-48">
+                            {item.otherEarningsLines.map((line) => (
+                              <Input
+                                key={line.id}
+                                value={line.description}
+                                placeholder="Other earning..."
+                                className="h-8 text-[11px] rounded-lg border-slate-100 font-medium"
+                                onChange={(e) => updateItem(item.id, (c) => ({ ...c, otherEarningsLines: c.otherEarningsLines.map(x => x.id === line.id ? { ...x, description: e.target.value } : x) }))}
+                                disabled={payrollRun.status === "Finalized"}
+                              />
+                            ))}
+                            <Button variant="ghost" size="sm" className="h-6 rounded-lg text-[10px] font-bold text-primary hover:bg-primary/10" onClick={() => addOtherEarning(item.id)} disabled={payrollRun.status === "Finalized"}>
+                              <Plus className="mr-1 h-3 w-3" /> Add Item
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-6">
+                          <div className="space-y-2">
+                            {item.otherEarningsLines.map((line) => (
+                              <Input
+                                key={line.id}
+                                type="number"
+                                value={line.amount}
+                                className="h-8 w-20 text-[11px] rounded-lg border-slate-100 font-black text-emerald-600"
+                                onChange={(e) => updateItem(item.id, (c) => ({ ...c, otherEarningsLines: c.otherEarningsLines.map(x => x.id === line.id ? { ...x, amount: Number(e.target.value) } : x) }))}
+                                disabled={payrollRun.status === "Finalized"}
+                              />
+                            ))}
+                          </div>
+                        </td>
+                        {visibleDeductions.map((deduction, index) => (
+                          <React.Fragment key={`${item.id}-${index}`}>
+                            <td className="px-4 py-6">
+                              <Input
+                                value={deduction.deductionName}
+                                placeholder={`Deduction ${index + 1}`}
+                                className="h-8 w-32 text-[11px] rounded-lg border-slate-100"
+                                disabled={payrollRun.status === "Finalized" || !item.deductionsLines[index] || deduction.deductionName === "Direct Deposit Fee"}
+                                onChange={(e) => updateItem(item.id, (c) => ({ ...c, deductionsLines: c.deductionsLines.map((x, i) => i === index ? { ...x, deductionName: e.target.value } : x) }))}
+                              />
+                            </td>
+                            <td className="px-4 py-6">
+                              <Input
+                                type="number"
+                                value={deduction.amount}
+                                className="h-8 w-20 text-[11px] rounded-lg border-slate-100 font-black text-rose-500"
+                                disabled={payrollRun.status === "Finalized" || !item.deductionsLines[index] || deduction.deductionName === "Direct Deposit Fee"}
+                                onChange={(e) => updateItem(item.id, (c) => ({ ...c, deductionsLines: c.deductionsLines.map((x, i) => i === index ? { ...x, amount: Number(e.target.value) } : x) }))}
+                              />
+                            </td>
+                          </React.Fragment>
+                        ))}
+                        <td className="px-4 py-6">
+                          <div className="bg-indigo-600 text-white rounded-xl px-4 py-2 font-black text-xs shadow-lg shadow-indigo-200">
+                            {currency(totals.netPay)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-6">
+                          <div className="space-y-3">
+                            <Textarea
+                              className="h-20 w-64 rounded-2xl border-slate-100 bg-slate-50/30 text-[11px] font-medium p-3 resize-none focus:bg-white"
+                              value={item.notes}
+                              placeholder="Employee specific instructions..."
+                              onChange={(e) => updateItem(item.id, (c) => ({ ...c, notes: e.target.value }))}
+                              disabled={payrollRun.status === "Finalized"}
+                            />
+                            <NoteSummarizer 
+                              notes={item.notes} 
+                              onSummarized={(s) => updateItem(item.id, c => ({ ...c, notes: `${c.notes}\n\nSUMMARY: ${s}` }))} 
+                              disabled={payrollRun.status === "Finalized"}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-4 py-6">
+                          <div className="flex flex-col gap-2">
+                            <Button size="sm" variant="outline" className="rounded-xl h-10 border-slate-200 font-bold text-[10px] uppercase tracking-wider hover:bg-slate-50 text-slate-600" onClick={() => setPreviewItem(item)}>
+                              <FileText className="mr-2 h-3 w-3" /> Preview
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 rounded-xl font-bold text-[9px] uppercase tracking-wider text-slate-400 hover:text-primary" onClick={() => addDeduction(item.id)} disabled={payrollRun.status === "Finalized" || item.deductionsLines.length >= 4}>
+                              <Plus className="mr-1 h-3 w-3" /> Add Deduction
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
+        <DialogContent className="max-h-[95vh] max-w-5xl overflow-hidden rounded-[2.5rem] p-0 border-none shadow-2xl">
+          <DialogHeader className="p-0 h-0 overflow-hidden">
+            <DialogTitle className="sr-only">Paystub Preview</DialogTitle>
+          </DialogHeader>
+          {previewItem && (
+            <PaystubPreview item={previewItem} run={payrollRun} />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
