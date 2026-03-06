@@ -23,29 +23,34 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
     <div className="flex flex-col w-full h-full bg-white text-black font-sans">
       <style jsx global>{`
         @media print {
-          @page {
-            size: portrait;
-            margin: 0;
-          }
+          /* Hide everything in the body */
           body * {
             visibility: hidden;
           }
+          /* Ensure the paystub container and its children are visible */
           #paystub-document, #paystub-document * {
             visibility: visible;
           }
+          /* Anchor the paystub to the absolute top-left of the physical page */
           #paystub-document {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 210mm; /* A4 width */
-            height: 297mm; /* A4 height */
-            padding: 20mm !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
             margin: 0 !important;
+            padding: 15mm !important;
             box-shadow: none !important;
             border: none !important;
             background: white !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+          /* Remove fixed page height to prevent extra blank pages */
+          @page {
+            size: auto;
+            margin: 0;
           }
           .no-print {
             display: none !important;
