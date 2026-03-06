@@ -17,12 +17,20 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Allow public verification of Access Keys (System UIDs)
+    // Access mapping for System UIDs
     match /system_users/{userId} {
       allow get: if true;
-      allow list: if isAdmin();
-      // Allow Master Admin to self-register/update their own node even during bootstrap
-      allow write: if isAdmin() || (userId == 'STUDIO-MASTER-2026' && request.auth != null && request.auth.token.email == 'masteradmin@system.oriented');
+      // Allow any authenticated user to find their own mapping node
+      allow list: if request.auth != null;
+      
+      // Allow Master Admin to self-register during bootstrap
+      // Also allow users who match the email-prefix derived from their UID
+      allow write: if isAdmin() || 
+                    (request.auth != null && (
+                      (userId == 'STUDIO-MASTER-2026' && request.auth.token.email == 'masteradmin@system.oriented') ||
+                      (request.auth.token.email == userId + '@system.oriented') ||
+                      (request.auth.token.email == userId.lower() + '@system.oriented')
+                    ));
     }
 
     match /employees/{employeeId} {
