@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { FileText, Lock, Plus, RefreshCw, Download, Settings2, Sparkles } from "lucide-react";
 
@@ -252,7 +252,7 @@ export default function EmployeePayoutTrackerApp() {
             <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden">
               <CardContent className="p-0">
                 <ScrollArea className="w-full">
-                  <div className="min-w-[2000px] overflow-x-auto">
+                  <div className="min-w-[2000px]">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-slate-50/80">
@@ -401,6 +401,7 @@ export default function EmployeePayoutTrackerApp() {
                       </tbody>
                     </table>
                   </div>
+                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               </CardContent>
             </Card>
@@ -428,7 +429,7 @@ export default function EmployeePayoutTrackerApp() {
               </CardHeader>
               <CardContent className="p-0">
                 <ScrollArea className="w-full">
-                  <div className="min-w-[1200px] overflow-x-auto">
+                  <div className="min-w-[1200px]">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-slate-50/80">
@@ -468,6 +469,7 @@ export default function EmployeePayoutTrackerApp() {
                       </tbody>
                     </table>
                   </div>
+                  <ScrollBar orientation="horizontal" />
                 </ScrollArea>
               </CardContent>
             </Card>
