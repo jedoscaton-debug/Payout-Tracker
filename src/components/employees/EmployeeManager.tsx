@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -82,7 +81,7 @@ export function EmployeeManager({
   });
 
   const filtered = employees.filter(e => 
-    (isRoleManagement ? (e.fullName || (e as any).username || e.id) : e.fullName).toLowerCase().includes(search.toLowerCase())
+    (isRoleManagement ? (e.fullName || (e as any).username || e.id || "") : (e.fullName || "")).toLowerCase().includes(search.toLowerCase())
   );
 
   const generateUID = () => {
@@ -217,7 +216,7 @@ export function EmployeeManager({
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Role</Label>
-                      <Select value={newStaff.role} onValueChange={(v: any) => setNewStaff({...newStaff, role: v})}>
+                      <Select value={newStaff.role || "Driver"} onValueChange={(v: any) => setNewStaff({...newStaff, role: v})}>
                         <SelectTrigger className="h-12 rounded-xl">
                           <SelectValue placeholder="Select Role" />
                         </SelectTrigger>
@@ -292,11 +291,11 @@ export function EmployeeManager({
                   return (
                     <tr key={emp.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="px-8 py-5 font-bold text-slate-900">
-                        {isRoleManagement ? ((emp as any).username || emp.fullName) : emp.fullName}
+                        {isRoleManagement ? ((emp as any).username || emp.fullName || "") : (emp.fullName || "")}
                         {!isRoleManagement && (
                           <div className="flex items-center gap-2 mt-1">
                             <Mail className="h-3 w-3 text-slate-300" />
-                            <span className="text-[10px] font-medium text-slate-400 lowercase">{emp.email}</span>
+                            <span className="text-[10px] font-medium text-slate-400 lowercase">{emp.email || ""}</span>
                           </div>
                         )}
                       </td>
@@ -329,7 +328,7 @@ export function EmployeeManager({
                           <td className="px-8 py-5 font-mono text-[10px] text-slate-400">
                             <div className="flex items-center gap-2">
                               <Key className="h-3 w-3" />
-                              <span>{emp.id}</span>
+                              <span>{emp.id || ""}</span>
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
@@ -432,7 +431,7 @@ export function EmployeeManager({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Role</Label>
-                  <Select value={editingEmployee.role} onValueChange={(v: any) => setEditingEmployee({...editingEmployee, role: v})}>
+                  <Select value={editingEmployee.role || "Driver"} onValueChange={(v: any) => setEditingEmployee({...editingEmployee, role: v})}>
                     <SelectTrigger className="h-12 rounded-xl">
                       <SelectValue />
                     </SelectTrigger>

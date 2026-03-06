@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -51,6 +50,7 @@ export function PayrollRunsView({
         const refreshed = createPayrollItem(employee, payrollRun, routeTracker);
         return {
           ...item,
+          authUid: employee.authUid || "",
           earningsLines: refreshed.earningsLines,
           deductionsLines: item.deductionsLines.length ? item.deductionsLines : refreshed.deductionsLines,
         };
@@ -154,14 +154,14 @@ export function PayrollRunsView({
                     return (
                       <tr key={item.id} className="group hover:bg-slate-50/30 transition-all align-top">
                         <td className="sticky left-0 z-20 bg-white px-8 py-6 font-bold text-slate-900 whitespace-nowrap border-r border-slate-100 shadow-[2px_0_5px_rgba(0,0,0,0.05)] group-hover:bg-slate-50/80">
-                          {item.employeeNameSnapshot}
+                          {item.employeeNameSnapshot || ""}
                         </td>
-                        <td className="px-4 py-6 text-sm text-slate-500 italic whitespace-nowrap">{item.dailyRateSnapshot}</td>
+                        <td className="px-4 py-6 text-sm text-slate-500 italic whitespace-nowrap">{item.dailyRateSnapshot || ""}</td>
                         <td className="px-4 py-6">
                           <div className="space-y-1 w-48">
                             {item.earningsLines.map((line, i) => (
                               <div key={i} className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50 truncate">
-                                {line.description}
+                                {line.description || ""}
                               </div>
                             ))}
                           </div>
@@ -239,7 +239,7 @@ export function PayrollRunsView({
                           {shortDate(payrollRun.payPeriodStart)} - {shortDate(payrollRun.payPeriodEnd)}
                         </td>
                         <td className="px-4 py-6 text-[10px] font-bold text-slate-400 whitespace-nowrap">
-                          {payrollRun.payDate}
+                          {payrollRun.payDate || ""}
                         </td>
                         <td className="px-4 py-6">
                           <Button size="sm" variant="outline" className="rounded-xl h-10 border-slate-200 font-bold text-[10px] uppercase tracking-wider hover:bg-slate-50 text-slate-600" onClick={() => setPreviewItem(item)}>

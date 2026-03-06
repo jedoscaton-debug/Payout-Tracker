@@ -2,12 +2,12 @@ import { Employee, RouteTrackerRow, PayrollRun, PayrollItem } from "./types";
 import { autoBuildEarnings, DIRECT_DEPOSIT_FEE, TRUCK_RENTAL_FIXED } from "./payroll-utils";
 
 export const employeesSeed: Employee[] = [
-  { id: "emp-1", fullName: "Jose Nolasco", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
-  { id: "emp-2", fullName: "Geovani", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
-  { id: "emp-3", fullName: "Steven Howard", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
-  { id: "emp-4", fullName: "Labrinkley Marshall", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
-  { id: "emp-5", fullName: "Dominique Roche", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
-  { id: "emp-6", fullName: "Diego Guevara", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
+  { id: "emp-1", fullName: "Jose Nolasco", role: "Driver", email: "jose@system.oriented", contactNumber: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
+  { id: "emp-2", fullName: "Geovani", role: "Driver", email: "geovani@system.oriented", contactNumber: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
+  { id: "emp-3", fullName: "Steven Howard", role: "Driver", email: "steven@system.oriented", contactNumber: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
+  { id: "emp-4", fullName: "Labrinkley Marshall", role: "Driver", email: "labrinkley@system.oriented", contactNumber: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
+  { id: "emp-5", fullName: "Dominique Roche", role: "Driver", email: "dominique@system.oriented", contactNumber: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
+  { id: "emp-6", fullName: "Diego Guevara", role: "Driver", email: "diego@system.oriented", contactNumber: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
 ];
 
 export const routeTrackerSeed: RouteTrackerRow[] = [
@@ -40,6 +40,7 @@ export function createPayrollItem(employee: Employee, payrollRun: PayrollRun, ro
     id: `${payrollRun.id}-${employee.id}`,
     payrollRunId: payrollRun.id,
     employeeId: employee.id,
+    authUid: employee.authUid || "",
     employeeNameSnapshot: employee.fullName,
     dailyRateSnapshot: employee.defaultDailyRate,
     notes: "",
