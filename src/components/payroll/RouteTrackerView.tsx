@@ -234,7 +234,7 @@ export function RouteTrackerView({
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Route Audit Tracker</h3>
+          <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Route Tracker</h3>
           <p className="text-sm text-slate-500 font-medium">Log and analyze daily route profitability and performance.</p>
         </div>
 
