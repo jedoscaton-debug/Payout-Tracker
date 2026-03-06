@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Employee } from "@/app/lib/types";
-import { Plus, Search, MoreHorizontal, Pencil, Shield, UserMinus, Key, Copy, Check } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Shield, UserMinus, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface EmployeeManagerProps {
@@ -33,7 +33,6 @@ export function EmployeeManager({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const { toast } = useToast();
   
   const [newStaff, setNewStaff] = useState<Omit<Employee, 'id'>>({
@@ -49,26 +48,25 @@ export function EmployeeManager({
     return res;
   };
 
-  const handleCopy = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setCopiedId(id);
-    toast({ title: "UID Copied", description: "Access Key copied to clipboard." });
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
   const handleSubmitStaff = (e: React.FormEvent) => {
     e.preventDefault();
     const id = generateUID();
-    onAddEmployee({ id, ...newStaff, email: newStaff.email.toLowerCase().trim() });
+    // Maintain empty strings for email/contact to satisfy existing data schemas
+    onAddEmployee({ 
+      id, 
+      ...newStaff, 
+      email: (newStaff.email || "").toLowerCase().trim(),
+      contactNumber: newStaff.contactNumber || ""
+    });
     setNewStaff({ fullName: "", role: "Driver", email: "", contactNumber: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" });
     setIsAddOpen(false);
-    toast({ title: "Staff Created", description: `Access Key for ${newStaff.fullName} is ${id}` });
+    toast({ title: "Staff Created", description: `HR Profile for ${newStaff.fullName} has been initialized.` });
   };
 
   const handleSubmitEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingEmployee) {
-      onUpdateEmployee({ ...editingEmployee, email: editingEmployee.email.toLowerCase().trim() });
+      onUpdateEmployee({ ...editingEmployee });
       setIsEditOpen(false);
     }
   };
@@ -78,7 +76,7 @@ export function EmployeeManager({
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Employee Directory</h3>
-          <p className="text-sm text-slate-500 font-medium">Manage staff records and automatically generate access credentials.</p>
+          <p className="text-sm text-slate-500 font-medium">Manage staff records and payroll configurations.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -100,10 +98,6 @@ export function EmployeeManager({
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Email Address</Label><Input required type="email" className="h-12 rounded-xl" value={newStaff.email || ""} onChange={(e) => setNewStaff({...newStaff, email: e.target.value})} /></div>
-                  <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Contact Number</Label><Input required className="h-12 rounded-xl" value={newStaff.contactNumber || ""} onChange={(e) => setNewStaff({...newStaff, contactNumber: e.target.value})} /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Daily Rate</Label><Input className="h-12 rounded-xl" value={newStaff.defaultDailyRate || ""} onChange={(e) => setNewStaff({...newStaff, defaultDailyRate: e.target.value})} /></div>
                   <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Payment Method</Label><Input className="h-12 rounded-xl" value={newStaff.paymentMethod || ""} onChange={(e) => setNewStaff({...newStaff, paymentMethod: e.target.value})} /></div>
                 </div>
@@ -122,8 +116,8 @@ export function EmployeeManager({
                 <tr className="bg-slate-50/80 border-b">
                   <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Staff Member</th>
                   <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Role</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Access Key</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Admin</th>
+                  <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Rate Basis</th>
+                  <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Admin Status</th>
                   <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</th>
                 </tr>
               </thead>
@@ -134,17 +128,9 @@ export function EmployeeManager({
                     <tr key={emp.id} className="hover:bg-slate-50/50">
                       <td className="px-8 py-5">
                         <div className="font-bold text-slate-900">{emp.fullName}</div>
-                        <div className="text-[10px] text-slate-400">{emp.email}</div>
                       </td>
                       <td className="px-8 py-5 text-xs font-bold uppercase">{emp.role}</td>
-                      <td className="px-8 py-5 font-mono text-[10px]">
-                        <div className="flex items-center gap-2 text-slate-400">
-                          <Key className="h-3 w-3" /><span>{emp.id}</span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(emp.id)}>
-                            {copiedId === emp.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                          </Button>
-                        </div>
-                      </td>
+                      <td className="px-8 py-5 text-xs font-medium text-slate-500">{emp.defaultDailyRate || "Varies"}</td>
                       <td className="px-8 py-5">
                         {isAdminMember && <Badge className="bg-primary text-white text-[9px] uppercase"><Shield className="h-3 w-3 mr-1" /> Admin</Badge>}
                       </td>
@@ -186,8 +172,8 @@ export function EmployeeManager({
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Email Address</Label><Input required type="email" value={editingEmployee.email || ""} onChange={(e) => setEditingEmployee({...editingEmployee, email: e.target.value})} /></div>
-                <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Contact Number</Label><Input required value={editingEmployee.contactNumber || ""} onChange={(e) => setEditingEmployee({...editingEmployee, contactNumber: e.target.value})} /></div>
+                <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Daily Rate</Label><Input className="h-12 rounded-xl" value={editingEmployee.defaultDailyRate || ""} onChange={(e) => setEditingEmployee({...editingEmployee, defaultDailyRate: e.target.value})} /></div>
+                <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Payment Method</Label><Input className="h-12 rounded-xl" value={editingEmployee.paymentMethod || ""} onChange={(e) => setEditingEmployee({...editingEmployee, paymentMethod: e.target.value})} /></div>
               </div>
               <DialogFooter className="pt-4"><Button type="submit" className="w-full rounded-xl h-12 bg-primary font-bold uppercase text-xs">Save Changes</Button></DialogFooter>
             </form>
