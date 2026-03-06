@@ -15,8 +15,6 @@ export function currency(value: number) {
 
 export function shortDate(input: string) {
   if (!input) return "";
-  // Robust manual formatting to avoid RangeErrors and locale inconsistencies
-  // input is expected as YYYY-MM-DD
   const parts = input.split('-');
   if (parts.length !== 3) return input;
   const year = parts[0];
@@ -39,12 +37,14 @@ export function estimateFuel(miles: number) {
   return 0.47 * (miles || 0);
 }
 
-export function driverPay(stops: number) {
-  return Number((estimatePay(stops) * 0.27).toFixed(2));
+export function driverPay(stops: number, route: string = "", vehicle: string = "") {
+  const rate = (route === "EV" && vehicle === "EV") ? 0.33 : 0.27;
+  return Number((estimatePay(stops) * rate).toFixed(2));
 }
 
-export function helperPay(stops: number) {
-  return Number((estimatePay(stops) * 0.23).toFixed(2));
+export function helperPay(stops: number, route: string = "", vehicle: string = "") {
+  const rate = (route === "EV" && vehicle === "EV") ? 0.27 : 0.23;
+  return Number((estimatePay(stops) * rate).toFixed(2));
 }
 
 export function truckRentalMileageCost(miles: number) {
@@ -61,9 +61,10 @@ function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType |
 }
 
 function amountForRole(row: RouteTrackerRow, role: RoleType) {
-  if (role === "Driver") return driverPay(row.stops);
-  if (role === "Helper") return helperPay(row.stops);
-  return driverPay(row.stops) + helperPay(row.stops);
+  if (role === "Driver") return driverPay(row.stops, row.route, row.vehicleNumber);
+  if (role === "Helper") return helperPay(row.stops, row.route, row.vehicleNumber);
+  // Combined role
+  return driverPay(row.stops, row.route, row.vehicleNumber) + helperPay(row.stops, row.route, row.vehicleNumber);
 }
 
 export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: RouteTrackerRow[]): EarningsLine[] {

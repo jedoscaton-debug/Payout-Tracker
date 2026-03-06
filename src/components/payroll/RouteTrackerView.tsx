@@ -78,11 +78,11 @@ export function RouteTrackerView({
 
   const currentRoute = isEditOpen ? editingRoute : newRoute;
   const estPayValue = estimatePay(currentRoute?.stops || 0);
-  const dPayValue = driverPay(currentRoute?.stops || 0);
-  const hPayValue = currentRoute?.helper && currentRoute?.helper !== "No Helper" ? helperPay(currentRoute?.stops || 0) : 0;
+  const dPayValue = driverPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber);
+  const hPayValue = currentRoute?.helper && currentRoute?.helper !== "No Helper" ? helperPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber) : 0;
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
   const fuelValue = estimateFuel(currentRoute?.miles || 0);
-  const totalExpensesValue = (currentRoute?.truckRental || 0) + mileageCostValue + fuelValue;
+  const totalExpensesValue = (currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue;
   const netProfitValue = estPayValue - (totalExpensesValue + dPayValue + hPayValue);
 
   const headers = [
@@ -120,8 +120,8 @@ export function RouteTrackerView({
   const totals = useMemo(() => {
     return filtered.reduce((acc, row) => {
       const estRev = estimatePay(row.stops);
-      const dPay = driverPay(row.stops);
-      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops) : 0;
+      const dPay = driverPay(row.stops, row.route, row.vehicleNumber);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber) : 0;
       const fuel = estimateFuel(row.miles);
       const mileageCost = truckRentalMileageCost(row.miles);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -152,8 +152,8 @@ export function RouteTrackerView({
 
     const rows = filtered.map(row => {
       const estRev = estimatePay(row.stops);
-      const dPay = driverPay(row.stops);
-      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops) : 0;
+      const dPay = driverPay(row.stops, row.route, row.vehicleNumber);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber) : 0;
       const mileageCost = truckRentalMileageCost(row.miles);
       const fuel = estimateFuel(row.miles);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -436,8 +436,8 @@ export function RouteTrackerView({
                 <tbody className="divide-y divide-slate-200">
                   {filtered.map((row) => {
                     const estRev = estimatePay(row.stops);
-                    const dPay = driverPay(row.stops);
-                    const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops) : 0;
+                    const dPay = driverPay(row.stops, row.route, row.vehicleNumber);
+                    const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber) : 0;
                     const mileageCost = truckRentalMileageCost(row.miles);
                     const fuel = estimateFuel(row.miles);
                     const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
