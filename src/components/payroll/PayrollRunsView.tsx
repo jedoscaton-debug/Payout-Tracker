@@ -94,7 +94,7 @@ export function PayrollRunsView({
               <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodStart} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodStart: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period End</label>
+              <label className="text-[10px) font-bold uppercase tracking-widest text-slate-400 px-1">Period End</label>
               <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodEnd} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodEnd: e.target.value }))} />
             </div>
             <div className="space-y-2">

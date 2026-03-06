@@ -27,31 +27,41 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             size: A4;
             margin: 0;
           }
-          body {
-            visibility: hidden !important;
-            height: auto !important;
-            overflow: visible !important;
-            background: white !important;
-          }
-          .no-print, [role="dialog"] > button, .radix-overlay {
+          /* Hide EVERYTHING except the specific document */
+          body > *:not(div[role="dialog"]) {
             display: none !important;
           }
-          #paystub-document {
-            visibility: visible !important;
+          /* Hide dialog overlays and other dialog contents */
+          div[role="dialog"] > *:not(#paystub-container) {
+            display: none !important;
+          }
+          /* Target the specific payslip container and force it to top */
+          #paystub-container {
             position: fixed !important;
-            left: 0 !important;
             top: 0 !important;
+            left: 0 !important;
             width: 100% !important;
             height: 100% !important;
             margin: 0 !important;
-            padding: 10mm !important;
-            box-shadow: none !important;
-            border: none !important;
+            padding: 0 !important;
+            display: block !important;
+            visibility: visible !important;
+            z-index: 9999 !important;
             background: white !important;
-            display: flex !important;
-            flex-direction: column !important;
           }
-          /* Ensure vertical lines print clearly */
+          #paystub-document {
+            width: 100% !important;
+            height: auto !important;
+            min-height: auto !important;
+            border: none !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 15mm !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          /* Ensure vertical divider prints */
           .print-divider {
             border-right-width: 2px !important;
             border-color: #cbd5e1 !important;
@@ -75,7 +85,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 bg-slate-100/50 p-6 sm:p-12 min-h-0">
+      <ScrollArea id="paystub-container" className="flex-1 bg-slate-100/50 p-6 sm:p-12 min-h-0">
         <div 
           id="paystub-document" 
           className="mx-auto bg-white p-12 shadow-2xl border border-slate-200 max-w-[800px] flex flex-col gap-10 min-h-[1050px] rounded-sm transition-all"
