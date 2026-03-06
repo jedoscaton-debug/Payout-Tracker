@@ -75,7 +75,6 @@ export default function AppShell() {
   const db = useFirestore();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
-  const initializationRef = useRef(false);
 
   // Role Checks
   const adminDocRef = useMemoFirebase(() => user ? doc(db, "roles_admin", user.uid) : null, [db, user]);
@@ -120,13 +119,31 @@ export default function AppShell() {
   const routeTracker = useMemo(() => (routesData || []) as RouteTrackerRow[], [routesData]);
   const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
 
-  // Guard initialization to prevent infinite update loop
+  // Reactive synchronization: Automatically remove or add payroll items based on the employee directory
   useEffect(() => {
-    if (isAdmin && employees.length > 0 && !initializationRef.current) {
-      setPayrollItems(employees.map(e => createPayrollItem(e, payrollRun, routeTracker)));
-      initializationRef.current = true;
-    }
-  }, [employees, payrollRun, routeTracker, isAdmin]);
+    if (!isAdmin) return;
+    
+    setPayrollItems(prevItems => {
+      const currentEmployeeIds = new Set(employees.map(e => e.id));
+      
+      // Filter out items for employees that no longer exist (DELETION SYNC)
+      const syncedItems = prevItems.filter(item => currentEmployeeIds.has(item.employeeId));
+      
+      // Add items for new employees that aren't in the list yet
+      const existingItemEmployeeIds = new Set(syncedItems.map(item => item.employeeId));
+      const newEmployeeItems = employees
+        .filter(e => !existingItemEmployeeIds.has(e.id))
+        .map(e => createPayrollItem(e, payrollRun, routeTracker));
+        
+      const finalItems = [...syncedItems, ...newEmployeeItems];
+      
+      // Only update state if the structure has actually changed to avoid re-render loops
+      if (finalItems.length !== prevItems.length) {
+        return finalItems;
+      }
+      return prevItems;
+    });
+  }, [employees, isAdmin, payrollRun, routeTracker]);
 
   const payrollSummary = useMemo(() => {
     const totals = payrollItems.map(computeTotals);
