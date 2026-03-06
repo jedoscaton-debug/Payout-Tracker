@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -174,6 +174,9 @@ export function RouteTrackerView({ routeTracker, onAddRoute, employees = [] }: R
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-[1000px] p-0 border-none shadow-2xl rounded-[2rem] overflow-hidden bg-white">
+              <DialogHeader className="sr-only">
+                <DialogTitle>Log Daily Route</DialogTitle>
+              </DialogHeader>
               <div className="p-10 space-y-8">
                 <div className="grid grid-cols-5 gap-x-6 gap-y-8">
                   {/* Row 1 */}
