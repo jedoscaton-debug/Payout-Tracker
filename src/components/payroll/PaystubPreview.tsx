@@ -49,33 +49,40 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
     <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white">
       <style jsx global>{`
         @media print {
-          body {
-            visibility: hidden !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          #paystub-document, #paystub-document * {
-            visibility: visible !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          #paystub-document {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            margin: 0 !important;
-            padding: 15mm !important;
-            box-shadow: none !important;
-            border: none !important;
-          }
-          .no-print {
-            display: none !important;
-          }
           @page {
             size: portrait;
             margin: 0;
+          }
+          body {
+            background-color: white !important;
+          }
+          /* Hide everything in the app */
+          body * {
+            visibility: hidden !important;
+          }
+          /* Show the paystub document and its children */
+          #paystub-document, #paystub-document * {
+            visibility: visible !important;
+          }
+          /* Force the document to the very top left of the page */
+          #paystub-document {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 20mm !important;
+            box-sizing: border-box !important;
+            background: white !important;
+            box-shadow: none !important;
+            border: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+          }
+          .no-print {
+            display: none !important;
           }
         }
       `}</style>
