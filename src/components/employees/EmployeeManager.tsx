@@ -22,7 +22,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Employee } from "@/app/lib/types";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Shield, UserMinus, ShieldAlert } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Shield, UserMinus, ShieldAlert, Key } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EmployeeManagerProps {
@@ -53,7 +53,7 @@ export function EmployeeManager({
   
   const [newAccess, setNewAccess] = useState({
     id: "",
-    fullName: "",
+    username: "",
   });
 
   const [newStaff, setNewStaff] = useState({
@@ -63,18 +63,18 @@ export function EmployeeManager({
   });
 
   const filtered = employees.filter(e => 
-    e.fullName.toLowerCase().includes(search.toLowerCase())
+    (isRoleManagement ? (e.fullName || e.id) : e.fullName).toLowerCase().includes(search.toLowerCase())
   );
 
   const handleSubmitAccess = (e: React.FormEvent) => {
     e.preventDefault();
     onAddEmployee({
       id: newAccess.id,
-      fullName: newAccess.fullName,
+      fullName: newAccess.username,
       defaultDailyRate: "Varies",
       paymentMethod: "Direct Deposit"
     });
-    setNewAccess({ id: "", fullName: "" });
+    setNewAccess({ id: "", username: "" });
     setIsAddOpen(false);
   };
 
@@ -113,7 +113,7 @@ export function EmployeeManager({
           </h3>
           <p className="text-sm text-slate-500 font-medium">
             {isRoleManagement 
-              ? "Manage system-wide permissions and grant administrative rights to registered names." 
+              ? "Manage system access credentials and grant administrative rights to user nodes." 
               : "Manage staff details, default rates, and payment configurations for the workforce."}
           </p>
         </div>
@@ -122,7 +122,7 @@ export function EmployeeManager({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input 
-              placeholder="Search directory..." 
+              placeholder={isRoleManagement ? "Search usernames..." : "Search directory..."}
               className="pl-10 h-11 w-64 rounded-xl border-slate-200" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -138,24 +138,24 @@ export function EmployeeManager({
             <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
-                  {isRoleManagement ? "Register Access Node" : "Register Staff Member"}
+                  {isRoleManagement ? "Register System Access" : "Register Staff Member"}
                 </DialogTitle>
               </DialogHeader>
               
               {isRoleManagement ? (
                 <form onSubmit={handleSubmitAccess} className="space-y-6 mt-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Username / Name</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">User Name</Label>
                     <Input 
                       required
-                      placeholder="e.g. John Doe"
+                      placeholder="e.g. alemer"
                       className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white" 
-                      value={newAccess.fullName}
-                      onChange={(e) => setNewAccess({...newAccess, fullName: e.target.value})}
+                      value={newAccess.username}
+                      onChange={(e) => setNewAccess({...newAccess, username: e.target.value})}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">System UID</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">User UID (Password Key)</Label>
                     <Input 
                       required
                       placeholder="pEdBZ1Y8AbeTrUKSC4..."
@@ -163,6 +163,11 @@ export function EmployeeManager({
                       value={newAccess.id}
                       onChange={(e) => setNewAccess({...newAccess, id: e.target.value})}
                     />
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">
+                      This will create a system node for <span className="text-primary">{newAccess.username || "user"}</span>. The UID provided will serve as their unique access password.
+                    </p>
                   </div>
                   <DialogFooter className="pt-4">
                     <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold shadow-lg shadow-slate-900/20">
@@ -216,11 +221,13 @@ export function EmployeeManager({
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Member</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  {isRoleManagement ? "User Name" : "Member"}
+                </th>
                 {isRoleManagement ? (
                   <>
-                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">System Access</th>
-                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Linked UID</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Access Tier</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">User UID</th>
                   </>
                 ) : (
                   <>
@@ -242,15 +249,20 @@ export function EmployeeManager({
                         <td className="px-8 py-5">
                           {isSystemAdmin ? (
                             <Badge className="rounded-full bg-slate-900 text-white text-[10px] font-black px-3 py-1 uppercase tracking-wider">
-                              <Shield className="mr-1 h-3 w-3" /> Admin Access
+                              <Shield className="mr-1 h-3 w-3" /> Admin Tier
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="rounded-full border-slate-200 text-slate-500 text-[10px] font-bold px-3 py-1 uppercase">
-                              Standard Access
+                              Standard Tier
                             </Badge>
                           )}
                         </td>
-                        <td className="px-8 py-5 text-[10px] font-mono text-slate-400">{emp.id}</td>
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
+                            <Key className="h-3 w-3" />
+                            {emp.id}
+                          </div>
+                        </td>
                       </>
                     ) : (
                       <>
@@ -286,14 +298,14 @@ export function EmployeeManager({
                                   className="rounded-lg font-bold text-xs uppercase tracking-wider text-rose-600 gap-2 cursor-pointer"
                                   onClick={() => onRevokeAdmin?.(emp.id)}
                                 >
-                                  <ShieldAlert className="h-3 w-3" /> Revoke Admin Rights
+                                  <ShieldAlert className="h-3 w-3" /> Revoke Admin Tier
                                 </DropdownMenuItem>
                               ) : (
                                 <DropdownMenuItem 
                                   className="rounded-lg font-bold text-xs uppercase tracking-wider text-primary gap-2 cursor-pointer"
                                   onClick={() => onGrantAdmin?.(emp.id)}
                                 >
-                                  <Shield className="h-3 w-3" /> Grant Admin Rights
+                                  <Shield className="h-3 w-3" /> Grant Admin Tier
                                 </DropdownMenuItem>
                               )}
                             </>
@@ -319,8 +331,8 @@ export function EmployeeManager({
       {/* Edit Dialog (Staff only) */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Edit Staff Record</DialogTitle>
+          <DialogHeader className="sr-only">
+            <DialogTitle>Edit Staff Record</DialogTitle>
           </DialogHeader>
           {editingEmployee && (
             <form onSubmit={handleSubmitEdit} className="space-y-6 mt-4">

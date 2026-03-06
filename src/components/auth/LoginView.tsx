@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -7,10 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/firebase";
 import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
-import { Loader2, ShieldCheck, Mail, Lock, UserPlus } from "lucide-react";
+import { Loader2, ShieldCheck, User, Lock, UserPlus } from "lucide-react";
 
 export function LoginView() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
@@ -19,6 +20,9 @@ export function LoginView() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    
+    // Internal mapping to allow username-style login with Firebase Auth
+    const email = `${username.toLowerCase().trim()}@system.oriented`;
     
     if (isSignUp) {
       initiateEmailSignUp(auth, email, password);
@@ -48,38 +52,38 @@ export function LoginView() {
         <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-10 pb-8 text-center">
             <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-              {isSignUp ? "Create Account" : "Secure Authentication"}
+              {isSignUp ? "Register Node" : "Secure Authentication"}
             </CardTitle>
             <CardDescription className="text-xs font-medium text-slate-500 mt-2">
-              {isSignUp ? "Register your professional credentials below." : "Enter your professional credentials to manage payroll logs."}
+              {isSignUp ? "Create your professional system identity." : "Enter your professional credentials to manage payroll logs."}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-10 pt-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Email Address</Label>
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Username</Label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input 
                     required
-                    type="email"
-                    placeholder="name@systemoriented.com"
+                    type="text"
+                    placeholder="e.g. alemer"
                     className="h-14 rounded-2xl pl-12 border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Password</Label>
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">System UID (Password)</Label>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input 
                     required
                     type="password"
-                    placeholder="••••••••"
+                    placeholder="••••••••••••"
                     className="h-14 rounded-2xl pl-12 border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -93,7 +97,7 @@ export function LoginView() {
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : isSignUp ? (
                     <>
-                      <UserPlus className="mr-2 h-5 w-5" /> Create Profile
+                      <UserPlus className="mr-2 h-5 w-5" /> Register Account
                     </>
                   ) : (
                     <>
@@ -108,7 +112,7 @@ export function LoginView() {
                   className="w-full text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary hover:bg-slate-50 rounded-xl"
                   onClick={() => setIsSignUp(!isSignUp)}
                 >
-                  {isSignUp ? "Already have an account? Log In" : "Need an account? Sign Up"}
+                  {isSignUp ? "Already registered? Log In" : "Need to register? Sign Up"}
                 </Button>
               </div>
             </form>
