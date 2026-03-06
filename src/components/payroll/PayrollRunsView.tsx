@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 import { 
   Employee, 
@@ -80,7 +81,7 @@ export function PayrollRunsView({
     "Deductions 1",
     "Deduction 1 Amount",
     "Deductions 2",
-    "Deductions 2 Amount",
+    "Deduction 2 Amount",
     "Deductions 3",
     "Deductions 3 Amount",
     "Deductions 4",
@@ -125,8 +126,8 @@ export function PayrollRunsView({
 
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardContent className="p-0">
-          <div className="w-full overflow-x-auto relative">
-            <div className="min-w-[2800px]">
+          <ScrollArea className="w-full">
+            <div className="min-w-[2800px] pb-6">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80">
@@ -252,7 +253,8 @@ export function PayrollRunsView({
                 </tbody>
               </table>
             </div>
-          </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </CardContent>
       </Card>
 

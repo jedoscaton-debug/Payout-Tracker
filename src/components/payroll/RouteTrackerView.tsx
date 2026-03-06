@@ -42,6 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Calendar as CalendarIcon, Download, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface RouteTrackerViewProps {
   routeTracker: RouteTrackerRow[];
@@ -445,8 +446,8 @@ export function RouteTrackerView({
 
       <Card className="rounded-[1.5rem] border border-slate-200 shadow-xl overflow-hidden bg-white">
         <CardContent className="p-0">
-          <div className="w-full overflow-x-auto relative">
-            <div className="min-w-[2400px]">
+          <ScrollArea className="w-full">
+            <div className="min-w-[2400px] pb-6">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-900">
@@ -548,7 +549,8 @@ export function RouteTrackerView({
                 </tfoot>
               </table>
             </div>
-          </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </CardContent>
       </Card>
 
