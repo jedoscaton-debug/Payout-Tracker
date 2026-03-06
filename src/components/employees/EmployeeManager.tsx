@@ -42,6 +42,8 @@ interface EmployeeManagerProps {
   allAdmins?: any[];
   onGrantAdmin?: (uid: string) => void;
   onRevokeAdmin?: (uid: string) => void;
+  directoryEmployees?: Employee[];
+  onLinkProfile?: (uid: string, employee: Employee) => void;
 }
 
 export function EmployeeManager({ 
@@ -52,7 +54,9 @@ export function EmployeeManager({
   isRoleManagement = false,
   allAdmins = [],
   onGrantAdmin,
-  onRevokeAdmin
+  onRevokeAdmin,
+  directoryEmployees = [],
+  onLinkProfile
 }: EmployeeManagerProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -60,6 +64,7 @@ export function EmployeeManager({
   const [search, setSearch] = useState("");
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [linkingUID, setLinkingUID] = useState<string | null>(null);
+  const [selectedEmployeeForLinking, setSelectedEmployeeForLinking] = useState<Employee | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const { toast } = useToast();
   
@@ -99,7 +104,6 @@ export function EmployeeManager({
   const handleSubmitAccess = (e: React.FormEvent) => {
     e.preventDefault();
     const generatedId = generateUID();
-    // SystemUser structure: UID as ID, fullName as username (internal placeholder)
     onAddEmployee({
       id: generatedId,
       fullName: newAccess.username,
@@ -136,22 +140,11 @@ export function EmployeeManager({
 
   const handleSubmitLink = (e: React.FormEvent) => {
     e.preventDefault();
-    if (linkingUID) {
-      onAddEmployee({
-        id: linkingUID,
-        ...newStaff
-      });
-      setNewStaff({ 
-        fullName: "", 
-        role: "Driver", 
-        email: "", 
-        contactNumber: "", 
-        defaultDailyRate: "Varies", 
-        paymentMethod: "Direct Deposit" 
-      });
+    if (linkingUID && selectedEmployeeForLinking && onLinkProfile) {
+      onLinkProfile(linkingUID, selectedEmployeeForLinking);
       setIsLinkOpen(false);
       setLinkingUID(null);
-      toast({ title: "Profile Linked", description: "Staff record successfully associated with system node." });
+      setSelectedEmployeeForLinking(null);
     }
   };
 
@@ -165,7 +158,7 @@ export function EmployeeManager({
   };
 
   const getAdminRole = (uid: string) => allAdmins.find(a => a.id === uid)?.role || null;
-  const isProfileLinked = (uid: string) => employees.some(e => e.id === uid && e.fullName && e.email && e.email.includes('@'));
+  const isProfileLinked = (uid: string) => directoryEmployees.some(e => e.id === uid);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -391,43 +384,34 @@ export function EmployeeManager({
         </CardContent>
       </Card>
 
-      {/* Linking Dialog */}
+      {/* Linking Dialog - UPDATED TO DROPDOWN */}
       <Dialog open={isLinkOpen} onOpenChange={setIsLinkOpen}>
-        <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white max-w-2xl">
+        <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white max-w-md">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Connect Staff Record</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmitLink} className="space-y-6 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
-                <Input required className="h-12 rounded-xl" value={newStaff.fullName || ""} onChange={(e) => setNewStaff({...newStaff, fullName: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Role</Label>
-                <Select value={newStaff.role} onValueChange={(v: any) => setNewStaff({...newStaff, role: v})}>
-                  <SelectTrigger className="h-12 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Driver">Driver</SelectItem>
-                    <SelectItem value="Helper">Helper</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email Address</Label>
-                <Input required type="email" className="h-12 rounded-xl" value={newStaff.email || ""} onChange={(e) => setNewStaff({...newStaff, email: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact Number</Label>
-                <Input required className="h-12 rounded-xl" value={newStaff.contactNumber || ""} onChange={(e) => setNewStaff({...newStaff, contactNumber: e.target.value})} />
-              </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Select Staff Member</Label>
+              <Select onValueChange={(val) => {
+                const emp = directoryEmployees.find(e => e.id === val);
+                if (emp) setSelectedEmployeeForLinking(emp);
+              }}>
+                <SelectTrigger className="h-12 rounded-xl">
+                  <SelectValue placeholder="Choose an employee..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {directoryEmployees.filter(emp => !employees.some(node => node.id === emp.id)).map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>{emp.fullName} ({emp.role})</SelectItem>
+                  ))}
+                  {directoryEmployees.filter(emp => !employees.some(node => node.id === emp.id)).length === 0 && (
+                    <p className="p-4 text-[10px] font-bold text-slate-400 uppercase text-center">No available profiles</p>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
             <DialogFooter className="pt-4">
-              <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold uppercase tracking-widest text-xs">Authorize & Connect Profile</Button>
+              <Button type="submit" disabled={!selectedEmployeeForLinking} className="w-full rounded-xl h-12 bg-slate-900 font-bold uppercase tracking-widest text-xs">Authorize & Connect Profile</Button>
             </DialogFooter>
           </form>
         </DialogContent>

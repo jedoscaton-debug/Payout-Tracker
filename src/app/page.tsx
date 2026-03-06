@@ -204,6 +204,20 @@ export default function AppShell() {
     toast({ title: "Staff Member Registered", description: `${newEmployee.fullName} has been added to the directory.` });
   };
 
+  const handleLinkProfile = (uid: string, employee: Employee) => {
+    // 1. Create the new record at the correct UID
+    const newDocRef = doc(db, "employees", uid);
+    setDocumentNonBlocking(newDocRef, { ...employee, id: uid }, { merge: true });
+    
+    // 2. Delete the old record if the ID is different
+    if (employee.id !== uid) {
+      const oldDocRef = doc(db, "employees", employee.id);
+      deleteDocumentNonBlocking(oldDocRef);
+    }
+    
+    toast({ title: "Profile Linked", description: "Staff record successfully associated with system node." });
+  };
+
   const handleUpdateEmployee = (updatedEmployee: Employee) => {
     const docRef = doc(db, "employees", updatedEmployee.id);
     updateDocumentNonBlocking(docRef, updatedEmployee);
@@ -359,7 +373,7 @@ export default function AppShell() {
             {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} isRoleManagement={false} />}
             {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} />}
             {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={handleAddRoute} onUpdateRoute={handleUpdateRoute} onDeleteRoute={handleDeleteRoute} employees={employees} />}
-            {activeView === "admin-board" && <EmployeeManager employees={systemUsers as any} onAddEmployee={(e) => handleRegisterAccess(e.id, (e as any).username || e.fullName)} onUpdateEmployee={() => {}} onDeleteEmployee={handleTerminateAccess} isRoleManagement={true} allAdmins={allAdmins} onGrantAdmin={handleGrantAdmin} onRevokeAdmin={handleRevokeAdmin} />}
+            {activeView === "admin-board" && <EmployeeManager employees={systemUsers as any} onAddEmployee={(e) => handleRegisterAccess(e.id, (e as any).username || e.fullName)} onUpdateEmployee={() => {}} onDeleteEmployee={handleTerminateAccess} isRoleManagement={true} allAdmins={allAdmins} onGrantAdmin={handleGrantAdmin} onRevokeAdmin={handleRevokeAdmin} directoryEmployees={employees} onLinkProfile={handleLinkProfile} />}
           </>
         ) : (
           <>
