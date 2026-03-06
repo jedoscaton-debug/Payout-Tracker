@@ -84,19 +84,26 @@ export default function AppShell() {
   const employeeDocRef = useMemoFirebase(() => user ? doc(db, "employees", user.uid) : null, [db, user]);
   const { data: employeeProfile, isLoading: profileLoading } = useDoc<Employee>(employeeDocRef);
 
+  const systemUserDocRef = useMemoFirebase(() => user ? doc(db, "system_users", user.uid) : null, [db, user]);
+  const { data: systemUserProfile, isLoading: userLoading } = useDoc(systemUserDocRef);
+
   const isAdmin = !!adminRole;
-  const isEmployee = !!employeeProfile && !isAdmin;
+  const isEmployee = !!employeeProfile;
+  const isAuthorized = !!systemUserProfile || isAdmin || isEmployee;
 
   // Set initial view based on role
   useEffect(() => {
     if (isAdmin) setActiveView("dashboard");
-    else if (isEmployee) setActiveView("emp-dashboard");
-  }, [isAdmin, isEmployee]);
+    else if (isAuthorized) setActiveView("emp-dashboard");
+  }, [isAdmin, isAuthorized]);
   
-  // Firestore Subscriptions (Admins only for general collections)
+  // Firestore Subscriptions
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
   const { data: employeesData } = useCollection<Employee>(employeesQuery);
   
+  const systemUsersQuery = useMemoFirebase(() => isAdmin ? collection(db, "system_users") : null, [db, isAdmin]);
+  const { data: systemUsersData } = useCollection(systemUsersQuery);
+
   const routesQuery = useMemoFirebase(() => isAdmin ? collection(db, "routeTrackerRows") : null, [db, isAdmin]);
   const { data: routesData } = useCollection<RouteTrackerRow>(routesQuery);
 
@@ -107,6 +114,7 @@ export default function AppShell() {
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
 
   const employees = useMemo(() => (employeesData || []) as Employee[], [employeesData]);
+  const systemUsers = useMemo(() => (systemUsersData || []), [systemUsersData]);
   const routeTracker = useMemo(() => (routesData || []) as RouteTrackerRow[], [routesData]);
   const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
 
@@ -129,87 +137,68 @@ export default function AppShell() {
     };
   }, [payrollItems]);
 
+  // Handlers
+  const handleRegisterAccess = (id: string, username: string) => {
+    const docRef = doc(db, "system_users", id);
+    setDocumentNonBlocking(docRef, { id, username }, { merge: true });
+    toast({ title: "Access Node Registered", description: `Username ${username} is now linked to node ${id}.` });
+  };
+
+  const handleTerminateAccess = (id: string) => {
+    const userRef = doc(db, "system_users", id);
+    const adminRef = doc(db, "roles_admin", id);
+    deleteDocumentNonBlocking(userRef);
+    deleteDocumentNonBlocking(adminRef);
+    toast({ title: "Access Revoked", description: "All system privileges for this node have been terminated.", variant: "destructive" });
+  };
+
   const handleAddEmployee = (newEmployee: Employee) => {
     const docRef = doc(db, "employees", newEmployee.id);
     setDocumentNonBlocking(docRef, newEmployee, { merge: true });
-    toast({
-      title: "Staff Member Registered",
-      description: `${newEmployee.fullName} has been added to the directory.`
-    });
+    toast({ title: "Staff Member Registered", description: `${newEmployee.fullName} has been added to the directory.` });
   };
 
   const handleUpdateEmployee = (updatedEmployee: Employee) => {
     const docRef = doc(db, "employees", updatedEmployee.id);
     updateDocumentNonBlocking(docRef, updatedEmployee);
-    toast({
-      title: "Profile Updated",
-      description: `Changes to ${updatedEmployee.fullName} have been saved.`
-    });
+    toast({ title: "Profile Updated", description: `Changes to ${updatedEmployee.fullName} have been saved.` });
   };
 
   const handleDeleteEmployee = (id: string) => {
     const docRef = doc(db, "employees", id);
     deleteDocumentNonBlocking(docRef);
-    toast({
-      title: "Staff Member Removed",
-      description: "Record has been deleted from the directory.",
-      variant: "destructive"
-    });
+    toast({ title: "Staff Member Removed", description: "HR record has been deleted.", variant: "destructive" });
   };
 
   const handleGrantAdmin = (uid: string) => {
     const docRef = doc(db, "roles_admin", uid);
     setDocumentNonBlocking(docRef, { role: "admin", createdAt: new Date().toISOString() }, { merge: true });
-    toast({
-      title: "Admin Privileges Granted",
-      description: "Administrative access enabled for this account."
-    });
+    toast({ title: "Admin Privileges Granted", description: "Administrative access enabled." });
   };
 
   const handleRevokeAdmin = (uid: string) => {
-    if (user?.uid === uid) {
-      toast({
-        title: "Action Restricted",
-        description: "You cannot revoke your own administrative privileges.",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (user?.uid === uid) return toast({ title: "Forbidden", description: "You cannot revoke your own access.", variant: "destructive" });
     const docRef = doc(db, "roles_admin", uid);
     deleteDocumentNonBlocking(docRef);
-    toast({
-      title: "Admin Privileges Revoked",
-      description: "Administrative access disabled for this account.",
-      variant: "destructive"
-    });
+    toast({ title: "Admin Privileges Revoked", description: "Access disabled.", variant: "destructive" });
   };
 
   const handleAddRoute = (newRoute: RouteTrackerRow) => {
     const docRef = doc(db, "routeTrackerRows", newRoute.id);
     setDocumentNonBlocking(docRef, newRoute, { merge: true });
-    toast({
-      title: "Route Logged",
-      description: `Route ${newRoute.route} for ${newRoute.date} has been added.`
-    });
+    toast({ title: "Route Logged", description: `Route ${newRoute.route} added.` });
   };
 
   const handleUpdateRoute = (updatedRoute: RouteTrackerRow) => {
     const docRef = doc(db, "routeTrackerRows", updatedRoute.id);
     updateDocumentNonBlocking(docRef, updatedRoute);
-    toast({
-      title: "Route Updated",
-      description: `Log for Route ${updatedRoute.route} has been updated.`
-    });
+    toast({ title: "Route Updated", description: `Route ${updatedRoute.route} updated.` });
   };
 
   const handleDeleteRoute = (id: string) => {
     const docRef = doc(db, "routeTrackerRows", id);
     deleteDocumentNonBlocking(docRef);
-    toast({
-      title: "Log Removed",
-      description: "Route log has been deleted from the audit.",
-      variant: "destructive"
-    });
+    toast({ title: "Log Removed", description: "Route log deleted.", variant: "destructive" });
   };
 
   const exportCsv = () => {
@@ -217,81 +206,53 @@ export default function AppShell() {
       ["Employee", "Pay Period", "Pay Date", "Gross", "Deductions", "Net"],
       ...payrollItems.map((item) => {
         const totals = computeTotals(item);
-        return [
-          item.employeeNameSnapshot,
-          `${payrollRun.payPeriodStart} to ${payrollRun.payPeriodEnd}`,
-          payrollRun.payDate,
-          totals.grossPay.toFixed(2),
-          totals.totalDeductions.toFixed(2),
-          totals.netPay.toFixed(2),
-        ];
+        return [item.employeeNameSnapshot, `${payrollRun.payPeriodStart} to ${payrollRun.payPeriodEnd}`, payrollRun.payDate, totals.grossPay.toFixed(2), totals.totalDeductions.toFixed(2), totals.netPay.toFixed(2)];
       }),
     ];
     const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", encodeURI(csvContent));
     link.setAttribute("download", `payroll_run_${payrollRun.payDate}.csv`);
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
   };
 
   const finalizeRun = () => {
     setPayrollRun((current) => ({ ...current, status: "Finalized" }));
-    toast({
-      title: "Payroll Finalized",
-      description: "All records have been locked for this period."
-    });
+    toast({ title: "Payroll Finalized", description: "Records locked." });
   };
 
-  const handleSignOut = () => {
-    signOut(auth);
-    setActiveView("dashboard");
-  };
+  const handleSignOut = () => signOut(auth);
 
   const handleBootstrapAdmin = () => {
     if (!user) return;
-    const docRef = doc(db, "roles_admin", user.uid);
-    setDocumentNonBlocking(docRef, { role: "admin", createdAt: new Date().toISOString() }, { merge: true });
-    toast({
-      title: "Admin Role Granted",
-      description: "You now have full system access. Page will refresh."
-    });
+    const adminRef = doc(db, "roles_admin", user.uid);
+    const userRef = doc(db, "system_users", user.uid);
+    setDocumentNonBlocking(adminRef, { role: "admin", createdAt: new Date().toISOString() }, { merge: true });
+    setDocumentNonBlocking(userRef, { id: user.uid, username: user.email?.split('@')[0] || "admin" }, { merge: true });
+    toast({ title: "System Initialized", description: "Page will refresh with Admin access." });
   };
 
-  if (isUserLoading || adminLoading || profileLoading) {
+  if (isUserLoading || adminLoading || profileLoading || userLoading) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Authenticating Session...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Authenticating...</p>
       </div>
     );
   }
 
-  if (!user) {
-    return <LoginView />;
-  }
+  if (!user) return <LoginView />;
 
-  // Handle users that are neither admin nor have an employee profile
-  if (!isAdmin && !isEmployee && !profileLoading) {
+  if (!isAuthorized) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">
-        <div className="max-w-md w-full text-center space-y-6">
-          <div className="flex h-20 w-20 mx-auto items-center justify-center rounded-3xl bg-rose-50 text-rose-500">
-            <ShieldAlert className="h-10 w-10" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Access Pending</h1>
-            <p className="text-sm text-slate-500 font-medium">Your account ({user.email}) is authenticated but not yet authorized by an administrator. Please wait for access activation.</p>
-          </div>
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="max-w-md space-y-6">
+          <ShieldAlert className="h-16 w-16 mx-auto text-rose-500" />
+          <h1 className="text-2xl font-black uppercase tracking-tighter">Access Pending</h1>
+          <p className="text-sm text-slate-500 font-medium">Your node ({user.uid.slice(0, 8)}...) is authenticated but not registered in the system board. Please contact an admin.</p>
           <div className="grid gap-3">
-            <Button className="rounded-xl h-12 w-full font-bold uppercase tracking-wider bg-slate-900 shadow-xl shadow-slate-900/20" onClick={handleBootstrapAdmin}>
-              <ShieldCheck className="mr-2 h-4 w-4" /> Bootstrap First Admin
-            </Button>
-            <Button variant="outline" className="rounded-xl h-12 w-full font-bold uppercase tracking-wider" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" /> Sign Out
-            </Button>
+            <Button className="rounded-xl h-12 bg-slate-900 font-bold uppercase tracking-wider" onClick={handleBootstrapAdmin}><ShieldCheck className="mr-2 h-4 w-4" /> Bootstrap Admin</Button>
+            <Button variant="outline" className="rounded-xl h-12 font-bold uppercase tracking-wider" onClick={handleSignOut}><LogOut className="mr-2 h-4 w-4" /> Sign Out</Button>
           </div>
         </div>
       </div>
@@ -306,149 +267,62 @@ export default function AppShell() {
     { id: "admin-board", label: "Admin Board", icon: Shield },
   ] : [
     { id: "emp-dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "emp-payslips", label: "My Payslips", icon: Receipt },
-    { id: "emp-routes", label: "My Routes", icon: History },
+    { id: "emp-payslips", label: "My Payslips", icon: Receipt, hidden: !isEmployee },
+    { id: "emp-routes", label: "My Routes", icon: History, hidden: !isEmployee },
     { id: "emp-profile", label: "Profile", icon: UserCircle },
-  ];
-
-  const getActiveViewTitle = () => {
-    switch(activeView) {
-      case "payroll": return "Payroll Runs";
-      case "routes": return "Route Tracker";
-      case "admin-board": return "Admin Access Board";
-      case "emp-dashboard": return "Employee Portal";
-      case "emp-payslips": return "My Statements";
-      case "emp-routes": return "Route History";
-      case "emp-profile": return "Account Settings";
-      default: return activeView.toUpperCase();
-    }
-  };
+  ].filter(i => !i.hidden);
 
   return (
     <div className="min-h-screen w-full bg-slate-50/50 flex flex-col">
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
-        <div className="px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
-                <svg viewBox="0 0 100 100" className="h-6 w-6 fill-white">
-                  <circle cx="50" cy="50" r="40" fill="#4461B5"/>
-                  <text x="35" y="68" style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '50px' }} fill="white">S</text>
-                </svg>
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-xs font-black tracking-tighter text-slate-900 uppercase leading-none">Payout Tracker</h1>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">System Oriented</p>
-              </div>
-            </div>
-
-            <nav className="flex items-center gap-1">
-              {navItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveView(item.id as ActiveView)}
-                  className={cn(
-                    "flex items-center gap-2 px-4 h-10 rounded-xl transition-all font-bold text-[10px] uppercase tracking-wider",
-                    activeView === item.id 
-                      ? "bg-slate-100 text-primary" 
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span className="hidden md:inline">{item.label}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-          
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md px-6 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-8">
           <div className="flex items-center gap-3">
-            {isAdmin && (
-              <>
-                <Button variant="outline" size="sm" className="rounded-xl h-9 border-slate-200 font-bold text-[10px] uppercase tracking-wider" onClick={exportCsv}>
-                  <Download className="mr-2 h-3 w-3" /> Export
-                </Button>
-                <Button size="sm" className="rounded-xl h-9 bg-accent hover:bg-accent/90 text-white font-bold text-[10px] uppercase tracking-wider" onClick={finalizeRun} disabled={payrollRun.status === "Finalized"}>
-                  <Lock className="mr-2 h-3 w-3" /> Finalize
-                </Button>
-              </>
-            )}
-            <div className="h-8 w-px bg-slate-200 mx-2" />
-            <div className="flex items-center gap-3 pl-2">
-              <div className="text-right hidden sm:block">
-                <p className="text-[10px] font-black text-slate-900 uppercase leading-none">{user.email?.split('@')[0]}</p>
-                <p className="text-[9px] font-bold text-slate-400 uppercase">{isAdmin ? "Administrator" : "Employee"}</p>
-              </div>
-              <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-slate-400 hover:text-rose-600 hover:bg-rose-50" onClick={handleSignOut}>
-                <LogOut className="h-5 w-5" />
-              </Button>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-lg">
+              <svg viewBox="0 0 100 100" className="h-6 w-6 fill-white">
+                <circle cx="50" cy="50" r="40" fill="#4461B5"/><text x="35" y="68" style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '50px' }} fill="white">S</text>
+              </svg>
+            </div>
+            <div className="hidden sm:block">
+              <h1 className="text-xs font-black tracking-tighter text-slate-900 uppercase leading-none">Payout Tracker</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase">System Oriented</p>
             </div>
           </div>
+          <nav className="flex items-center gap-1">
+            {navItems.map((item) => (
+              <button key={item.id} onClick={() => setActiveView(item.id as ActiveView)} className={cn("flex items-center gap-2 px-4 h-10 rounded-xl transition-all font-bold text-[10px] uppercase tracking-wider", activeView === item.id ? "bg-slate-100 text-primary" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900")}>
+                <item.icon className="h-4 w-4" /><span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div className="flex items-center gap-3">
+          {isAdmin && (
+            <>
+              <Button variant="outline" size="sm" className="rounded-xl h-9 text-[10px] font-bold uppercase" onClick={exportCsv}><Download className="mr-2 h-3 w-3" /> Export</Button>
+              <Button size="sm" className="rounded-xl h-9 bg-accent text-white text-[10px] font-bold uppercase" onClick={finalizeRun} disabled={payrollRun.status === "Finalized"}><Lock className="mr-2 h-3 w-3" /> Finalize</Button>
+            </>
+          )}
+          <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-slate-400 hover:text-rose-600" onClick={handleSignOut}><LogOut className="h-5 w-5" /></Button>
         </div>
       </header>
 
-      <div className="bg-white border-b border-slate-100 px-8 py-3 flex items-center gap-2">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">System</span>
-        <ChevronRight className="h-3 w-3 text-slate-300" />
-        <h2 className="text-[10px] font-black uppercase tracking-widest text-primary">
-          {getActiveViewTitle()}
-        </h2>
-      </div>
-
-      <main className="flex-1 p-8 overflow-x-hidden">
-        <div className="max-w-[1600px] mx-auto">
-          {isAdmin ? (
-            <>
-              {activeView === "dashboard" && <DashboardView summary={payrollSummary} />}
-              {activeView === "employees" && (
-                <EmployeeManager 
-                  employees={employees} 
-                  onAddEmployee={handleAddEmployee}
-                  onUpdateEmployee={handleUpdateEmployee}
-                  onDeleteEmployee={handleDeleteEmployee}
-                  isRoleManagement={false}
-                />
-              )}
-              {activeView === "payroll" && (
-                <PayrollRunsView 
-                  payrollRun={payrollRun} 
-                  setPayrollRun={setPayrollRun}
-                  payrollItems={payrollItems}
-                  setPayrollItems={setPayrollItems}
-                  employees={employees}
-                  routeTracker={routeTracker}
-                />
-              )}
-              {activeView === "routes" && (
-                <RouteTrackerView 
-                  routeTracker={routeTracker} 
-                  onAddRoute={handleAddRoute}
-                  onUpdateRoute={handleUpdateRoute}
-                  onDeleteRoute={handleDeleteRoute}
-                  employees={employees}
-                />
-              )}
-              {activeView === "admin-board" && (
-                <EmployeeManager 
-                  employees={employees} 
-                  onAddEmployee={handleAddEmployee}
-                  onUpdateEmployee={handleUpdateEmployee}
-                  onDeleteEmployee={handleDeleteEmployee}
-                  isRoleManagement={true}
-                  allAdmins={allAdmins}
-                  onGrantAdmin={handleGrantAdmin}
-                  onRevokeAdmin={handleRevokeAdmin}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              {activeView === "emp-dashboard" && <EmployeeDashboard employee={employeeProfile} />}
-              {activeView === "emp-payslips" && <MyPaystubsView employee={employeeProfile || null} />}
-              {activeView === "emp-routes" && <MyRoutesView employee={employeeProfile || null} />}
-              {activeView === "emp-profile" && <EmployeeProfileView employee={employeeProfile || null} />}
-            </>
-          )}
-        </div>
+      <main className="flex-1 p-8 overflow-x-hidden max-w-[1600px] mx-auto w-full">
+        {isAdmin ? (
+          <>
+            {activeView === "dashboard" && <DashboardView summary={payrollSummary} />}
+            {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={handleAddEmployee} onUpdateEmployee={handleUpdateEmployee} onDeleteEmployee={handleDeleteEmployee} isRoleManagement={false} />}
+            {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} />}
+            {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={handleAddRoute} onUpdateRoute={handleUpdateRoute} onDeleteRoute={handleDeleteRoute} employees={employees} />}
+            {activeView === "admin-board" && <EmployeeManager employees={systemUsers as any} onAddEmployee={(e) => handleRegisterAccess(e.id, e.fullName)} onUpdateEmployee={() => {}} onDeleteEmployee={handleTerminateAccess} isRoleManagement={true} allAdmins={allAdmins} onGrantAdmin={handleGrantAdmin} onRevokeAdmin={handleRevokeAdmin} />}
+          </>
+        ) : (
+          <>
+            {activeView === "emp-dashboard" && <EmployeeDashboard employee={employeeProfile} />}
+            {activeView === "emp-payslips" && <MyPaystubsView employee={employeeProfile || null} />}
+            {activeView === "emp-routes" && <MyRoutesView employee={employeeProfile || null} />}
+            {activeView === "emp-profile" && <EmployeeProfileView employee={employeeProfile || null} />}
+          </>
+        )}
       </main>
     </div>
   );

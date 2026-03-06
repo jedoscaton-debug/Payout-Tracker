@@ -1,5 +1,23 @@
+
 {
   "entities": {
+    "SystemUser": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SystemUser",
+      "type": "object",
+      "description": "Represents a user with system access, identified by a username and a linked UID.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique system UID."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's login username."
+        }
+      },
+      "required": ["id", "username"]
+    },
     "Employee": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Employee",
@@ -187,243 +205,40 @@
         "otherEarningsLines",
         "deductionsLines"
       ]
-    },
-    "EarningsLine": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "EarningsLine",
-      "type": "object",
-      "description": "Represents a single line item of earnings for an employee within a payroll item, typically derived from route activity.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the EarningsLine. This ID is unique within the context of a PayrollItem."
-        },
-        "date": {
-          "type": "string",
-          "description": "The date associated with this earning.",
-          "format": "date"
-        },
-        "client": {
-          "type": "string",
-          "description": "The client for which this earning was generated."
-        },
-        "role": {
-          "type": "string",
-          "description": "The role the employee performed to earn this amount (Driver, Helper, or both).",
-          "format": "enum",
-          "items": {
-            "type": "string"
-          }
-        },
-        "description": {
-          "type": "string",
-          "description": "A textual description of the earning line."
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary amount of this earning line."
-        }
-      },
-      "required": [
-        "id",
-        "date",
-        "client",
-        "role",
-        "description",
-        "amount"
-      ]
-    },
-    "OtherEarningLine": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "OtherEarningLine",
-      "type": "object",
-      "description": "Represents a miscellaneous earning line item for an employee within a payroll item, not automatically generated from routes.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the OtherEarningLine. This ID is unique within the context of a PayrollItem."
-        },
-        "description": {
-          "type": "string",
-          "description": "A textual description of the other earning."
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary amount of this other earning line."
-        }
-      },
-      "required": [
-        "id",
-        "description",
-        "amount"
-      ]
-    },
-    "DeductionLine": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "DeductionLine",
-      "type": "object",
-      "description": "Represents a single deduction line item applied to an employee's pay within a payroll item.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the DeductionLine. This ID is unique within the context of a PayrollItem."
-        },
-        "deductionName": {
-          "type": "string",
-          "description": "The name or description of the deduction."
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary amount of the deduction."
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of deduction (Fixed or Installment).",
-          "format": "enum",
-          "items": {
-            "type": "string"
-          }
-        },
-        "installmentMeta": {
-          "type": "string",
-          "description": "Metadata for installment-based deductions, if applicable. (Embedded Object: InstallmentMeta)"
-        }
-      },
-      "required": [
-        "id",
-        "deductionName",
-        "amount",
-        "type"
-      ]
-    },
-    "InstallmentMeta": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "InstallmentMeta",
-      "type": "object",
-      "description": "Contains metadata for deductions that are paid in installments.",
-      "properties": {
-        "totalClaimAmount": {
-          "type": "number",
-          "description": "The total original amount of the claim being deducted in installments."
-        },
-        "installmentCount": {
-          "type": "number",
-          "description": "The total number of installments planned for this deduction."
-        },
-        "installmentNumberPaid": {
-          "type": "number",
-          "description": "The number of installments that have already been paid."
-        },
-        "remainingBalance": {
-          "type": "number",
-          "description": "The remaining balance of the deduction after current and previous installments."
-        },
-        "note": {
-          "type": "string",
-          "description": "An optional note related to the installment deduction."
-        }
-      },
-      "required": [
-        "totalClaimAmount",
-        "installmentCount",
-        "installmentNumberPaid",
-        "remainingBalance"
-      ]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
       {
+        "path": "/system_users/{userId}",
+        "definition": {
+          "entityName": "SystemUser",
+          "schema": { "$ref": "#/backend/entities/SystemUser" },
+          "description": "Stores access nodes for users. Linked by UID.",
+          "params": [{ "name": "userId", "description": "The system UID." }]
+        }
+      },
+      {
         "path": "/employees/{employeeId}",
         "definition": {
           "entityName": "Employee",
-          "schema": {
-            "$ref": "#/backend/entities/Employee"
-          },
-          "description": "Stores core details for individual employees. Employee documents are accessible by the employee themselves (using request.auth.uid) or by administrators.",
-          "params": [
-            {
-              "name": "employeeId",
-              "description": "The unique identifier of the employee."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Employee" },
+          "description": "Stores core HR details for staff.",
+          "params": [{ "name": "employeeId", "description": "The employee UID." }]
         }
       },
       {
         "path": "/roles_admin/{adminId}",
         "definition": {
           "entityName": "AdminRole",
-          "schema": {
-            "$ref": "#/backend/entities/AdminRole"
-          },
-          "description": "This collection determines administrative privileges. The existence of a document where the document ID matches a user's UID grants that user administrative access. This is a conceptual entity for database authorization.",
-          "params": [
-            {
-              "name": "adminId",
-              "description": "The UID of the user with administrative privileges."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/routeTrackerRows/{routeTrackerRowId}",
-        "definition": {
-          "entityName": "RouteTrackerRow",
-          "schema": {
-            "$ref": "#/backend/entities/RouteTrackerRow"
-          },
-          "description": "Central repository for raw route tracking data, serving as the source for automated payroll calculations. This collection is primarily accessible by administrators for data entry and processing.",
-          "params": [
-            {
-              "name": "routeTrackerRowId",
-              "description": "The unique identifier for a route tracker row."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/payrollRuns/{payrollRunId}",
-        "definition": {
-          "entityName": "PayrollRun",
-          "schema": {
-            "$ref": "#/backend/entities/PayrollRun"
-          },
-          "description": "Defines parameters for each payroll period, including start, end, and pay dates, and its processing status (e.g., 'Draft', 'Finalized'). Accessible only by administrators. The 'status' field is critical for controlling write access to child PayrollItems.",
-          "params": [
-            {
-              "name": "payrollRunId",
-              "description": "The unique identifier for a payroll run."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/payrollRuns/{payrollRunId}/payrollItems/{payrollItemId}",
-        "definition": {
-          "entityName": "PayrollItem",
-          "schema": {
-            "$ref": "#/backend/entities/PayrollItem"
-          },
-          "description": "Contains an employee's detailed paystub for a specific payroll run. Includes denormalized 'employeeId' for efficient employee-specific read access and 'payrollRunStatus' (from parent PayrollRun's status) for authorization independence on writes. 'earningsLines', 'otherEarningsLines', and 'deductionsLines' are embedded arrays within this document.",
-          "params": [
-            {
-              "name": "payrollRunId",
-              "description": "The unique identifier for the parent payroll run."
-            },
-            {
-              "name": "payrollItemId",
-              "description": "The unique identifier for this payroll item (paystub)."
-            }
-          ]
+          "schema": { "type": "object", "properties": { "role": { "type": "string" } } },
+          "description": "Determines administrative privileges.",
+          "params": [{ "name": "adminId", "description": "The UID." }]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to be secure, scalable, and debuggable, adhering strictly to the core design principles and mandates. \n\n**Authorization Independence (CRITICAL):**\n\n1.  **PayrollItem Status Denormalization:** The `PayrollItem` documents are stored in a subcollection under `PayrollRun` (`/payrollRuns/{payrollRunId}/payrollItems/{payrollItemId}`). To ensure authorization independence, each `PayrollItem` document will include a denormalized field, `payrollRunStatus` (e.g., 'Draft' or 'Finalized'), copied directly from its parent `PayrollRun` document's `status` field. This eliminates the need for security rules to use `get()` operations on the parent `PayrollRun` document to check its status during write operations on `PayrollItem`s. For example, an administrator can update a `PayrollItem` only if its `payrollRunStatus` is 'Draft', without performing an expensive and non-atomic read on the parent `PayrollRun`. This enables atomic batch writes and transactions involving `PayrollItem`s.\n2.  **Employee ID Denormalization:** Each `PayrollItem` also contains the `employeeId` field, which directly corresponds to the employee it belongs to. This enables an employee to retrieve their own payroll items using their `request.auth.uid` without any `get()` operations on other collections.\n\n**Clarity of Intent (Debuggability):**\n\n*   Collection paths are semantically clear (e.g., `/employees`, `/payrollRuns`, `/routeTrackerRows`).\n*   Authorization logic is explicit within the data (e.g., `payrollRunStatus` in `PayrollItem`) and directly referencable by security rules, making them easier to read and debug.\n\n**DBAC (No Custom Claims):**\n\n*   Administrator roles are managed through a dedicated top-level collection: `/roles_admin/{adminId}`. The mere existence of a document at this path signifies administrator privileges for the `adminId`. This allows for simple, performant rule checks like `exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))`.\n*   Employee-specific access relies on `request.auth.uid` matching the `employeeId` field or path parameter.\n\n**QAPs (Rules are not Filters):**\n\n*   **Structural Segregation:** Data is segregated into collections with homogeneous security postures. For example, `RouteTrackerRows` are only accessible to administrators, ensuring that `list` operations always return authorized results without complex filtering logic.\n*   **Path-Based Ownership:** For `/employees/{employeeId}`, only the employee matching `{employeeId}` (via `request.auth.uid`) or an administrator can read their own profile. This inherently supports secure `list` operations by returning only the accessible documents or all documents for an admin.\n*   **Denormalization for List Operations:** For `PayrollItem`s, the `employeeId` field allows for efficient, secure querying by employees (`where('employeeId', '==', request.auth.uid)`) to retrieve only their relevant payroll items, without relying on client-side filtering.\n*   **Restricted `PayrollRun` List:** Only administrators can list all `PayrollRun`s, maintaining the security posture for sensitive payroll data.\n\n**Invariants:**\n\n*   `PayrollItem` documents include `employeeNameSnapshot` and `dailyRateSnapshot` to preserve historical data, preventing changes to employee details from altering past payroll records.\n*   The `status` field in `PayrollRun` provides an explicit state model, which is denormalized into `payrollRunStatus` in `PayrollItem` to ensure consistent application of the 'finalized' state across related documents."
+    ]
   }
 }
