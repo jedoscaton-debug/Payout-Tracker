@@ -102,15 +102,15 @@ export default function AppShell() {
   const { data: allAdminsData, isLoading: allAdminsLoading } = useCollection(adminsQuery);
   const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
 
-  // Automated Redirection Logic
+  // Automated Redirection Logic - Hardened to handle loading states correctly
   useEffect(() => {
-    if (!isUserLoading && !adminLoading && !profileLoading && !bootstrapLoading && !nodeLoading) {
+    if (!isUserLoading && !adminLoading && !profileLoading && !bootstrapLoading && !nodeLoading && user) {
       if (isAdmin) {
         setActiveView("dashboard");
       } else if (isEmployee) {
         setActiveView("emp-dashboard");
-      } else if (!isSystemFresh && user) {
-        // Default view for authenticated users who are not yet linked to an employee record
+      } else if (!isSystemFresh) {
+        // Fallback for recognized users without linked profiles
         setActiveView("emp-profile");
       }
     }
@@ -184,6 +184,7 @@ export default function AppShell() {
       deleteDocumentNonBlocking(adminRef);
     }
     
+    // Wipe system node but preserve HR employee record (per user request)
     deleteDocumentNonBlocking(userRef);
     toast({ title: "Access Revoked", description: "System privileges for this node have been terminated. The employee record remains active." });
   };
@@ -191,7 +192,6 @@ export default function AppShell() {
   const handleBootstrapMaster = () => {
     if (!user) return;
     const adminRef = doc(db, "roles_admin", user.uid);
-    // Persist the STUDIO-MASTER-2026 UID for the Master Admin
     const rootSystemUid = "STUDIO-MASTER-2026";
     const userRef = doc(db, "system_users", rootSystemUid);
     const placeholderRef = doc(db, "roles_admin", "first_admin_placeholder");
