@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -136,7 +135,7 @@ export default function AppShell() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-slate-50/50">
-        <Sidebar className="border-r border-slate-200">
+        <Sidebar className="border-r border-slate-200 bg-white shadow-xl z-20">
           <SidebarHeader className="p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
@@ -201,7 +200,7 @@ export default function AppShell() {
           </SidebarContent>
         </Sidebar>
 
-        <SidebarInset>
+        <SidebarInset className="bg-slate-50/50">
           <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur-md">
             <div className="flex items-center gap-4">
               <SidebarTrigger />
