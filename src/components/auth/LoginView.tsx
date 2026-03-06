@@ -44,6 +44,7 @@ export function LoginView() {
           description: "System node created. Waiting for admin authorization."
         });
       } else {
+        // Attempt sign in
         await initiateEmailSignIn(auth, email, password);
         toast({
           title: "Access Granted",
@@ -51,11 +52,11 @@ export function LoginView() {
         });
       }
     } catch (error: any) {
-      console.error("Auth error:", error);
+      // Do not use console.error() to prevent triggering unhandled exception overlays
       let message = "An error occurred during authentication.";
       
-      // Handle Firebase merged error codes
-      if (error.code === 'auth/invalid-credential') {
+      // Handle Firebase error codes to prevent system-level crashes
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         message = isSignUp 
           ? "This node may already be registered. Try Logging In instead." 
           : "Invalid username or system UID. If this is your first time, please Register your node first.";

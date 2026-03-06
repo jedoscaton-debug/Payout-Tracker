@@ -155,7 +155,7 @@ export function EmployeeManager({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">User UID (Password Key)</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">User UID (Access Key)</Label>
                     <Input 
                       required
                       placeholder="pEdBZ1Y8AbeTrUKSC4..."
