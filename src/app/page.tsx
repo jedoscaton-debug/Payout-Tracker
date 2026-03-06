@@ -49,9 +49,9 @@ export default function AppShell() {
   const employeeProfile = employeesFound?.[0] || null;
   const isEmployee = !!employeeProfile;
 
-  // System Bootstrap Check
+  // System Bootstrap Check - Gated by !!user to prevent permission errors on login screen
   const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
-  const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef);
+  const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef, { enabled: !!user });
   const isSystemFresh = !bootstrapLoading && !bootstrapDoc && !isMasterByEmail && !isAdmin && !isEmployee && user;
 
   // Redirection Logic
