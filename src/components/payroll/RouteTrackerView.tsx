@@ -11,8 +11,7 @@ import {
   estimateFuel, 
   driverPay, 
   helperPay,
-  truckRentalMileageCost,
-  TRUCK_RENTAL_FIXED
+  truckRentalMileageCost
 } from "@/app/lib/payroll-utils";
 import { cn } from "@/lib/utils";
 
@@ -32,9 +31,9 @@ export function RouteTrackerView({ routeTracker }: RouteTrackerViewProps) {
     "Estimated Pay",
     "Actual Pay - Audit",
     "Delta - Audit",
-    "", // Spacer 1
+    "", // Spacer
     "Driver",
-    "", // Spacer 2
+    "", // Spacer
     "Helper(s)",
     "Driver Pay",
     "Helper(s) Pay",
@@ -79,7 +78,7 @@ export function RouteTrackerView({ routeTracker }: RouteTrackerViewProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-8 w-1.5 bg-primary rounded-full" />
-              <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-white">Route Financial Audit (Week Feb 22 - Feb 28, 2026)</CardTitle>
+              <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-white">Route Financial Audit</CardTitle>
             </div>
           </div>
         </CardHeader>
@@ -117,7 +116,6 @@ export function RouteTrackerView({ routeTracker }: RouteTrackerViewProps) {
                     const totalExp = row.truckRental + mileageCost + row.insurance + fuel;
                     const netProfit = (actualPay || estRev) - totalExp - dPay - hPay;
                     
-                    // Sample logic for yellow highlighting from the image
                     const isYellow = idx % 3 === 2 || row.route === "EV" || row.route === "GAS";
 
                     return (

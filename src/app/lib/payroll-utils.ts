@@ -16,7 +16,8 @@ export function currency(value: number) {
 export function shortDate(input: string) {
   if (!input) return "";
   const d = new Date(`${input}T00:00:00`);
-  return d.toLocaleDateString("en-US", { month: "n/j/Y" });
+  // FIXED: Using valid numeric options instead of a format string
+  return d.toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" });
 }
 
 export function getDayOfWeek(input: string) {
