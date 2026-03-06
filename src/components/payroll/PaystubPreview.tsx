@@ -1,11 +1,15 @@
 
 "use client";
 
+import { useState } from "react";
 import { PayrollItem, PayrollRun } from "@/app/lib/types";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
+import { Printer, Download, Loader2 } from "lucide-react";
+
+// @ts-ignore
+import html2pdf from "html2pdf.js";
 
 interface PaystubPreviewProps {
   item: PayrollItem;
@@ -14,16 +18,35 @@ interface PaystubPreviewProps {
 
 export function PaystubPreview({ item, run }: PaystubPreviewProps) {
   const totals = computeTotals(item);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const downloadPaystub = () => {
+    const element = document.getElementById("paystub-document");
+    if (!element) return;
+    
+    setIsDownloading(true);
+
+    const opt = {
+      margin: 10,
+      filename: `payslip_${item.employeeNameSnapshot.replace(/\s+/g, '_')}_${run.payDate}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().from(element).set(opt).save().finally(() => {
+      setIsDownloading(false);
+    });
   };
 
   return (
     <div className="flex flex-col w-full h-full bg-white text-black font-sans">
       <style jsx global>{`
         @media print {
-          /* Reset root styles for a clean A4/Letter print */
           html, body {
             height: 100%;
             margin: 0 !important;
@@ -32,12 +55,10 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             background: white !important;
           }
 
-          /* Hide everything in the app except our print container */
           header, main, footer, nav, [role="dialog"] > *:not(#paystub-print-container), .no-print {
             display: none !important;
           }
 
-          /* Force the document to the top of the physical page */
           #paystub-print-container {
             display: block !important;
             position: fixed !important;
@@ -61,7 +82,6 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             height: auto !important;
           }
 
-          /* Preserve ledger vertical lines for printing */
           .print-divider {
             border-right: 1.5px solid #000 !important;
             opacity: 1 !important;
@@ -69,22 +89,40 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
         }
       `}</style>
 
-      {/* Dialog Header with Print Button */}
-      <div className="no-print flex items-center justify-between p-6 border-b bg-slate-50/50 sticky top-0 z-10">
+      {/* Dialog Header with Print/Download Buttons */}
+      <div className="no-print flex items-center justify-between p-6 border-b bg-slate-50/50 sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg">
-            <svg viewBox="0 0 40 40" className="h-6 w-6 fill-current">
-              <path d="M20 2L4 10V30L20 38L36 30V10L20 2ZM20 6L32 12V28L20 34L8 28V12L20 6ZM20 10L14 13V27L20 30L26 27V13L20 10Z" />
-            </svg>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg">
+            <span className="text-xl font-black">S</span>
           </div>
           <div>
-            <h3 className="text-sm font-black uppercase tracking-tighter">Payslip Preview</h3>
-            <p className="text-[10px] text-slate-500 font-medium tracking-wider">SYSTEM ORIENTED OFFICIAL STATEMENT</p>
+            <h3 className="text-sm font-black uppercase tracking-tighter">Payslip Statement</h3>
+            <p className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Official Business Record</p>
           </div>
         </div>
-        <Button size="sm" className="rounded-xl h-10 text-[10px] font-bold uppercase bg-slate-900 hover:bg-black text-white px-6" onClick={handlePrint}>
-          <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="outline"
+            size="sm" 
+            className="rounded-xl h-10 text-[10px] font-bold uppercase border-slate-200 px-6" 
+            onClick={handlePrint}
+          >
+            <Printer className="mr-2 h-4 w-4" /> Print
+          </Button>
+          <Button 
+            size="sm" 
+            className="rounded-xl h-10 text-[10px] font-bold uppercase bg-slate-900 hover:bg-black text-white px-6" 
+            onClick={downloadPaystub}
+            disabled={isDownloading}
+          >
+            {isDownloading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Download PDF
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="flex-1 bg-slate-100/50 p-6 sm:p-12 min-h-0" id="paystub-print-container">
@@ -95,9 +133,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
           {/* Company Branding */}
           <div className="flex flex-col items-center gap-2">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl">
-              <svg viewBox="0 0 40 40" className="h-10 w-10 fill-current">
-                <path d="M20 2L4 10V30L20 38L36 30V10L20 2ZM20 6L32 12V28L20 34L8 28V12L20 6ZM20 10L14 13V27L20 30L26 27V13L20 10Z" />
-              </svg>
+               <span className="text-4xl font-black">S</span>
             </div>
             <div className="text-center">
               <h1 className="text-3xl font-black tracking-tight uppercase text-slate-900 leading-none">SYSTEM ORIENTED LLC</h1>
@@ -112,7 +148,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
               <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Employee</span>
               <span className="font-black text-slate-900 uppercase tracking-tight">{item.employeeNameSnapshot}</span>
               
-              <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Contract Info</span>
+              <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Contract Basis</span>
               <span className="font-bold text-slate-700">{item.dailyRateSnapshot || "Varies"}</span>
               
               <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Pay Period</span>
@@ -220,7 +256,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
           <div className="flex flex-col gap-4 mt-auto pt-10 border-t border-slate-100">
              <div className="grid grid-cols-3 border-2 border-slate-900 rounded-2xl overflow-hidden text-center bg-white shadow-sm">
                 <div className="flex flex-col border-r-2 border-slate-900">
-                  <div className="bg-slate-50 border-b-2 border-slate-900 py-3 text-[10px] font-black uppercase tracking-widest text-slate-900">Gross Pay</div>
+                  <div className="bg-slate-50 border-b-2 border-slate-900 py-3 text-[10px] font-black uppercase tracking-widest text-slate-900">Gross Amount</div>
                   <div className="py-5 text-sm font-black text-slate-900">{currency(totals.grossPay)}</div>
                 </div>
                 <div className="flex flex-col border-r-2 border-slate-900">
@@ -228,7 +264,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                   <div className="py-5 text-sm font-black text-rose-600">{currency(totals.totalDeductions)}</div>
                 </div>
                 <div className="flex flex-col bg-slate-900 text-white">
-                  <div className="border-b-2 border-white/20 py-3 text-[10px] font-black uppercase tracking-[0.3em]">Net Pay</div>
+                  <div className="border-b-2 border-white/20 py-3 text-[10px] font-black uppercase tracking-[0.3em]">Net Amount</div>
                   <div className="py-5 text-sm font-black">{currency(totals.netPay)}</div>
                 </div>
              </div>
@@ -236,7 +272,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             <div className="flex items-center justify-between mt-6">
               <div className="flex items-center gap-2">
                 <div className="h-4 w-4 rounded bg-slate-900" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">SYSTEM ORIENTED OFFICIAL DOCUMENT</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">SYSTEM ORIENTED OFFICIAL STATEMENT</span>
               </div>
               <span className="text-[10px] font-bold text-slate-300 uppercase">Page 1 of 1</span>
             </div>
