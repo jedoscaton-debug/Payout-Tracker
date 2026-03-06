@@ -15,12 +15,12 @@ export function currency(value: number) {
 
 export function shortDate(input: string) {
   if (!input) return "";
-  const parts = input.split('-');
-  if (parts.length !== 3) return input;
-  const year = parts[0];
-  const month = parseInt(parts[1], 10);
-  const day = parseInt(parts[2], 10);
-  return `${month}/${day}/${year}`;
+  const d = new Date(`${input}T00:00:00`);
+  return d.toLocaleDateString("en-US", {
+    month: "numeric",
+    day: "numeric",
+    year: "numeric"
+  });
 }
 
 export function getDayOfWeek(input: string) {
@@ -37,14 +37,16 @@ export function estimateFuel(miles: number) {
   return 0.47 * (miles || 0);
 }
 
-export function driverPay(stops: number, route: string = "", vehicle: string = "") {
+export function driverPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number) {
+  const basePay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops);
   const rate = (route === "EV" && vehicle === "EV") ? 0.33 : 0.27;
-  return Number((estimatePay(stops) * rate).toFixed(2));
+  return Number((basePay * rate).toFixed(2));
 }
 
-export function helperPay(stops: number, route: string = "", vehicle: string = "") {
+export function helperPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number) {
+  const basePay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops);
   const rate = (route === "EV" && vehicle === "EV") ? 0.27 : 0.23;
-  return Number((estimatePay(stops) * rate).toFixed(2));
+  return Number((basePay * rate).toFixed(2));
 }
 
 export function truckRentalMileageCost(miles: number) {
@@ -61,10 +63,11 @@ function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType |
 }
 
 function amountForRole(row: RouteTrackerRow, role: RoleType) {
-  if (role === "Driver") return driverPay(row.stops, row.route, row.vehicleNumber);
-  if (role === "Helper") return helperPay(row.stops, row.route, row.vehicleNumber);
+  const estPay = row.estimatedPay || estimatePay(row.stops);
+  if (role === "Driver") return driverPay(row.stops, row.route, row.vehicleNumber, estPay);
+  if (role === "Helper") return helperPay(row.stops, row.route, row.vehicleNumber, estPay);
   // Combined role
-  return driverPay(row.stops, row.route, row.vehicleNumber) + helperPay(row.stops, row.route, row.vehicleNumber);
+  return driverPay(row.stops, row.route, row.vehicleNumber, estPay) + helperPay(row.stops, row.route, row.vehicleNumber, estPay);
 }
 
 export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: RouteTrackerRow[]): EarningsLine[] {

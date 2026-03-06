@@ -9,6 +9,7 @@ export type RouteTrackerRow = {
   date: string;
   miles: number;
   stops: number;
+  estimatedPay?: number; // Optional override
   actualPayAudit: number;
   truckRental: number;
   insurance: number;

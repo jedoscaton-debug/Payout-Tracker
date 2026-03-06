@@ -70,6 +70,7 @@ export function RouteTrackerView({
     date: new Date().toISOString().split('T')[0],
     miles: 0,
     stops: 0,
+    estimatedPay: 0,
     truckRental: TRUCK_RENTAL_FIXED,
     insurance: 0,
     driver: "",
@@ -77,9 +78,17 @@ export function RouteTrackerView({
   });
 
   const currentRoute = isEditOpen ? editingRoute : newRoute;
-  const estPayValue = estimatePay(currentRoute?.stops || 0);
-  const dPayValue = driverPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber);
-  const hPayValue = currentRoute?.helper && currentRoute?.helper !== "No Helper" ? helperPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber) : 0;
+  
+  // Logic: Use manually entered pay if > 0, otherwise calculate based on stops
+  const estPayValue = currentRoute?.estimatedPay && currentRoute.estimatedPay > 0 
+    ? currentRoute.estimatedPay 
+    : estimatePay(currentRoute?.stops || 0);
+
+  const dPayValue = driverPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber, currentRoute?.estimatedPay);
+  const hPayValue = currentRoute?.helper && currentRoute?.helper !== "No Helper" 
+    ? helperPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber, currentRoute?.estimatedPay) 
+    : 0;
+    
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
   const fuelValue = estimateFuel(currentRoute?.miles || 0);
   const totalExpensesValue = (currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue;
@@ -119,9 +128,9 @@ export function RouteTrackerView({
 
   const totals = useMemo(() => {
     return filtered.reduce((acc, row) => {
-      const estRev = estimatePay(row.stops);
-      const dPay = driverPay(row.stops, row.route, row.vehicleNumber);
-      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber) : 0;
+      const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops);
+      const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay) : 0;
       const fuel = estimateFuel(row.miles);
       const mileageCost = truckRentalMileageCost(row.miles);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -151,9 +160,9 @@ export function RouteTrackerView({
     ];
 
     const rows = filtered.map(row => {
-      const estRev = estimatePay(row.stops);
-      const dPay = driverPay(row.stops, row.route, row.vehicleNumber);
-      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber) : 0;
+      const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops);
+      const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay) : 0;
       const mileageCost = truckRentalMileageCost(row.miles);
       const fuel = estimateFuel(row.miles);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -208,6 +217,7 @@ export function RouteTrackerView({
         date: new Date().toISOString().split('T')[0],
         miles: 0,
         stops: 0,
+        estimatedPay: 0,
         truckRental: TRUCK_RENTAL_FIXED,
         insurance: 0,
         driver: "",
@@ -332,10 +342,14 @@ export function RouteTrackerView({
                     <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.stops} onChange={(e) => setNewRoute({...newRoute, stops: Number(e.target.value)})} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Pay</Label>
-                    <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold">
-                      {currency(estPayValue)}
-                    </div>
+                    <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Pay (Manual override)</Label>
+                    <Input 
+                      type="number" 
+                      className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
+                      placeholder={estimatePay(newRoute.stops || 0).toString()}
+                      value={newRoute.estimatedPay || ""} 
+                      onChange={(e) => setNewRoute({...newRoute, estimatedPay: Number(e.target.value)})} 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Driver</Label>
@@ -435,9 +449,9 @@ export function RouteTrackerView({
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {filtered.map((row) => {
-                    const estRev = estimatePay(row.stops);
-                    const dPay = driverPay(row.stops, row.route, row.vehicleNumber);
-                    const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber) : 0;
+                    const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops);
+                    const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay);
+                    const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay) : 0;
                     const mileageCost = truckRentalMileageCost(row.miles);
                     const fuel = estimateFuel(row.miles);
                     const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -568,10 +582,14 @@ export function RouteTrackerView({
                   <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.stops} onChange={(e) => setEditingRoute({...editingRoute, stops: Number(e.target.value)})} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Pay</Label>
-                  <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold">
-                    {currency(estPayValue)}
-                  </div>
+                  <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Pay (Manual override)</Label>
+                  <Input 
+                    type="number" 
+                    className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
+                    placeholder={estimatePay(editingRoute.stops || 0).toString()}
+                    value={editingRoute.estimatedPay || ""} 
+                    onChange={(e) => setEditingRoute({...editingRoute, estimatedPay: Number(e.target.value)})} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Driver</Label>
