@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -256,14 +257,14 @@ export function RouteTrackerView({
                 <Input 
                   type="date" 
                   className="h-8 w-36 border-none bg-transparent p-0 text-[10px] font-bold uppercase" 
-                  value={startDate}
+                  value={startDate || ""}
                   onChange={(e) => setStartDate(e.target.value)}
                 />
                 <span className="text-[10px] font-black text-slate-300">TO</span>
                 <Input 
                   type="date" 
                   className="h-8 w-36 border-none bg-transparent p-0 text-[10px] font-bold uppercase" 
-                  value={endDate}
+                  value={endDate || ""}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
@@ -275,7 +276,7 @@ export function RouteTrackerView({
             <Input 
               placeholder="Search routes or staff..." 
               className="pl-10 h-11 w-64 rounded-xl border-slate-200" 
-              value={search}
+              value={search || ""}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
@@ -302,7 +303,7 @@ export function RouteTrackerView({
                 <div className="grid grid-cols-5 gap-x-6 gap-y-8">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Route ID</Label>
-                    <Input placeholder="e.g. A01_EV" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.route} onChange={(e) => setNewRoute({...newRoute, route: e.target.value})} />
+                    <Input placeholder="e.g. A01_EV" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.route || ""} onChange={(e) => setNewRoute({...newRoute, route: e.target.value})} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Route Type</Label>
@@ -320,11 +321,11 @@ export function RouteTrackerView({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Vehicle #</Label>
-                    <Input placeholder="e.g. 2" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.vehicleNumber} onChange={(e) => setNewRoute({...newRoute, vehicleNumber: e.target.value})} />
+                    <Input placeholder="e.g. 2" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.vehicleNumber || ""} onChange={(e) => setNewRoute({...newRoute, vehicleNumber: e.target.value})} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Date</Label>
-                    <Input type="date" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.date} onChange={(e) => setNewRoute({...newRoute, date: e.target.value})} />
+                    <Input type="date" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.date || ""} onChange={(e) => setNewRoute({...newRoute, date: e.target.value})} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Day of Week</Label>
@@ -335,11 +336,11 @@ export function RouteTrackerView({
 
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Miles</Label>
-                    <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.miles} onChange={(e) => setNewRoute({...newRoute, miles: Number(e.target.value)})} />
+                    <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.miles || 0} onChange={(e) => setNewRoute({...newRoute, miles: Number(e.target.value)})} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Stops</Label>
-                    <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.stops} onChange={(e) => setNewRoute({...newRoute, stops: Number(e.target.value)})} />
+                    <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.stops || 0} onChange={(e) => setNewRoute({...newRoute, stops: Number(e.target.value)})} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Pay (Manual override)</Label>
@@ -347,7 +348,7 @@ export function RouteTrackerView({
                       type="number" 
                       className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
                       placeholder={estimatePay(newRoute.stops || 0).toString()}
-                      value={newRoute.estimatedPay || ""} 
+                      value={newRoute.estimatedPay || 0} 
                       onChange={(e) => setNewRoute({...newRoute, estimatedPay: Number(e.target.value)})} 
                     />
                   </div>
@@ -389,7 +390,7 @@ export function RouteTrackerView({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Truck Rental</Label>
-                    <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.truckRental} onChange={(e) => setNewRoute({...newRoute, truckRental: Number(e.target.value)})} />
+                    <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.truckRental || 0} onChange={(e) => setNewRoute({...newRoute, truckRental: Number(e.target.value)})} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Mileage Cost</Label>
@@ -542,7 +543,7 @@ export function RouteTrackerView({
               <div className="grid grid-cols-5 gap-x-6 gap-y-8">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Route ID</Label>
-                  <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.route} onChange={(e) => setEditingRoute({...editingRoute, route: e.target.value})} />
+                  <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.route || ""} onChange={(e) => setEditingRoute({...editingRoute, route: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Route Type</Label>
@@ -560,11 +561,11 @@ export function RouteTrackerView({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Vehicle #</Label>
-                  <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.vehicleNumber} onChange={(e) => setEditingRoute({...editingRoute, vehicleNumber: e.target.value})} />
+                  <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.vehicleNumber || ""} onChange={(e) => setEditingRoute({...editingRoute, vehicleNumber: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Date</Label>
-                  <Input type="date" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.date} onChange={(e) => setEditingRoute({...editingRoute, date: e.target.value})} />
+                  <Input type="date" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.date || ""} onChange={(e) => setEditingRoute({...editingRoute, date: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Day of Week</Label>
@@ -575,11 +576,11 @@ export function RouteTrackerView({
 
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Miles</Label>
-                  <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.miles} onChange={(e) => setEditingRoute({...editingRoute, miles: Number(e.target.value)})} />
+                  <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.miles || 0} onChange={(e) => setEditingRoute({...editingRoute, miles: Number(e.target.value)})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Stops</Label>
-                  <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.stops} onChange={(e) => setEditingRoute({...editingRoute, stops: Number(e.target.value)})} />
+                  <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.stops || 0} onChange={(e) => setEditingRoute({...editingRoute, stops: Number(e.target.value)})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Pay (Manual override)</Label>
@@ -587,7 +588,7 @@ export function RouteTrackerView({
                     type="number" 
                     className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
                     placeholder={estimatePay(editingRoute.stops || 0).toString()}
-                    value={editingRoute.estimatedPay || ""} 
+                    value={editingRoute.estimatedPay || 0} 
                     onChange={(e) => setEditingRoute({...editingRoute, estimatedPay: Number(e.target.value)})} 
                   />
                 </div>
@@ -629,7 +630,7 @@ export function RouteTrackerView({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Truck Rental</Label>
-                  <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.truckRental} onChange={(e) => setEditingRoute({...editingRoute, truckRental: Number(e.target.value)})} />
+                  <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.truckRental || 0} onChange={(e) => setEditingRoute({...editingRoute, truckRental: Number(e.target.value)})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Mileage Cost</Label>

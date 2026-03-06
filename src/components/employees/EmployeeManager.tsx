@@ -184,7 +184,7 @@ export function EmployeeManager({
                 <form onSubmit={handleSubmitAccess} className="space-y-6 mt-4">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Username</Label>
-                    <Input required placeholder="e.g. alemer" className="h-12 rounded-xl" value={newAccess.username} onChange={(e) => setNewAccess({username: e.target.value})} />
+                    <Input required placeholder="e.g. alemer" className="h-12 rounded-xl" value={newAccess.username || ""} onChange={(e) => setNewAccess({username: e.target.value})} />
                     <p className="text-[10px] font-medium text-slate-400 italic">The System UID (Password) will be generated automatically upon registration.</p>
                   </div>
                   <DialogFooter className="pt-4">
@@ -196,7 +196,7 @@ export function EmployeeManager({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
-                      <Input required className="h-12 rounded-xl" value={newStaff.fullName} onChange={(e) => setNewStaff({...newStaff, fullName: e.target.value})} />
+                      <Input required className="h-12 rounded-xl" value={newStaff.fullName || ""} onChange={(e) => setNewStaff({...newStaff, fullName: e.target.value})} />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Role</Label>
@@ -214,21 +214,21 @@ export function EmployeeManager({
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email Address</Label>
-                      <Input required type="email" className="h-12 rounded-xl" value={newStaff.email} onChange={(e) => setNewStaff({...newStaff, email: e.target.value})} />
+                      <Input required type="email" className="h-12 rounded-xl" value={newStaff.email || ""} onChange={(e) => setNewStaff({...newStaff, email: e.target.value})} />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact Number</Label>
-                      <Input required className="h-12 rounded-xl" value={newStaff.contactNumber} onChange={(e) => setNewStaff({...newStaff, contactNumber: e.target.value})} />
+                      <Input required className="h-12 rounded-xl" value={newStaff.contactNumber || ""} onChange={(e) => setNewStaff({...newStaff, contactNumber: e.target.value})} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Daily Rate</Label>
-                      <Input className="h-12 rounded-xl" value={newStaff.defaultDailyRate} onChange={(e) => setNewStaff({...newStaff, defaultDailyRate: e.target.value})} />
+                      <Input className="h-12 rounded-xl" value={newStaff.defaultDailyRate || ""} onChange={(e) => setNewStaff({...newStaff, defaultDailyRate: e.target.value})} />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payment Method</Label>
-                      <Input className="h-12 rounded-xl" value={newStaff.paymentMethod} onChange={(e) => setNewStaff({...newStaff, paymentMethod: e.target.value})} />
+                      <Input className="h-12 rounded-xl" value={newStaff.paymentMethod || ""} onChange={(e) => setNewStaff({...newStaff, paymentMethod: e.target.value})} />
                     </div>
                   </div>
                   <DialogFooter className="pt-4">
@@ -363,7 +363,7 @@ export function EmployeeManager({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
-                  <Input required value={editingEmployee.fullName} onChange={(e) => setEditingEmployee({...editingEmployee, fullName: e.target.value})} />
+                  <Input required value={editingEmployee.fullName || ""} onChange={(e) => setEditingEmployee({...editingEmployee, fullName: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Role</Label>
@@ -381,17 +381,17 @@ export function EmployeeManager({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email Address</Label>
-                  <Input required type="email" value={editingEmployee.email} onChange={(e) => setEditingEmployee({...editingEmployee, email: e.target.value})} />
+                  <Input required type="email" value={editingEmployee.email || ""} onChange={(e) => setEditingEmployee({...editingEmployee, email: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact Number</Label>
-                  <Input required value={editingEmployee.contactNumber} onChange={(e) => setEditingEmployee({...editingEmployee, contactNumber: e.target.value})} />
+                  <Input required value={editingEmployee.contactNumber || ""} onChange={(e) => setEditingEmployee({...editingEmployee, contactNumber: e.target.value})} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Daily Rate</Label>
-                  <Input value={editingEmployee.defaultDailyRate} onChange={(e) => setEditingEmployee({...editingEmployee, defaultDailyRate: e.target.value})} />
+                  <Input value={editingEmployee.defaultDailyRate || ""} onChange={(e) => setEditingEmployee({...editingEmployee, defaultDailyRate: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payment Method</Label>

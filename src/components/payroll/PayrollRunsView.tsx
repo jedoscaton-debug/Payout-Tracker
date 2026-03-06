@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -105,15 +106,15 @@ export function PayrollRunsView({
           <div className="grid gap-8 md:grid-cols-4 items-end">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period Start</label>
-              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodStart} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodStart: e.target.value }))} />
+              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodStart || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodStart: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period End</label>
-              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodEnd} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodEnd: e.target.value }))} />
+              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodEnd || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodEnd: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Pay Date</label>
-              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payDate} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payDate: e.target.value }))} />
+              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payDate || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payDate: e.target.value }))} />
             </div>
             <Button className="h-12 w-full rounded-2xl bg-primary/10 text-primary hover:bg-primary font-bold transition-all border-none" variant="outline" onClick={refreshFromRoutes} disabled={payrollRun.status === "Finalized"}>
               <RefreshCw className="mr-2 h-4 w-4" /> Sync Route Earnings
@@ -179,7 +180,7 @@ export function PayrollRunsView({
                             {item.otherEarningsLines.map((line) => (
                               <Input
                                 key={line.id}
-                                value={line.description}
+                                value={line.description || ""}
                                 placeholder="Earning label..."
                                 className="h-8 text-[11px] rounded-lg border-slate-100 font-medium"
                                 onChange={(e) => updateItem(item.id, (c) => ({ ...c, otherEarningsLines: c.otherEarningsLines.map(x => x.id === line.id ? { ...x, description: e.target.value } : x) }))}
@@ -197,7 +198,7 @@ export function PayrollRunsView({
                               <Input
                                 key={line.id}
                                 type="number"
-                                value={line.amount}
+                                value={line.amount || 0}
                                 className="h-8 w-20 text-[11px] rounded-lg border-slate-100 font-black text-emerald-600"
                                 onChange={(e) => updateItem(item.id, (c) => ({ ...c, otherEarningsLines: c.otherEarningsLines.map(x => x.id === line.id ? { ...x, amount: Number(e.target.value) } : x) }))}
                                 disabled={payrollRun.status === "Finalized"}
@@ -209,7 +210,7 @@ export function PayrollRunsView({
                           <React.Fragment key={`${item.id}-${index}`}>
                             <td className="px-4 py-6">
                               <Input
-                                value={deduction.deductionName}
+                                value={deduction.deductionName || ""}
                                 placeholder={`Deduction ${index + 1}`}
                                 className="h-8 w-32 text-[11px] rounded-lg border-slate-100"
                                 disabled={payrollRun.status === "Finalized" || (item.deductionsLines[index] && deduction.deductionName === "Direct Deposit Fee")}
@@ -219,7 +220,7 @@ export function PayrollRunsView({
                             <td className="px-4 py-6">
                               <Input
                                 type="number"
-                                value={deduction.amount}
+                                value={deduction.amount || 0}
                                 className="h-8 w-20 text-[11px] rounded-lg border-slate-100 font-black text-rose-500"
                                 disabled={payrollRun.status === "Finalized" || (item.deductionsLines[index] && deduction.deductionName === "Direct Deposit Fee")}
                                 onChange={(e) => updateItem(item.id, (c) => ({ ...c, deductionsLines: c.deductionsLines.map((x, i) => i === index ? { ...x, amount: Number(e.target.value) } : x) }))}
