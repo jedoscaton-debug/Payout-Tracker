@@ -5,7 +5,7 @@ import { PayrollItem, PayrollRun } from "@/app/lib/types";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Printer, Settings2 } from "lucide-react";
+import { Printer } from "lucide-react";
 
 interface PaystubPreviewProps {
   item: PayrollItem;
@@ -23,36 +23,45 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
     <div className="flex flex-col w-full h-full bg-white text-black font-sans">
       <style jsx global>{`
         @media print {
-          @page {
-            size: A4;
-            margin: 0;
+          /* Reset root styles for a clean A4/Letter print */
+          html, body {
+            height: 100%;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            background: white !important;
           }
-          /* Hide everything in the app */
-          body * {
-            visibility: hidden !important;
+
+          /* Hide everything in the app except our print container */
+          header, main, footer, nav, [role="dialog"] > *:not(#paystub-print-container), .no-print {
+            display: none !important;
           }
-          /* Show only the document and its content */
-          #paystub-document, #paystub-document * {
-            visibility: visible !important;
-          }
-          /* Force document to the very top left of the physical page */
-          #paystub-document {
+
+          /* Force the document to the top of the physical page */
+          #paystub-print-container {
+            display: block !important;
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             width: 100% !important;
             height: 100% !important;
+            padding: 0 !important;
             margin: 0 !important;
-            padding: 15mm !important;
             background: white !important;
-            z-index: 9999 !important;
+            z-index: 9999999 !important;
+          }
+
+          #paystub-document {
+            margin: 0 auto !important;
+            padding: 15mm !important;
+            width: 100% !important;
+            max-width: none !important;
             box-shadow: none !important;
             border: none !important;
+            height: auto !important;
           }
-          .no-print {
-            display: none !important;
-          }
-          /* Ensure vertical lines print clearly */
+
+          /* Preserve ledger vertical lines for printing */
           .print-divider {
             border-right: 1.5px solid #000 !important;
             opacity: 1 !important;
@@ -63,155 +72,174 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
       {/* Dialog Header with Print Button */}
       <div className="no-print flex items-center justify-between p-6 border-b bg-slate-50/50 sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
-            <Settings2 className="h-5 w-5" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg">
+            <svg viewBox="0 0 40 40" className="h-6 w-6 fill-current">
+              <path d="M20 2L4 10V30L20 38L36 30V10L20 2ZM20 6L32 12V28L20 34L8 28V12L20 6ZM20 10L14 13V27L20 30L26 27V13L20 10Z" />
+            </svg>
           </div>
           <div>
             <h3 className="text-sm font-black uppercase tracking-tighter">Payslip Preview</h3>
-            <p className="text-[10px] text-slate-500 font-medium">Review and download employee statement.</p>
+            <p className="text-[10px] text-slate-500 font-medium tracking-wider">SYSTEM ORIENTED OFFICIAL STATEMENT</p>
           </div>
         </div>
-        <Button size="sm" className="rounded-xl h-9 text-[10px] font-bold uppercase bg-accent hover:bg-accent/90 text-white shadow-lg shadow-accent/20" onClick={handlePrint}>
-          <Printer className="mr-2 h-3.5 w-3.5" /> Print / Save PDF
+        <Button size="sm" className="rounded-xl h-10 text-[10px] font-bold uppercase bg-slate-900 hover:bg-black text-white px-6" onClick={handlePrint}>
+          <Printer className="mr-2 h-4 w-4" /> Print / Save PDF
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 bg-slate-100/50 p-6 sm:p-12 min-h-0">
+      <ScrollArea className="flex-1 bg-slate-100/50 p-6 sm:p-12 min-h-0" id="paystub-print-container">
         <div 
           id="paystub-document" 
-          className="mx-auto bg-white p-12 shadow-2xl border border-slate-200 max-w-[800px] flex flex-col gap-10 min-h-[1050px] rounded-sm transition-all"
+          className="mx-auto bg-white p-12 shadow-2xl border border-slate-200 max-w-[800px] flex flex-col gap-10 min-h-[1050px] rounded-sm transition-all relative"
         >
           {/* Company Branding */}
           <div className="flex flex-col items-center gap-2">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-2xl shadow-primary/20">
-              <Settings2 className="h-8 w-8" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl">
+              <svg viewBox="0 0 40 40" className="h-10 w-10 fill-current">
+                <path d="M20 2L4 10V30L20 38L36 30V10L20 2ZM20 6L32 12V28L20 34L8 28V12L20 6ZM20 10L14 13V27L20 30L26 27V13L20 10Z" />
+              </svg>
             </div>
             <div className="text-center">
-              <h1 className="text-2xl font-black tracking-tight uppercase text-slate-900 leading-none">SYSTEM ORIENTED LLC</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Upper Marlboro, MD</p>
+              <h1 className="text-3xl font-black tracking-tight uppercase text-slate-900 leading-none">SYSTEM ORIENTED LLC</h1>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-2">Upper Marlboro, MD</p>
             </div>
           </div>
 
           {/* Employee & Summary Row */}
-          <div className="grid grid-cols-2 gap-12 items-start">
+          <div className="grid grid-cols-[1.5fr_1fr] gap-12 items-start mt-4">
             {/* Left: Employee Info */}
-            <div className="grid grid-cols-[120px_1fr] gap-x-4 gap-y-6 text-sm pt-4">
+            <div className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-7 text-sm">
               <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Employee</span>
-              <span className="font-bold text-slate-900">{item.employeeNameSnapshot}</span>
+              <span className="font-black text-slate-900 uppercase tracking-tight">{item.employeeNameSnapshot}</span>
               
-              <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Daily Rate</span>
-              <span className="font-medium text-slate-700">{item.dailyRateSnapshot || "Varies"}</span>
+              <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Contract Info</span>
+              <span className="font-bold text-slate-700">{item.dailyRateSnapshot || "Varies"}</span>
               
               <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Pay Period</span>
-              <span className="font-medium text-slate-700">{shortDate(run.payPeriodStart)} — {shortDate(run.payPeriodEnd)}</span>
+              <span className="font-bold text-slate-700">{shortDate(run.payPeriodStart)} — {shortDate(run.payPeriodEnd)}</span>
               
               <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Pay Date</span>
-              <span className="font-bold text-slate-900">{run.payDate}</span>
+              <span className="font-black text-slate-900">{run.payDate}</span>
             </div>
 
             {/* Right: Summary Box */}
-            <div className="border-2 border-slate-900 rounded-xl overflow-hidden shadow-sm bg-white">
+            <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-sm bg-white">
               <div className="bg-slate-50 border-b-2 border-slate-900 py-3 px-4 text-center">
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">Payslip Summary</span>
               </div>
-              <div className="grid grid-cols-[1fr_120px] border-b-2 border-slate-900">
-                <span className="px-4 py-3 text-xs font-bold text-slate-600">Total Gross</span>
-                <span className="px-4 py-3 text-xs font-black text-right border-l-2 border-slate-900">{currency(totals.grossPay)}</span>
+              <div className="grid grid-cols-[1fr_110px] border-b-2 border-slate-900">
+                <span className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase">Total Gross</span>
+                <span className="px-5 py-3.5 text-xs font-black text-right border-l-2 border-slate-900">{currency(totals.grossPay)}</span>
               </div>
-              <div className="grid grid-cols-[1fr_120px] border-b-2 border-slate-900">
-                <span className="px-4 py-3 text-xs font-bold text-slate-600">Total Deductions</span>
-                <span className="px-4 py-3 text-xs font-black text-right border-l-2 border-slate-900">{currency(totals.totalDeductions)}</span>
+              <div className="grid grid-cols-[1fr_110px] border-b-2 border-slate-900">
+                <span className="px-5 py-3.5 text-[11px] font-bold text-slate-500 uppercase">Total Deductions</span>
+                <span className="px-5 py-3.5 text-xs font-black text-right border-l-2 border-slate-900">{currency(totals.totalDeductions)}</span>
               </div>
-              <div className="grid grid-cols-[1fr_120px] bg-slate-900 text-white">
-                <span className="px-4 py-3.5 text-[10px] font-black uppercase tracking-[0.2em]">Net Pay</span>
-                <span className="px-4 py-3.5 text-xs font-black text-right border-l-2 border-white/20">{currency(totals.netPay)}</span>
+              <div className="grid grid-cols-[1fr_110px] bg-slate-900 text-white">
+                <span className="px-5 py-4 text-[10px] font-black uppercase tracking-[0.3em]">Net Pay</span>
+                <span className="px-5 py-4 text-xs font-black text-right border-l-2 border-white/20">{currency(totals.netPay)}</span>
               </div>
             </div>
-          </div>
-
-          {/* Breakdown Header */}
-          <div className="flex flex-col gap-2 mt-2">
-            <h2 className="text-3xl font-black tracking-tighter uppercase text-slate-900">Payslip Breakdown</h2>
-            <div className="h-1.5 w-24 bg-primary rounded-full" />
           </div>
 
           {/* Breakdown Ledger Table */}
-          <div className="border-2 border-slate-900 rounded-2xl overflow-hidden flex flex-col bg-white shadow-sm">
-            {/* Table Headers */}
-            <div className="grid grid-cols-2 bg-slate-50 border-b-2 border-slate-900">
-              <div className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest border-r-2 border-slate-900 text-slate-900">Earnings</div>
-              <div className="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-900">Deductions</div>
-            </div>
+          <div className="flex flex-col mt-4">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-6">Payslip Breakdown</h2>
             
-            {/* Sub-headers */}
-            <div className="grid grid-cols-2 text-[10px] font-black uppercase tracking-[0.2em] bg-white border-b-2 border-slate-900">
-              <div className="grid grid-cols-[1fr_120px] border-r-2 border-slate-900">
-                <span className="px-8 py-3 text-slate-400">Description</span>
-                <span className="px-4 py-3 text-center border-l-2 border-slate-900 text-slate-400">Amount</span>
+            <div className="border-2 border-slate-900 rounded-2xl overflow-hidden flex flex-col bg-white shadow-sm">
+              {/* Table Headers */}
+              <div className="grid grid-cols-2 bg-slate-50 border-b-2 border-slate-900">
+                <div className="px-6 py-5 text-center text-[11px] font-black uppercase tracking-widest border-r-2 border-slate-900 text-slate-900">Earnings</div>
+                <div className="px-6 py-5 text-center text-[11px] font-black uppercase tracking-widest text-slate-900">Deductions</div>
               </div>
-              <div className="grid grid-cols-[1fr_120px]">
-                <span className="px-8 py-3 text-slate-400">Description</span>
-                <span className="px-4 py-3 text-center border-l-2 border-slate-900 text-slate-400">Amount</span>
-              </div>
-            </div>
-
-            {/* Content with Continuous Vertical Dividers */}
-            <div className="flex-1 min-h-[450px] flex relative">
-              {/* Earnings Column Wrapper */}
-              <div className="flex-1 border-r-2 border-slate-900 relative">
-                {/* Fixed Continuous Divider */}
-                <div className="absolute top-0 bottom-0 right-[120px] border-r-2 border-slate-900 pointer-events-none print-divider" />
-                <div className="flex flex-col text-[11px] font-medium text-slate-700">
-                  {item.earningsLines.map((line) => (
-                    <div key={line.id} className="grid grid-cols-[1fr_120px]">
-                      <span className="px-8 py-3 truncate">{line.description}</span>
-                      <span className="px-4 py-3 text-right font-black text-slate-900">{currency(line.amount)}</span>
-                    </div>
-                  ))}
-                  {item.otherEarningsLines.map((line) => (
-                    <div key={line.id} className="grid grid-cols-[1fr_120px]">
-                      <span className="px-8 py-3 truncate">{line.description}</span>
-                      <span className="px-4 py-3 text-right font-black text-slate-900">{currency(line.amount)}</span>
-                    </div>
-                  ))}
+              
+              {/* Sub-headers */}
+              <div className="grid grid-cols-2 text-[10px] font-black uppercase tracking-[0.25em] bg-white border-b-2 border-slate-900 text-slate-400">
+                <div className="grid grid-cols-[1fr_110px] border-r-2 border-slate-900">
+                  <span className="px-10 py-4">Description</span>
+                  <span className="px-4 py-4 text-center border-l-2 border-slate-900">Amount</span>
+                </div>
+                <div className="grid grid-cols-[1fr_110px]">
+                  <span className="px-10 py-4">Description</span>
+                  <span className="px-4 py-4 text-center border-l-2 border-slate-900">Amount</span>
                 </div>
               </div>
 
-              {/* Deductions Column Wrapper */}
-              <div className="flex-1 relative">
-                {/* Fixed Continuous Divider */}
-                <div className="absolute top-0 bottom-0 right-[120px] border-r-2 border-slate-900 pointer-events-none print-divider" />
-                <div className="flex flex-col text-[11px] font-medium text-slate-700">
-                  {item.deductionsLines.map((line) => (
-                    <div key={line.id} className="grid grid-cols-[1fr_120px]">
-                      <span className="px-8 py-3 truncate">{line.deductionName}</span>
-                      <span className="px-4 py-3 text-right font-black text-rose-600">{currency(line.amount)}</span>
-                    </div>
-                  ))}
+              {/* Content Ledger Wrapper */}
+              <div className="flex-1 min-h-[400px] flex relative">
+                {/* Earnings Column */}
+                <div className="flex-1 border-r-2 border-slate-900 relative">
+                  {/* Fixed Continuous Vertical Line */}
+                  <div className="absolute top-0 bottom-0 right-[110px] border-r-2 border-slate-900 pointer-events-none print-divider" />
+                  <div className="flex flex-col text-[12px] font-bold text-slate-700 py-4">
+                    {item.earningsLines.map((line) => (
+                      <div key={line.id} className="grid grid-cols-[1fr_110px]">
+                        <span className="px-10 py-3.5 truncate">{line.description}</span>
+                        <span className="px-6 py-3.5 text-right font-black text-slate-900">{currency(line.amount)}</span>
+                      </div>
+                    ))}
+                    {item.otherEarningsLines.map((line) => (
+                      <div key={line.id} className="grid grid-cols-[1fr_110px]">
+                        <span className="px-10 py-3.5 truncate">{line.description}</span>
+                        <span className="px-6 py-3.5 text-right font-black text-slate-900">{currency(line.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Deductions Column */}
+                <div className="flex-1 relative">
+                  {/* Fixed Continuous Vertical Line */}
+                  <div className="absolute top-0 bottom-0 right-[110px] border-r-2 border-slate-900 pointer-events-none print-divider" />
+                  <div className="flex flex-col text-[12px] font-bold text-slate-700 py-4">
+                    {item.deductionsLines.map((line) => (
+                      <div key={line.id} className="grid grid-cols-[1fr_110px]">
+                        <span className="px-10 py-3.5 truncate">{line.deductionName}</span>
+                        <span className="px-6 py-3.5 text-right font-black text-rose-600">{currency(line.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Totals Summary Footer */}
-            <div className="grid grid-cols-2 bg-slate-50 border-t-2 border-slate-900 text-xs font-black">
-              <div className="grid grid-cols-[1fr_120px] border-r-2 border-slate-900">
-                <span className="px-8 py-4 uppercase tracking-[0.2em] text-slate-500 text-[10px]">Total Gross</span>
-                <span className="px-4 py-4 text-right border-l-2 border-slate-900 bg-white font-black text-slate-900">{currency(totals.grossPay)}</span>
-              </div>
-              <div className="grid grid-cols-[1fr_120px]">
-                <span className="px-8 py-4 uppercase tracking-[0.2em] text-slate-500 text-[10px]">Total Deductions</span>
-                <span className="px-4 py-4 text-right border-l-2 border-slate-900 bg-white font-black text-slate-900">{currency(totals.totalDeductions)}</span>
+              {/* Ledger Summary Row */}
+              <div className="grid grid-cols-2 bg-slate-50 border-t-2 border-slate-900">
+                <div className="grid grid-cols-[1fr_110px] border-r-2 border-slate-900">
+                  <span className="px-10 py-5 uppercase tracking-[0.2em] text-slate-500 font-black text-[10px]">Total Gross</span>
+                  <span className="px-6 py-5 text-right border-l-2 border-slate-900 bg-white font-black text-slate-900 text-xs">{currency(totals.grossPay)}</span>
+                </div>
+                <div className="grid grid-cols-[1fr_110px]">
+                  <span className="px-10 py-5 uppercase tracking-[0.2em] text-slate-500 font-black text-[10px]">Total Deductions</span>
+                  <span className="px-6 py-5 text-right border-l-2 border-slate-900 bg-white font-black text-slate-900 text-xs">{currency(totals.totalDeductions)}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Footer Branding */}
-          <div className="mt-auto pt-10 border-t border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Settings2 className="h-4 w-4 text-slate-300" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Generated via System Oriented Payroll Engine</span>
+          {/* Statement Summary Table at Bottom */}
+          <div className="flex flex-col gap-4 mt-auto pt-10 border-t border-slate-100">
+             <div className="grid grid-cols-3 border-2 border-slate-900 rounded-2xl overflow-hidden text-center bg-white shadow-sm">
+                <div className="flex flex-col border-r-2 border-slate-900">
+                  <div className="bg-slate-50 border-b-2 border-slate-900 py-3 text-[10px] font-black uppercase tracking-widest text-slate-900">Gross Pay</div>
+                  <div className="py-5 text-sm font-black text-slate-900">{currency(totals.grossPay)}</div>
+                </div>
+                <div className="flex flex-col border-r-2 border-slate-900">
+                  <div className="bg-slate-50 border-b-2 border-slate-900 py-3 text-[10px] font-black uppercase tracking-widest text-slate-900">Total Deductions</div>
+                  <div className="py-5 text-sm font-black text-rose-600">{currency(totals.totalDeductions)}</div>
+                </div>
+                <div className="flex flex-col bg-slate-900 text-white">
+                  <div className="border-b-2 border-white/20 py-3 text-[10px] font-black uppercase tracking-[0.3em]">Net Pay</div>
+                  <div className="py-5 text-sm font-black">{currency(totals.netPay)}</div>
+                </div>
+             </div>
+
+            <div className="flex items-center justify-between mt-6">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 rounded bg-slate-900" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">SYSTEM ORIENTED OFFICIAL DOCUMENT</span>
+              </div>
+              <span className="text-[10px] font-bold text-slate-300 uppercase">Page 1 of 1</span>
             </div>
-            <span className="text-[10px] font-bold text-slate-300 uppercase">Page 1 of 1</span>
           </div>
         </div>
       </ScrollArea>

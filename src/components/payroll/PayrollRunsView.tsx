@@ -115,7 +115,7 @@ export function PayrollRunsView({
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80">
-                    <th className="sticky left-0 z-30 bg-white border-b border-r border-slate-200 px-6 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 whitespace-nowrap shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)]">
+                    <th className="sticky left-0 z-30 bg-white border-b border-r border-slate-200 px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 whitespace-nowrap shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                       Employee
                     </th>
                     {[
@@ -154,7 +154,7 @@ export function PayrollRunsView({
 
                     return (
                       <tr key={item.id} className="group hover:bg-slate-50/30 transition-all align-top">
-                        <td className="sticky left-0 z-20 bg-white px-6 py-6 font-bold text-slate-900 whitespace-nowrap border-r border-slate-100 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] group-hover:bg-slate-50/80">
+                        <td className="sticky left-0 z-20 bg-white px-8 py-6 font-bold text-slate-900 whitespace-nowrap border-r border-slate-100 shadow-[2px_0_5px_rgba(0,0,0,0.05)] group-hover:bg-slate-50/80">
                           {item.employeeNameSnapshot}
                         </td>
                         <td className="px-4 py-6 text-sm text-slate-500 italic">{item.dailyRateSnapshot}</td>
