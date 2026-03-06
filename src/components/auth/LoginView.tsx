@@ -41,27 +41,40 @@ export function LoginView() {
     
     const systemUid = password.trim();
     const cleanUsername = username.toLowerCase().trim();
+    const isMasterUid = systemUid === "STUDIO-MASTER-2026";
+    const isMasterUsername = cleanUsername === "masteradmin";
     
     try {
-      // 0. Handle System Initialization Bypass
-      if (isSystemFresh && cleanUsername === "masteradmin" && systemUid === "STUDIO-MASTER-2026") {
+      // 0. Handle Master Admin Permanent Bypass (Bootstrap or Regular Login)
+      if (isMasterUid && isMasterUsername) {
         const email = "masteradmin@system.oriented";
+        let userCredential;
         try {
-          await initiateEmailSignIn(auth, email, systemUid);
+          userCredential = await initiateEmailSignIn(auth, email, systemUid);
         } catch (signInError: any) {
-          // If login fails during bootstrap, try signing up
-          await initiateEmailSignUp(auth, email, systemUid);
+          // If first login ever, sign up
+          userCredential = await initiateEmailSignUp(auth, email, systemUid);
         }
+
+        // Update the master node in registry if it exists or create it
+        const masterDocRef = doc(db, "system_users", systemUid);
+        if (userCredential?.user) {
+          updateDocumentNonBlocking(masterDocRef, { 
+            id: systemUid, 
+            username: "MasterAdmin", 
+            authUid: userCredential.user.uid 
+          });
+        }
+
         toast({
           title: "Master Node Accessed",
-          description: "Proceed to initialize the system."
+          description: "Full system authority granted."
         });
         setIsLoading(false);
         return;
       }
 
-      // 1. Verify the System UID exists in our registry first
-      // This is now possible thanks to the updated public read rules for system_users/{id}
+      // 1. Verify the System UID exists in our registry for standard nodes
       const userDocRef = doc(db, "system_users", systemUid);
       const userDoc = await getDoc(userDocRef);
       
@@ -86,13 +99,13 @@ export function LoginView() {
         return;
       }
 
-      // 2. Perform Authentication
+      // 2. Perform Authentication for standard nodes
+      // Use a unique email based on UID to avoid username collisions across deletions
       const email = `${systemUid.toLowerCase()}@system.oriented`;
       let userCredential;
       try {
         userCredential = await initiateEmailSignIn(auth, email, systemUid);
       } catch (signInError: any) {
-        // Handle standard Firebase Auth errors or attempt auto-registration for valid UIDs
         if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-email') {
           userCredential = await initiateEmailSignUp(auth, email, systemUid);
         } else {
@@ -100,7 +113,7 @@ export function LoginView() {
         }
       }
 
-      // 3. Update the mapping between System UID and Firebase UID if necessary
+      // 3. Update the mapping between System UID and Firebase UID
       if (userCredential?.user) {
         updateDocumentNonBlocking(userDocRef, { authUid: userCredential.user.uid });
       }
