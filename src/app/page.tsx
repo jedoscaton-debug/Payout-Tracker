@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -12,7 +13,8 @@ import {
   Loader2,
   LogOut,
   ShieldAlert,
-  ShieldCheck
+  ShieldCheck,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -51,7 +53,7 @@ import {
 import { collection, doc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 
-type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "my-stubs";
+type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "my-stubs" | "admin-board";
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
@@ -83,11 +85,15 @@ export default function AppShell() {
   const routesQuery = useMemoFirebase(() => isAdmin ? collection(db, "routeTrackerRows") : null, [db, isAdmin]);
   const { data: routesData } = useCollection<RouteTrackerRow>(routesQuery);
 
+  const adminsQuery = useMemoFirebase(() => isAdmin ? collection(db, "roles_admin") : null, [db, isAdmin]);
+  const { data: allAdminsData } = useCollection(adminsQuery);
+
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
 
   const employees = useMemo(() => (employeesData || []) as Employee[], [employeesData]);
   const routeTracker = useMemo(() => (routesData || []) as RouteTrackerRow[], [routesData]);
+  const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
 
   // Guard initialization to prevent infinite update loop
   useEffect(() => {
@@ -128,9 +134,39 @@ export default function AppShell() {
   const handleDeleteEmployee = (id: string) => {
     const docRef = doc(db, "employees", id);
     deleteDocumentNonBlocking(docRef);
+    // Also remove admin role if it exists
+    const adminRef = doc(db, "roles_admin", id);
+    deleteDocumentNonBlocking(adminRef);
     toast({
-      title: "Record Deleted",
-      description: "Employee record has been removed from the directory.",
+      title: "Record Terminated",
+      description: "Access has been revoked and record removed from system.",
+      variant: "destructive"
+    });
+  };
+
+  const handleGrantAdmin = (uid: string) => {
+    const docRef = doc(db, "roles_admin", uid);
+    setDocumentNonBlocking(docRef, { role: "admin", createdAt: new Date().toISOString() }, { merge: true });
+    toast({
+      title: "Admin Role Granted",
+      description: "Administrative privileges have been enabled for this account."
+    });
+  };
+
+  const handleRevokeAdmin = (uid: string) => {
+    if (user?.uid === uid) {
+      toast({
+        title: "Action Restricted",
+        description: "You cannot revoke your own administrative privileges.",
+        variant: "destructive"
+      });
+      return;
+    }
+    const docRef = doc(db, "roles_admin", uid);
+    deleteDocumentNonBlocking(docRef);
+    toast({
+      title: "Admin Role Revoked",
+      description: "Administrative privileges have been disabled for this account.",
       variant: "destructive"
     });
   };
@@ -257,6 +293,7 @@ export default function AppShell() {
     { id: "employees", label: "Employees", icon: Users },
     { id: "payroll", label: "Payroll Runs", icon: Receipt },
     { id: "routes", label: "Route Tracker", icon: Route },
+    { id: "admin-board", label: "Admin Board", icon: Shield },
   ] : [
     { id: "my-stubs", label: "My Paystubs", icon: Receipt },
   ];
@@ -327,7 +364,7 @@ export default function AppShell() {
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">System</span>
         <ChevronRight className="h-3 w-3 text-slate-300" />
         <h2 className="text-[10px] font-black uppercase tracking-widest text-primary">
-          {activeView === "payroll" ? "Payroll Runs" : activeView === "routes" ? "Route Tracker" : activeView === "my-stubs" ? "My Statements" : activeView.toUpperCase()}
+          {activeView === "payroll" ? "Payroll Runs" : activeView === "routes" ? "Route Tracker" : activeView === "my-stubs" ? "My Statements" : activeView === "admin-board" ? "Admin Board" : activeView.toUpperCase()}
         </h2>
       </div>
 
@@ -361,6 +398,18 @@ export default function AppShell() {
                   onUpdateRoute={handleUpdateRoute}
                   onDeleteRoute={handleDeleteRoute}
                   employees={employees}
+                />
+              )}
+              {activeView === "admin-board" && (
+                <EmployeeManager 
+                  employees={employees} 
+                  onAddEmployee={handleAddEmployee}
+                  onUpdateEmployee={handleUpdateEmployee}
+                  onDeleteEmployee={handleDeleteEmployee}
+                  isRoleManagement={true}
+                  allAdmins={allAdmins}
+                  onGrantAdmin={handleGrantAdmin}
+                  onRevokeAdmin={handleRevokeAdmin}
                 />
               )}
             </>
