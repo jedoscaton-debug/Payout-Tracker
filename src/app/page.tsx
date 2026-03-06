@@ -94,6 +94,23 @@ export default function AppShell() {
     });
   };
 
+  const handleUpdateRoute = (updatedRoute: RouteTrackerRow) => {
+    setRouteTracker(prev => prev.map(r => r.id === updatedRoute.id ? updatedRoute : r));
+    toast({
+      title: "Route Updated",
+      description: `Log for Route ${updatedRoute.route} has been updated.`
+    });
+  };
+
+  const handleDeleteRoute = (id: string) => {
+    setRouteTracker(prev => prev.filter(r => r.id !== id));
+    toast({
+      title: "Log Removed",
+      description: "Route log has been deleted from the audit.",
+      variant: "destructive"
+    });
+  };
+
   const exportCsv = () => {
     const rows = [
       ["Employee", "Pay Period", "Pay Date", "Gross", "Deductions", "Net"],
@@ -220,6 +237,8 @@ export default function AppShell() {
             <RouteTrackerView 
               routeTracker={routeTracker} 
               onAddRoute={handleAddRoute}
+              onUpdateRoute={handleUpdateRoute}
+              onDeleteRoute={handleDeleteRoute}
               employees={employees}
             />
           )}

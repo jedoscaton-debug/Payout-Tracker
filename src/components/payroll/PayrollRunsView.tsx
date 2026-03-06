@@ -257,8 +257,8 @@ export function PayrollRunsView({
 
       <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
         <DialogContent className="max-w-[850px] w-full p-0 border-none shadow-2xl bg-white overflow-y-auto max-h-[95vh] rounded-[2.5rem]">
-          <DialogHeader className="p-0 h-0 overflow-hidden">
-            <DialogTitle className="sr-only">Paystub Preview</DialogTitle>
+          <DialogHeader className="sr-only">
+            <DialogTitle>Paystub Preview Statement</DialogTitle>
           </DialogHeader>
           {previewItem && (
             <PaystubPreview item={previewItem} run={payrollRun} />
