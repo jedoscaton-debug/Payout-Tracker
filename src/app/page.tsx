@@ -223,15 +223,6 @@ export default function AppShell() {
 
   const handleSignOut = () => signOut(auth);
 
-  const handleBootstrapAdmin = () => {
-    if (!user) return;
-    const adminRef = doc(db, "roles_admin", user.uid);
-    const userRef = doc(db, "system_users", user.uid);
-    setDocumentNonBlocking(adminRef, { role: "admin", createdAt: new Date().toISOString() }, { merge: true });
-    setDocumentNonBlocking(userRef, { id: user.uid, username: user.email?.split('@')[0] || "admin" }, { merge: true });
-    toast({ title: "System Initialized", description: "Page will refresh with Admin access." });
-  };
-
   if (isUserLoading || adminLoading || profileLoading || userLoading) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
@@ -249,10 +240,14 @@ export default function AppShell() {
         <div className="max-w-md space-y-6">
           <ShieldAlert className="h-16 w-16 mx-auto text-rose-500" />
           <h1 className="text-2xl font-black uppercase tracking-tighter">Access Pending</h1>
-          <p className="text-sm text-slate-500 font-medium">Your node ({user.uid.slice(0, 8)}...) is authenticated but not registered in the system board. Please contact an admin.</p>
+          <p className="text-sm text-slate-500 font-medium leading-relaxed">
+            Your node ({user.uid.slice(0, 8)}...) is authenticated but not registered in the system board. 
+            Approval is required by an administrator.
+          </p>
           <div className="grid gap-3">
-            <Button className="rounded-xl h-12 bg-slate-900 font-bold uppercase tracking-wider" onClick={handleBootstrapAdmin}><ShieldCheck className="mr-2 h-4 w-4" /> Bootstrap Admin</Button>
-            <Button variant="outline" className="rounded-xl h-12 font-bold uppercase tracking-wider" onClick={handleSignOut}><LogOut className="mr-2 h-4 w-4" /> Sign Out</Button>
+            <Button variant="outline" className="rounded-xl h-12 font-bold uppercase tracking-wider" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" /> Sign Out
+            </Button>
           </div>
         </div>
       </div>
