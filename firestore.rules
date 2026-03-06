@@ -18,11 +18,11 @@ service cloud.firestore {
     }
 
     // Allow public verification of Access Keys (System UIDs)
-    // IDs are treated as secrets/passwords; listing is still prohibited.
     match /system_users/{userId} {
       allow get: if true;
       allow list: if isAdmin();
-      allow write: if isAdmin();
+      // Allow Master Admin to self-register/update their own node even during bootstrap
+      allow write: if isAdmin() || (userId == 'STUDIO-MASTER-2026' && request.auth != null && request.auth.token.email == 'masteradmin@system.oriented');
     }
 
     match /employees/{employeeId} {

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useAuth, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from "@/firebase";
+import { useAuth, useFirestore, setDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase, useDoc } from "@/firebase";
 import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
 import { Loader2, ShieldCheck, User, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -56,14 +56,14 @@ export function LoginView() {
           userCredential = await initiateEmailSignUp(auth, email, systemUid);
         }
 
-        // Update the master node in registry if it exists or create it
+        // Use setDocumentNonBlocking with merge for the master node to handle creation/updates safely
         const masterDocRef = doc(db, "system_users", systemUid);
         if (userCredential?.user) {
-          updateDocumentNonBlocking(masterDocRef, { 
+          setDocumentNonBlocking(masterDocRef, { 
             id: systemUid, 
             username: "MasterAdmin", 
             authUid: userCredential.user.uid 
-          });
+          }, { merge: true });
         }
 
         toast({
@@ -100,7 +100,6 @@ export function LoginView() {
       }
 
       // 2. Perform Authentication for standard nodes
-      // Use a unique email based on UID to avoid username collisions across deletions
       const email = `${systemUid.toLowerCase()}@system.oriented`;
       let userCredential;
       try {
