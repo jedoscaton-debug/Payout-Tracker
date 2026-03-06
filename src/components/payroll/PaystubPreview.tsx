@@ -139,7 +139,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
       <ScrollArea className="flex-1 bg-slate-100/50 p-6 sm:p-8 min-h-0" id="paystub-print-container">
         <div 
           id="paystub-document" 
-          className="mx-auto bg-white p-8 sm:p-10 shadow-2xl border border-slate-200 w-full max-w-[800px] flex flex-col gap-3 rounded-sm transition-all relative overflow-hidden"
+          className="mx-auto bg-white p-8 sm:p-10 shadow-2xl border border-slate-200 w-full max-w-[800px] flex flex-col gap-4 rounded-sm transition-all relative overflow-hidden"
         >
           {/* Header Branding */}
           <div className="flex flex-col items-center gap-2 mb-2">
@@ -154,7 +154,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
 
           {/* Info Section */}
           <div className="grid grid-cols-[1.3fr_1fr] gap-6 items-start">
-            <div className="grid grid-cols-[110px_1fr] gap-x-4 gap-y-3 text-sm">
+            <div className="grid grid-cols-[110px_1fr] gap-x-4 gap-y-2 text-sm">
               <span className="font-bold text-slate-400 text-[9px] uppercase tracking-widest">Employee</span>
               <span className="font-black text-slate-900 uppercase tracking-tight">{item.employeeNameSnapshot}</span>
               
@@ -188,33 +188,36 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
           </div>
 
           {/* Breakdown Ledger */}
-          <div className="flex flex-col mt-2">
+          <div className="flex flex-col">
             <h2 className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 mb-2">Payslip Breakdown</h2>
             
-            <div className="border-2 border-slate-900 rounded-xl overflow-hidden flex flex-col bg-white shadow-sm min-h-[250px]">
-              <div className="grid grid-cols-2 bg-slate-50 border-b-2 border-slate-900">
-                <div className="px-4 py-2 text-center text-[10px] font-black uppercase tracking-widest border-r-2 border-slate-900 text-slate-900">Earnings</div>
+            <div className="border-2 border-slate-900 rounded-xl overflow-hidden flex flex-col bg-white shadow-sm min-h-[300px] relative">
+              {/* Vertical Divider Lines (Continuous from top to bottom) */}
+              <div className="absolute top-0 bottom-0 left-[50%] w-0.5 bg-slate-900 z-20" />
+              <div className="absolute top-0 bottom-0 left-[calc(50%-90px)] w-0.5 bg-slate-900 z-20" />
+              <div className="absolute top-0 bottom-0 right-[90px] w-0.5 bg-slate-900 z-20" />
+
+              {/* Main Headers */}
+              <div className="grid grid-cols-2 bg-slate-50 border-b-2 border-slate-900 relative z-10">
+                <div className="px-4 py-2 text-center text-[10px] font-black uppercase tracking-widest text-slate-900">Earnings</div>
                 <div className="px-4 py-2 text-center text-[10px] font-black uppercase tracking-widest text-slate-900">Deductions</div>
               </div>
               
-              <div className="grid grid-cols-2 text-[8px] font-black uppercase tracking-[0.25em] bg-white border-b-2 border-slate-900 text-slate-400">
-                <div className="grid grid-cols-[1fr_90px] border-r-2 border-slate-900">
+              {/* Sub-Headers */}
+              <div className="grid grid-cols-2 text-[8px] font-black uppercase tracking-[0.25em] bg-white border-b-2 border-slate-900 text-slate-400 relative z-10">
+                <div className="grid grid-cols-[1fr_90px]">
                   <span className="px-6 py-2">Description</span>
-                  <span className="px-2 py-2 text-center border-l-2 border-slate-900">Amount</span>
+                  <span className="px-2 py-2 text-center">Amount</span>
                 </div>
                 <div className="grid grid-cols-[1fr_90px]">
                   <span className="px-6 py-2">Description</span>
-                  <span className="px-2 py-2 text-center border-l-2 border-slate-900">Amount</span>
+                  <span className="px-2 py-2 text-center">Amount</span>
                 </div>
               </div>
 
-              <div className="flex-1 flex relative">
-                {/* Vertical Divider Lines (Absolute for continuous look) */}
-                <div className="absolute top-0 bottom-0 left-[50%] w-0.5 bg-slate-900 z-10" />
-                <div className="absolute top-0 bottom-0 left-[calc(50%-90px)] w-0.5 bg-slate-900 z-10" />
-                <div className="absolute top-0 bottom-0 right-[90px] w-0.5 bg-slate-900 z-10" />
-
-                <div className="flex-1 relative">
+              {/* Ledger Rows */}
+              <div className="flex-1 flex relative z-10">
+                <div className="flex-1">
                   <div className="flex flex-col text-[10px] font-bold text-slate-700 py-1">
                     {item.earningsLines.map((line) => (
                       <div key={line.id} className="grid grid-cols-[1fr_90px]">
@@ -231,7 +234,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                   </div>
                 </div>
 
-                <div className="flex-1 relative">
+                <div className="flex-1">
                   <div className="flex flex-col text-[10px] font-bold text-slate-700 py-1">
                     {item.deductionsLines.map((line) => (
                       <div key={line.id} className="grid grid-cols-[1fr_90px]">
@@ -243,21 +246,22 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 bg-slate-50 border-t-2 border-slate-900">
-                <div className="grid grid-cols-[1fr_90px] border-r-2 border-slate-900">
+              {/* Totals Row */}
+              <div className="grid grid-cols-2 bg-slate-50 border-t-2 border-slate-900 relative z-10">
+                <div className="grid grid-cols-[1fr_90px]">
                   <span className="px-6 py-2 uppercase tracking-[0.2em] text-slate-500 font-black text-[9px]">Total Gross</span>
-                  <span className="px-4 py-2 text-right border-l-2 border-slate-900 bg-white font-black text-slate-900 text-xs">{currency(totals.grossPay)}</span>
+                  <span className="px-4 py-2 text-right bg-white font-black text-slate-900 text-xs">{currency(totals.grossPay)}</span>
                 </div>
                 <div className="grid grid-cols-[1fr_90px]">
                   <span className="px-6 py-2 uppercase tracking-[0.2em] text-slate-500 font-black text-[9px]">Total Deductions</span>
-                  <span className="px-4 py-2 text-right border-l-2 border-slate-900 bg-white font-black text-slate-900 text-xs">{currency(totals.totalDeductions)}</span>
+                  <span className="px-4 py-2 text-right bg-white font-black text-slate-900 text-xs">{currency(totals.totalDeductions)}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Statement Summary */}
-          <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-slate-100">
+          {/* Statement Footer Summary */}
+          <div className="flex flex-col gap-3 mt-2">
              <div className="grid grid-cols-3 border-2 border-slate-900 rounded-xl overflow-hidden text-center bg-white shadow-sm">
                 <div className="flex flex-col border-r-2 border-slate-900">
                   <div className="bg-slate-50 border-b-2 border-slate-900 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-900">Gross Amount</div>
@@ -273,7 +277,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 </div>
              </div>
 
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between mt-1">
               <div className="flex items-center gap-2">
                 <div className="h-4 w-4 rounded bg-slate-900" />
                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">SYSTEM ORIENTED OFFICIAL STATEMENT</span>
