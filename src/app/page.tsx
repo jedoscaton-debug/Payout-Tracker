@@ -89,18 +89,17 @@ export default function AppShell() {
 
   const isAdmin = !!adminRole;
   const isEmployee = !!employeeProfile;
-  const isAuthorized = !!systemUserProfile || isAdmin || isEmployee;
 
   // Automated Redirection Logic
   useEffect(() => {
     if (!isUserLoading && !adminLoading && !profileLoading && !userLoading) {
       if (isAdmin) {
         setActiveView("dashboard");
-      } else if (isAuthorized) {
+      } else {
         setActiveView("emp-dashboard");
       }
     }
-  }, [isAdmin, isAuthorized, isUserLoading, adminLoading, profileLoading, userLoading]);
+  }, [isAdmin, isUserLoading, adminLoading, profileLoading, userLoading]);
   
   // Firestore Subscriptions
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
@@ -238,26 +237,6 @@ export default function AppShell() {
   }
 
   if (!user) return <LoginView />;
-
-  if (!isAuthorized) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6 text-center">
-        <div className="max-w-md space-y-6">
-          <ShieldAlert className="h-16 w-16 mx-auto text-rose-500" />
-          <h1 className="text-2xl font-black uppercase tracking-tighter">Access Pending Approval</h1>
-          <p className="text-sm text-slate-500 font-medium leading-relaxed">
-            Your system node ({user.uid.slice(0, 8)}...) is authenticated but not yet registered in the administrator directory. 
-            Please contact your manager to activate your access key.
-          </p>
-          <div className="grid gap-3">
-            <Button variant="outline" className="rounded-xl h-12 font-bold uppercase tracking-wider" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" /> Sign Out
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const navItems = isAdmin ? [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
