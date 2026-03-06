@@ -1,6 +1,7 @@
 import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollItem, ComputedTotals } from './types';
 
 export const DIRECT_DEPOSIT_FEE = 4;
+export const TRUCK_MILEAGE_RATE = 0.25;
 
 export function currency(value: number) {
   return new Intl.NumberFormat("en-US", { 
@@ -17,6 +18,12 @@ export function shortDate(input: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+export function getDayOfWeek(input: string) {
+  if (!input) return "";
+  const d = new Date(`${input}T00:00:00`);
+  return d.toLocaleDateString("en-US", { weekday: "short" });
+}
+
 export function estimatePay(stops: number) {
   return 27 * stops;
 }
@@ -31,6 +38,10 @@ export function driverPay(stops: number) {
 
 export function helperPay(stops: number) {
   return estimatePay(stops) * 0.23;
+}
+
+export function truckRentalMileageCost(miles: number) {
+  return miles * TRUCK_MILEAGE_RATE;
 }
 
 function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType | null {
@@ -57,9 +68,9 @@ export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: R
       return {
         id: `${employee.id}-${row.id}`,
         date: row.date,
-        client: row.client,
+        client: row.route,
         role,
-        description: `${shortDate(row.date)} - ${row.client} ${role}`,
+        description: `${shortDate(row.date)} - Route ${row.route} ${role}`,
         amount: Number(amountForRole(row, role).toFixed(2)),
       } satisfies EarningsLine;
     })

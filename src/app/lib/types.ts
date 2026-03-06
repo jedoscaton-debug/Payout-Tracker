@@ -3,10 +3,15 @@ export type PayrollStatus = "Draft" | "Finalized";
 
 export type RouteTrackerRow = {
   id: string;
+  route: string;
+  routeType: string;
+  vehicleNumber: string;
   date: string;
-  client: string;
   miles: number;
   stops: number;
+  actualPayAudit: number;
+  truckRental: number;
+  insurance: number;
   driver: string;
   helper?: string;
 };
