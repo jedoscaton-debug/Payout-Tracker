@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -8,29 +7,60 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/firebase";
 import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
-import { Loader2, ShieldCheck, User, Lock, UserPlus } from "lucide-react";
+import { Loader2, ShieldCheck, User, Lock, UserPlus, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export function LoginView() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const { toast } = useToast();
   const auth = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     // Internal mapping to allow username-style login with Firebase Auth
     const email = `${username.toLowerCase().trim()}@system.oriented`;
     
-    if (isSignUp) {
-      initiateEmailSignUp(auth, email, password);
-    } else {
-      initiateEmailSignIn(auth, email, password);
+    try {
+      if (isSignUp) {
+        await initiateEmailSignUp(auth, email, password);
+        toast({
+          title: "Registration Success",
+          description: "System node created. Waiting for admin authorization."
+        });
+      } else {
+        await initiateEmailSignIn(auth, email, password);
+        toast({
+          title: "Access Granted",
+          description: "Authenticated successfully. Syncing roles..."
+        });
+      }
+    } catch (error: any) {
+      console.error("Auth error:", error);
+      let message = "An error occurred during authentication.";
+      
+      if (error.code === 'auth/invalid-credential') {
+        message = "Invalid username or system UID. Please check your credentials.";
+      } else if (error.code === 'auth/weak-password') {
+        message = "The System UID must be at least 6 characters long.";
+      } else if (error.code === 'auth/email-already-in-use') {
+        message = "This username is already registered in the system.";
+      } else if (error.code === 'auth/user-not-found') {
+        message = "No system node found for this username. Please register first.";
+      }
+
+      toast({
+        variant: "destructive",
+        title: "Authentication Failed",
+        description: message,
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    setTimeout(() => setIsLoading(false), 2000);
   };
 
   return (
