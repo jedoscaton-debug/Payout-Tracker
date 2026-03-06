@@ -11,6 +11,12 @@ export const employeesSeed: Employee[] = [
 ];
 
 export const routeTrackerSeed: RouteTrackerRow[] = [
+  // February Data
+  { id: "rt-feb-1", date: "2026-02-23", route: "A01_EV", routeType: "IKEA", vehicleNumber: "2", miles: 85, stops: 18, actualPayAudit: 0, truckRental: TRUCK_RENTAL_FIXED, insurance: 0, driver: "Jose Nolasco", helper: "Diego Guevara" },
+  { id: "rt-feb-2", date: "2026-02-24", route: "EV", routeType: "IKEA", vehicleNumber: "EV", miles: 0, stops: 10, actualPayAudit: 0, truckRental: TRUCK_RENTAL_FIXED, insurance: 0, driver: "Steven Howard", helper: "Geovani" },
+  { id: "rt-feb-3", date: "2026-02-25", route: "A05_EV", routeType: "IKEA", vehicleNumber: "4", miles: 120, stops: 20, actualPayAudit: 0, truckRental: TRUCK_RENTAL_FIXED, insurance: 0, driver: "Labrinkley Marshall", helper: "Dominique Roche" },
+  
+  // March Data
   { id: "rt-1", date: "2026-03-01", route: "A05_EV", routeType: "IKEA", vehicleNumber: "4", miles: 138, stops: 24, actualPayAudit: 0, truckRental: TRUCK_RENTAL_FIXED, insurance: 0, driver: "Labrinkley Marshall", helper: "Labrinkley Marshall" },
   { id: "rt-2", date: "2026-03-01", route: "EV", routeType: "IKEA", vehicleNumber: "EV", miles: 0, stops: 12, actualPayAudit: 0, truckRental: TRUCK_RENTAL_FIXED, insurance: 0, driver: "Jose Nolasco", helper: "Diego Guevara" },
   { id: "rt-3", date: "2026-03-03", route: "A01_EV", routeType: "IKEA", vehicleNumber: "2", miles: 73, stops: 14, actualPayAudit: 0, truckRental: TRUCK_RENTAL_FIXED, insurance: 0, driver: "Steven Howard", helper: "Dominique Roche" },
