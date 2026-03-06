@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -105,9 +106,9 @@ export function EmployeeManager({
     const generatedId = generateUID();
     onAddEmployee({
       id: generatedId,
-      fullName: newAccess.username,
+      fullName: newAccess.username || "",
       role: "Driver",
-      email: `${newAccess.username.toLowerCase()}@system.oriented`,
+      email: `${(newAccess.username || "").toLowerCase()}@system.oriented`,
       contactNumber: "",
       defaultDailyRate: "Varies",
       paymentMethod: "Direct Deposit"
@@ -179,7 +180,7 @@ export function EmployeeManager({
             <Input 
               placeholder={isRoleManagement ? "Search nodes..." : "Search directory..."}
               className="pl-10 h-11 w-64 rounded-xl" 
-              value={search}
+              value={search || ""}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>

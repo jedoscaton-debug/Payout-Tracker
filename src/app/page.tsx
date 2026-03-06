@@ -193,7 +193,7 @@ export default function AppShell() {
 
   const handleRegisterAccess = (id: string, username: string) => {
     const docRef = doc(db, "system_users", id);
-    setDocumentNonBlocking(docRef, { id, username }, { merge: true });
+    setDocumentNonBlocking(docRef, { id, username: username || "" }, { merge: true });
     toast({ title: "Access Node Registered", description: `Username ${username} is now linked to node ${id}.` });
   };
 

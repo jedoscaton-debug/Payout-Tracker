@@ -307,7 +307,7 @@ export function RouteTrackerView({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Route Type</Label>
-                    <Select value={newRoute.routeType} onValueChange={(v) => setNewRoute({...newRoute, routeType: v})}>
+                    <Select value={newRoute.routeType || "EA"} onValueChange={(v) => setNewRoute({...newRoute, routeType: v})}>
                       <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                         <SelectValue />
                       </SelectTrigger>
@@ -354,7 +354,7 @@ export function RouteTrackerView({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Driver</Label>
-                    <Select value={newRoute.driver} onValueChange={(v) => setNewRoute({...newRoute, driver: v})}>
+                    <Select value={newRoute.driver || ""} onValueChange={(v) => setNewRoute({...newRoute, driver: v})}>
                       <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                         <SelectValue placeholder="Select Driver" />
                       </SelectTrigger>
@@ -365,7 +365,7 @@ export function RouteTrackerView({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Helper</Label>
-                    <Select value={newRoute.helper} onValueChange={(v) => setNewRoute({...newRoute, helper: v})}>
+                    <Select value={newRoute.helper || "No Helper"} onValueChange={(v) => setNewRoute({...newRoute, helper: v})}>
                       <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                         <SelectValue placeholder="No Helper" />
                       </SelectTrigger>
@@ -547,7 +547,7 @@ export function RouteTrackerView({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Route Type</Label>
-                  <Select value={editingRoute.routeType} onValueChange={(v) => setEditingRoute({...editingRoute, routeType: v})}>
+                  <Select value={editingRoute.routeType || "EA"} onValueChange={(v) => setEditingRoute({...editingRoute, routeType: v})}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                       <SelectValue />
                     </SelectTrigger>
@@ -570,7 +570,7 @@ export function RouteTrackerView({
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Day of Week</Label>
                   <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold uppercase tracking-wider text-xs">
-                    {getDayOfWeek(editingRoute.date)}
+                    {getDayOfWeek(editingRoute.date || "")}
                   </div>
                 </div>
 
@@ -594,7 +594,7 @@ export function RouteTrackerView({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Driver</Label>
-                  <Select value={editingRoute.driver} onValueChange={(v) => setEditingRoute({...editingRoute, driver: v})}>
+                  <Select value={editingRoute.driver || ""} onValueChange={(v) => setEditingRoute({...editingRoute, driver: v})}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                       <SelectValue />
                     </SelectTrigger>
@@ -605,7 +605,7 @@ export function RouteTrackerView({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Helper</Label>
-                  <Select value={editingRoute.helper} onValueChange={(v) => setEditingRoute({...editingRoute, helper: v})}>
+                  <Select value={editingRoute.helper || "No Helper"} onValueChange={(v) => setEditingRoute({...editingRoute, helper: v})}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                       <SelectValue />
                     </SelectTrigger>

@@ -11,7 +11,7 @@ service cloud.firestore {
     // GLOBAL RULES FOR COLLECTION GROUP QUERIES
     // This requires the query to filter by authUid to satisfy query-side validation
     match /{path=**}/payrollItems/{payrollItemId} {
-      allow read: if isAdmin() || (request.auth != null && resource.data.authUid == request.auth.uid);
+      allow read: if request.auth != null && (isAdmin() || resource.data.authUid == request.auth.uid);
       allow write: if isAdmin();
     }
 
@@ -50,7 +50,7 @@ service cloud.firestore {
       
       match /payrollItems/{payrollItemId} {
         // Redundant but safe document-path access
-        allow read: if isAdmin() || (request.auth != null && resource.data.authUid == request.auth.uid);
+        allow read: if request.auth != null && (isAdmin() || resource.data.authUid == request.auth.uid);
         allow write: if isAdmin();
       }
     }
