@@ -115,8 +115,10 @@ export function PayrollRunsView({
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80">
+                    <th className="sticky left-0 z-20 bg-slate-50 border-b border-slate-100 px-4 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                      Employee
+                    </th>
                     {[
-                      "Employee",
                       "Daily Rate",
                       "Earnings Breakdown",
                       "Earning Amount",
@@ -132,13 +134,10 @@ export function PayrollRunsView({
                       "Amt 4",
                       "Net Total",
                       "Actions",
-                    ].map((header, idx) => (
+                    ].map((header) => (
                       <th 
                         key={header} 
-                        className={cn(
-                          "border-b border-slate-100 px-4 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap",
-                          idx === 0 && "sticky left-0 z-20 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
-                        )}
+                        className="border-b border-slate-100 px-4 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap"
                       >
                         {header}
                       </th>
