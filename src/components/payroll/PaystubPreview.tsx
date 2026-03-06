@@ -63,7 +63,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
   return (
     <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white">
       {/* Main Document View */}
-      <div className="flex-1 h-full overflow-hidden bg-slate-50/50 border-r border-slate-100">
+      <div className="flex-1 h-full overflow-hidden bg-white">
         <ScrollArea className="h-full p-4 sm:p-12 print:p-0 print:bg-white">
           <style jsx global>{`
             @media print {
@@ -106,20 +106,18 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                   <div className="h-10 w-10 bg-black rounded-lg flex items-center justify-center text-white font-black text-xl">S</div>
                   <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">SYSTEM ORIENTED LLC</h2>
                 </div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
-                  9701 Apollo Dr<br />
-                  Upper Marlboro, MD 20774
+                <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-relaxed">
+                  Upper Marlboro, MD
                 </div>
               </div>
-              <div className="bg-slate-900 text-white p-4 rounded-xl min-w-[200px]">
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-60 mb-1">Document Type</p>
+              <div className="bg-slate-900 text-white p-6 rounded-xl min-w-[200px] flex items-center justify-center">
                 <p className="text-xl font-black uppercase tracking-wider">Payslip Summary</p>
               </div>
             </div>
 
-            {/* Employee Info Grid */}
+            {/* Info Grid */}
             <div className="grid grid-cols-2 gap-8">
-              <div className="grid grid-cols-2 gap-y-4 border-r-2 border-slate-100 pr-8">
+              <div className="grid grid-cols-1 gap-y-4">
                 <div>
                   <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Employee Name</label>
                   <p className="text-sm font-bold text-slate-900">{item.employeeNameSnapshot}</p>
@@ -127,10 +125,6 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 <div>
                   <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Daily Rate</label>
                   <p className="text-sm font-bold text-slate-900">{item.dailyRateSnapshot}</p>
-                </div>
-                <div>
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Employee ID</label>
-                  <p className="text-sm font-mono text-slate-900">{item.employeeId}</p>
                 </div>
                 <div>
                   <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Payment Type</label>
@@ -143,7 +137,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                   <p className="text-sm font-bold text-slate-900">{shortDate(run.payPeriodStart)} — {shortDate(run.payPeriodEnd)}</p>
                 </div>
                 <div>
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Statement Date</label>
+                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Pay Date</label>
                   <p className="text-sm font-bold text-slate-900">{shortDate(run.payDate)}</p>
                 </div>
               </div>
@@ -160,18 +154,18 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 <div className="divide-y-2 divide-slate-100">
                   {item.earningsLines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_120px] text-xs">
-                      <div className="px-5 py-3 font-bold text-slate-900 border-r-2 border-slate-100 whitespace-nowrap">{line.description}</div>
+                      <div className="px-5 py-3 font-bold text-slate-900 border-r-2 border-slate-900 whitespace-nowrap">{line.description}</div>
                       <div className="px-5 py-3 text-right font-black text-slate-900">{currency(line.amount)}</div>
                     </div>
                   ))}
                   {item.otherEarningsLines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_120px] text-xs">
-                      <div className="px-5 py-3 font-bold text-slate-900 italic border-r-2 border-slate-100 whitespace-nowrap">{line.description || "Other Earning"}</div>
+                      <div className="px-5 py-3 font-bold text-slate-900 italic border-r-2 border-slate-900 whitespace-nowrap">{line.description || "Other Earning"}</div>
                       <div className="px-5 py-3 text-right font-black text-slate-900">{currency(line.amount)}</div>
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-[1fr_120px] bg-slate-50 border-t-2 border-slate-900 font-black text-xs">
+                <div className="grid grid-cols-[1fr_120px] bg-white border-t-2 border-slate-900 font-black text-xs">
                   <div className="px-5 py-4 uppercase tracking-widest text-[9px] border-r-2 border-slate-900">Total Gross Earnings</div>
                   <div className="px-5 py-4 text-right">{currency(totals.grossPay)}</div>
                 </div>
@@ -180,18 +174,18 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
               {/* Deductions Table */}
               <div className="rounded-xl border-2 border-slate-900 overflow-hidden">
                 <div className="grid grid-cols-[1fr_120px] bg-slate-100 text-slate-900 text-[10px] font-black uppercase tracking-[0.2em] border-b-2 border-slate-900">
-                  <div className="px-5 py-3 border-r-2 border-slate-200">Deductions / Withholdings</div>
+                  <div className="px-5 py-3 border-r-2 border-slate-900">Deductions / Withholdings</div>
                   <div className="px-5 py-3 text-right">Amount</div>
                 </div>
                 <div className="divide-y-2 divide-slate-100">
                   {item.deductionsLines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_120px] text-xs">
-                      <div className="px-5 py-3 font-bold text-slate-500 border-r-2 border-slate-100 whitespace-nowrap">{line.deductionName || "Deduction"}</div>
+                      <div className="px-5 py-3 font-bold text-slate-600 border-r-2 border-slate-900 whitespace-nowrap">{line.deductionName || "Deduction"}</div>
                       <div className="px-5 py-3 text-right font-black text-rose-600">({currency(line.amount)})</div>
                     </div>
                   ))}
                 </div>
-                <div className="grid grid-cols-[1fr_120px] bg-slate-50 border-t-2 border-slate-900 font-black text-xs">
+                <div className="grid grid-cols-[1fr_120px] bg-white border-t-2 border-slate-900 font-black text-xs">
                   <div className="px-5 py-4 uppercase tracking-widest text-[9px] border-r-2 border-slate-900">Total Deductions</div>
                   <div className="px-5 py-4 text-right">{currency(totals.totalDeductions)}</div>
                 </div>
@@ -204,20 +198,13 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">NET PAYMENT DISBURSED</p>
                 <p className="text-5xl font-black tracking-tighter">{currency(totals.netPay)}</p>
               </div>
-              <div className="text-right border-l-2 border-white/20 pl-10">
-                <div className="h-12 w-12 bg-white/10 rounded-full flex items-center justify-center mb-2 ml-auto">
-                  <Share2 className="h-6 w-6 text-white" />
-                </div>
-                <p className="text-xs font-bold">Transaction Certified</p>
-                <p className="text-[9px] font-black uppercase tracking-widest opacity-50">E-Signature: SYSTEM_OR_LLC</p>
-              </div>
             </div>
           </div>
         </ScrollArea>
       </div>
 
       {/* Sidebar Controls */}
-      <div className="w-full lg:w-[350px] bg-white p-10 no-print flex flex-col gap-6 shadow-2xl z-10">
+      <div className="w-full lg:w-[350px] bg-white p-10 no-print flex flex-col gap-6 shadow-2xl z-10 border-l border-slate-100">
         <div>
           <h3 className="text-xl font-black tracking-tighter text-slate-900 uppercase">Document Controls</h3>
           <p className="text-xs text-slate-500 font-medium mt-1">Export, share, or archive this statement.</p>
