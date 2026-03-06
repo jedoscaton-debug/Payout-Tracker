@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -135,21 +136,21 @@ export default function AppShell() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-slate-50/50">
-        <Sidebar className="border-r border-slate-200 bg-white shadow-xl z-20">
-          <SidebarHeader className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
+        <Sidebar collapsible="icon" className="border-r border-slate-200 bg-white z-50">
+          <SidebarHeader className="p-4">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
                 <Settings2 className="h-5 w-5" />
               </div>
-              <div>
-                <h1 className="text-sm font-black tracking-tighter text-slate-900 uppercase">Payout Tracker</h1>
+              <div className="group-data-[collapsible=icon]:hidden transition-opacity duration-200">
+                <h1 className="text-sm font-black tracking-tighter text-slate-900 uppercase whitespace-nowrap">Payout Tracker</h1>
                 <p className="text-[10px] font-bold text-slate-400 uppercase">System Oriented</p>
               </div>
             </div>
           </SidebarHeader>
           <SidebarContent className="px-3">
             <SidebarGroup>
-              <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 px-4">
+              <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 px-4 group-data-[collapsible=icon]:hidden">
                 Main Navigation
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -159,9 +160,10 @@ export default function AppShell() {
                       isActive={activeView === "dashboard"} 
                       onClick={() => setActiveView("dashboard")}
                       className="rounded-xl h-11 px-4"
+                      tooltip="Dashboard"
                     >
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
-                      <span className="font-bold text-xs uppercase tracking-wider">Dashboard</span>
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span className="font-bold text-xs uppercase tracking-wider group-data-[collapsible=icon]:hidden">Dashboard</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
@@ -169,9 +171,10 @@ export default function AppShell() {
                       isActive={activeView === "employees"} 
                       onClick={() => setActiveView("employees")}
                       className="rounded-xl h-11 px-4"
+                      tooltip="Employees"
                     >
-                      <Users className="mr-2 h-4 w-4" />
-                      <span className="font-bold text-xs uppercase tracking-wider">Employees</span>
+                      <Users className="h-4 w-4" />
+                      <span className="font-bold text-xs uppercase tracking-wider group-data-[collapsible=icon]:hidden">Employees</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
@@ -179,9 +182,10 @@ export default function AppShell() {
                       isActive={activeView === "payroll"} 
                       onClick={() => setActiveView("payroll")}
                       className="rounded-xl h-11 px-4"
+                      tooltip="Payroll Runs"
                     >
-                      <Receipt className="mr-2 h-4 w-4" />
-                      <span className="font-bold text-xs uppercase tracking-wider">Payroll Runs</span>
+                      <Receipt className="h-4 w-4" />
+                      <span className="font-bold text-xs uppercase tracking-wider group-data-[collapsible=icon]:hidden">Payroll Runs</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
@@ -189,9 +193,10 @@ export default function AppShell() {
                       isActive={activeView === "routes"} 
                       onClick={() => setActiveView("routes")}
                       className="rounded-xl h-11 px-4"
+                      tooltip="Route Tracker"
                     >
-                      <Route className="mr-2 h-4 w-4" />
-                      <span className="font-bold text-xs uppercase tracking-wider">Route Tracker</span>
+                      <Route className="h-4 w-4" />
+                      <span className="font-bold text-xs uppercase tracking-wider group-data-[collapsible=icon]:hidden">Route Tracker</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>

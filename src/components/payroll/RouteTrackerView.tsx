@@ -1,16 +1,26 @@
 
 "use client";
 
+import React, { useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { RouteTrackerRow } from "@/app/lib/types";
 import { currency, shortDate, estimatePay, estimateFuel, driverPay, helperPay } from "@/app/lib/payroll-utils";
+import { useSidebar } from "@/components/ui/sidebar";
 
 interface RouteTrackerViewProps {
   routeTracker: RouteTrackerRow[];
 }
 
 export function RouteTrackerView({ routeTracker }: RouteTrackerViewProps) {
+  const { setOpen } = useSidebar();
+
+  const handleHorizontalScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    // If user scrolls horizontally more than 20px, collapse the sidebar for more space
+    if (e.currentTarget.scrollLeft > 20) {
+      setOpen(false);
+    }
+  }, [setOpen]);
+
   return (
     <div className="animate-in fade-in duration-500">
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden">
@@ -33,7 +43,7 @@ export function RouteTrackerView({ routeTracker }: RouteTrackerViewProps) {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="w-full">
+          <div className="w-full overflow-x-auto" onScroll={handleHorizontalScroll}>
             <div className="min-w-[1200px]">
               <table className="w-full border-collapse">
                 <thead>
@@ -74,8 +84,7 @@ export function RouteTrackerView({ routeTracker }: RouteTrackerViewProps) {
                 </tbody>
               </table>
             </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+          </div>
         </CardContent>
       </Card>
     </div>
