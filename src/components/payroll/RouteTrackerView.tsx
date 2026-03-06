@@ -68,14 +68,12 @@ export function RouteTrackerView({
     date: new Date().toISOString().split('T')[0],
     miles: 0,
     stops: 0,
-    actualPayAudit: 0,
     truckRental: TRUCK_RENTAL_FIXED,
     insurance: 0,
     driver: "",
     helper: ""
   });
 
-  // Financial Calculations for the Form
   const currentRoute = isEditOpen ? editingRoute : newRoute;
   const estPayValue = estimatePay(currentRoute?.stops || 0);
   const dPayValue = driverPay(currentRoute?.stops || 0);
@@ -153,7 +151,6 @@ export function RouteTrackerView({
         date: new Date().toISOString().split('T')[0],
         miles: 0,
         stops: 0,
-        actualPayAudit: 0,
         truckRental: TRUCK_RENTAL_FIXED,
         insurance: 0,
         driver: "",
@@ -181,7 +178,7 @@ export function RouteTrackerView({
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Route Audit Tracker</h3>
-          <p className="text-sm text-slate-500 font-medium">Log and analyze daily route profitability and driver performance.</p>
+          <p className="text-sm text-slate-500 font-medium">Log and analyze daily route profitability and performance.</p>
         </div>
 
         <div className="flex items-center gap-3">

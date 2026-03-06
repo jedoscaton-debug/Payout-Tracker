@@ -119,16 +119,12 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
               <span className="font-black text-slate-900">{run.payDate}</span>
             </div>
             <div className="border-2 border-slate-900 rounded-xl overflow-hidden shadow-sm bg-white">
-              <div className="bg-slate-50 border-b-2 border-slate-900 py-1.5 px-4 text-center">
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-900">Payslip Summary</span>
+              <div className="bg-slate-900 py-1.5 px-4 text-center">
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">Net Pay Summary</span>
               </div>
-              <div className="grid grid-cols-[1fr_90px] border-b-2 border-slate-900">
-                <span className="px-4 py-1.5 text-[9px] font-bold text-slate-500 uppercase">Gross Pay</span>
-                <span className="px-4 py-1.5 text-xs font-black text-right border-l-2 border-slate-900">{currency(totals.grossPay)}</span>
-              </div>
-              <div className="grid grid-cols-[1fr_90px] bg-slate-900 text-white">
+              <div className="grid grid-cols-[1fr_90px] bg-white text-slate-900">
                 <span className="px-4 py-2 text-[9px] font-black uppercase tracking-[0.3em]">Net Pay</span>
-                <span className="px-4 py-2 text-xs font-black text-right border-l-2 border-white/20">{currency(totals.netPay)}</span>
+                <span className="px-4 py-2 text-xs font-black text-right border-l-2 border-slate-900">{currency(totals.netPay)}</span>
               </div>
             </div>
           </div>

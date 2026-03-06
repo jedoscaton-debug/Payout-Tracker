@@ -39,13 +39,11 @@ export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
   const { toast } = useToast();
   
-  // App State
   const [employees, setEmployees] = useState<Employee[]>(employeesSeed);
   const [routeTracker, setRouteTracker] = useState<RouteTrackerRow[]>(routeTrackerSeed);
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
 
-  // Initialize Payroll Items
   useEffect(() => {
     setPayrollItems(employees.map(e => createPayrollItem(e, payrollRun, routeTracker)));
   }, [employees, payrollRun, routeTracker]);
@@ -153,7 +151,6 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen w-full bg-slate-50/50 flex flex-col">
-      {/* Top Navigation Bar */}
       <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
         <div className="px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
@@ -200,7 +197,6 @@ export default function AppShell() {
         </div>
       </header>
 
-      {/* Sub-header Breadcrumb */}
       <div className="bg-white border-b border-slate-100 px-8 py-3 flex items-center gap-2">
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">System</span>
         <ChevronRight className="h-3 w-3 text-slate-300" />
@@ -209,7 +205,6 @@ export default function AppShell() {
         </h2>
       </div>
 
-      {/* Main Content Area */}
       <main className="flex-1 p-8 overflow-x-hidden">
         <div className="max-w-[1600px] mx-auto">
           {activeView === "dashboard" && (

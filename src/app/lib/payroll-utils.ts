@@ -26,7 +26,7 @@ export function shortDate(input: string) {
 export function getDayOfWeek(input: string) {
   if (!input) return "";
   const d = new Date(`${input}T00:00:00`);
-  return d.toLocaleDateString("en-US", { weekday: "short" });
+  return d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
 }
 
 export function estimatePay(stops: number) {
