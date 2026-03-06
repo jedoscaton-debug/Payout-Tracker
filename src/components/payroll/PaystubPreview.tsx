@@ -100,7 +100,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
 
           <div 
             id="paystub-document" 
-            className="mx-auto max-w-[800px] rounded-[1.5rem] border border-slate-200 bg-white p-10 shadow-2xl shadow-slate-200/50 print:shadow-none print:border-none print:p-0"
+            className="mx-auto max-w-[800px] rounded-[1.5rem] border border-slate-200 bg-white p-10 shadow-2xl shadow-slate-200/50 print:shadow-none print:border-none print:p-0 my-4"
           >
             <div className="text-center space-y-1">
               <h2 className="text-xl font-black tracking-[0.1em] text-slate-900 uppercase">SYSTEM ORIENTED LLC</h2>
