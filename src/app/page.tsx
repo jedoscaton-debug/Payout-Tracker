@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -7,7 +6,6 @@ import {
   Users, 
   Receipt, 
   Route, 
-  Settings2,
   Lock,
   Download,
   ChevronRight
@@ -88,6 +86,14 @@ export default function AppShell() {
     });
   };
 
+  const handleAddRoute = (newRoute: RouteTrackerRow) => {
+    setRouteTracker(prev => [...prev, newRoute]);
+    toast({
+      title: "Route Logged",
+      description: `Route ${newRoute.route} for ${newRoute.date} has been added.`
+    });
+  };
+
   const exportCsv = () => {
     const rows = [
       ["Employee", "Pay Period", "Pay Date", "Gross", "Deductions", "Net"],
@@ -138,7 +144,7 @@ export default function AppShell() {
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
                 <svg viewBox="0 0 100 100" className="h-5 w-5 fill-white">
                   <circle cx="50" cy="50" r="40" fill="#4461B5"/>
-                  <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="50" fill="white">S</text>
+                  <text x="35" y="68" style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '50px' }} fill="white">S</text>
                 </svg>
               </div>
               <div className="hidden sm:block">
@@ -211,7 +217,11 @@ export default function AppShell() {
             />
           )}
           {activeView === "routes" && (
-            <RouteTrackerView routeTracker={routeTracker} />
+            <RouteTrackerView 
+              routeTracker={routeTracker} 
+              onAddRoute={handleAddRoute}
+              employees={employees}
+            />
           )}
         </div>
       </main>
