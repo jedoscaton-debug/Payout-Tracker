@@ -50,8 +50,13 @@ export function EmployeeManager({
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [newEmp, setNewEmp] = useState({
-    id: "", // For admin linking
+  
+  const [newAccess, setNewAccess] = useState({
+    id: "",
+    fullName: "",
+  });
+
+  const [newStaff, setNewStaff] = useState({
     fullName: "",
     defaultDailyRate: "Varies",
     paymentMethod: "Direct Deposit"
@@ -61,13 +66,25 @@ export function EmployeeManager({
     e.fullName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSubmitAdd = (e: React.FormEvent) => {
+  const handleSubmitAccess = (e: React.FormEvent) => {
     e.preventDefault();
     onAddEmployee({
-      id: newEmp.id || `emp-${Date.now()}`,
-      ...newEmp
+      id: newAccess.id,
+      fullName: newAccess.fullName,
+      defaultDailyRate: "Varies",
+      paymentMethod: "Direct Deposit"
     });
-    setNewEmp({ id: "", fullName: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" });
+    setNewAccess({ id: "", fullName: "" });
+    setIsAddOpen(false);
+  };
+
+  const handleSubmitStaff = (e: React.FormEvent) => {
+    e.preventDefault();
+    onAddEmployee({
+      id: `emp-${Date.now()}`,
+      ...newStaff
+    });
+    setNewStaff({ fullName: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" });
     setIsAddOpen(false);
   };
 
@@ -92,12 +109,12 @@ export function EmployeeManager({
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
-            {isRoleManagement ? "Administrative Control Board" : "Employee Directory"}
+            {isRoleManagement ? "Admin Access Board" : "Employee Directory"}
           </h3>
           <p className="text-sm text-slate-500 font-medium">
             {isRoleManagement 
-              ? "Manage system-wide permissions, grant administrative rights, and revoke access." 
-              : "Manage your workforce, default rates, and payment configurations."}
+              ? "Manage system-wide permissions and grant administrative rights to registered names." 
+              : "Manage staff details, default rates, and payment configurations for the workforce."}
           </p>
         </div>
 
@@ -115,72 +132,103 @@ export function EmployeeManager({
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-xl h-11 bg-primary px-6 font-bold shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5">
-                <Plus className="mr-2 h-4 w-4" /> Create Access
+                <Plus className="mr-2 h-4 w-4" /> {isRoleManagement ? "Register Access" : "Add Staff Member"}
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl">
+            <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white">
               <DialogHeader>
-                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Register System Access</DialogTitle>
+                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
+                  {isRoleManagement ? "Register Access Node" : "Register Staff Member"}
+                </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmitAdd} className="space-y-6 mt-4">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
-                  <Input 
-                    required
-                    className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white" 
-                    value={newEmp.fullName}
-                    onChange={(e) => setNewEmp({...newEmp, fullName: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">User UID (Optional - for account linking)</Label>
-                  <Input 
-                    placeholder="e.g. pEdBZ1Y8AbeTrUKSC4..."
-                    className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white font-mono text-[11px]" 
-                    value={newEmp.id}
-                    onChange={(e) => setNewEmp({...newEmp, id: e.target.value})}
-                  />
-                  <p className="text-[9px] text-slate-400 font-medium italic">Link an existing account by providing their unique ID found in the Auth console.</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+              
+              {isRoleManagement ? (
+                <form onSubmit={handleSubmitAccess} className="space-y-6 mt-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Daily Rate</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Username / Name</Label>
                     <Input 
+                      required
+                      placeholder="e.g. John Doe"
                       className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white" 
-                      value={newEmp.defaultDailyRate}
-                      onChange={(e) => setNewEmp({...newEmp, defaultDailyRate: e.target.value})}
+                      value={newAccess.fullName}
+                      onChange={(e) => setNewAccess({...newAccess, fullName: e.target.value})}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payment Method</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">System UID</Label>
                     <Input 
-                      className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white" 
-                      value={newEmp.paymentMethod}
-                      onChange={(e) => setNewEmp({...newEmp, paymentMethod: e.target.value})}
+                      required
+                      placeholder="pEdBZ1Y8AbeTrUKSC4..."
+                      className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white font-mono text-[11px]" 
+                      value={newAccess.id}
+                      onChange={(e) => setNewAccess({...newAccess, id: e.target.value})}
                     />
                   </div>
-                </div>
-                <DialogFooter className="pt-4">
-                  <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold shadow-lg shadow-slate-900/20">
-                    Register Record in System
-                  </Button>
-                </DialogFooter>
-              </form>
+                  <DialogFooter className="pt-4">
+                    <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold shadow-lg shadow-slate-900/20">
+                      Link System Access
+                    </Button>
+                  </DialogFooter>
+                </form>
+              ) : (
+                <form onSubmit={handleSubmitStaff} className="space-y-6 mt-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
+                    <Input 
+                      required
+                      className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white" 
+                      value={newStaff.fullName}
+                      onChange={(e) => setNewStaff({...newStaff, fullName: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Default Rate</Label>
+                      <Input 
+                        className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white" 
+                        value={newStaff.defaultDailyRate}
+                        onChange={(e) => setNewStaff({...newStaff, defaultDailyRate: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payment Method</Label>
+                      <Input 
+                        className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white" 
+                        value={newStaff.paymentMethod}
+                        onChange={(e) => setNewStaff({...newStaff, paymentMethod: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter className="pt-4">
+                    <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold shadow-lg shadow-slate-900/20">
+                      Create Staff Profile
+                    </Button>
+                  </DialogFooter>
+                </form>
+              )}
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden">
+      <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardContent className="p-0">
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Staff Member</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Role & Access</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Pay Basis</th>
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">System UID</th>
-                <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Management</th>
+                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Member</th>
+                {isRoleManagement ? (
+                  <>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">System Access</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Linked UID</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Daily Rate</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Payment Method</th>
+                  </>
+                )}
+                <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -189,22 +237,31 @@ export function EmployeeManager({
                 return (
                   <tr key={emp.id} className="group hover:bg-slate-50/50 transition-colors">
                     <td className="px-8 py-5 font-bold text-slate-900">{emp.fullName}</td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-2">
-                        {isSystemAdmin && (
-                          <Badge className="rounded-full bg-slate-900 text-white text-[10px] font-black px-3 py-1 uppercase tracking-wider">
-                            <Shield className="mr-1 h-3 w-3" /> Admin
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className="rounded-full border-slate-200 text-slate-500 text-[10px] font-bold px-3 py-1 uppercase">
-                          Employee
-                        </Badge>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{emp.defaultDailyRate}</span>
-                    </td>
-                    <td className="px-8 py-5 text-[10px] font-mono text-slate-400">{emp.id}</td>
+                    {isRoleManagement ? (
+                      <>
+                        <td className="px-8 py-5">
+                          {isSystemAdmin ? (
+                            <Badge className="rounded-full bg-slate-900 text-white text-[10px] font-black px-3 py-1 uppercase tracking-wider">
+                              <Shield className="mr-1 h-3 w-3" /> Admin Access
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="rounded-full border-slate-200 text-slate-500 text-[10px] font-bold px-3 py-1 uppercase">
+                              Standard Access
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-8 py-5 text-[10px] font-mono text-slate-400">{emp.id}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-8 py-5">
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{emp.defaultDailyRate}</span>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">{emp.paymentMethod}</span>
+                        </td>
+                      </>
+                    )}
                     <td className="px-8 py-5 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -212,13 +269,15 @@ export function EmployeeManager({
                             <MoreHorizontal className="h-4 w-4 text-slate-400" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-xl p-2 w-56">
-                          <DropdownMenuItem 
-                            className="rounded-lg font-bold text-xs uppercase tracking-wider text-slate-600 gap-2 cursor-pointer"
-                            onClick={() => handleStartEdit(emp)}
-                          >
-                            <Pencil className="h-3 w-3" /> Edit Profile
-                          </DropdownMenuItem>
+                        <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-xl p-2 w-56 bg-white">
+                          {!isRoleManagement && (
+                            <DropdownMenuItem 
+                              className="rounded-lg font-bold text-xs uppercase tracking-wider text-slate-600 gap-2 cursor-pointer"
+                              onClick={() => handleStartEdit(emp)}
+                            >
+                              <Pencil className="h-3 w-3" /> Edit Staff Profile
+                            </DropdownMenuItem>
+                          )}
                           
                           {isRoleManagement && (
                             <>
@@ -227,14 +286,14 @@ export function EmployeeManager({
                                   className="rounded-lg font-bold text-xs uppercase tracking-wider text-rose-600 gap-2 cursor-pointer"
                                   onClick={() => onRevokeAdmin?.(emp.id)}
                                 >
-                                  <ShieldAlert className="h-3 w-3" /> Revoke Admin
+                                  <ShieldAlert className="h-3 w-3" /> Revoke Admin Rights
                                 </DropdownMenuItem>
                               ) : (
                                 <DropdownMenuItem 
                                   className="rounded-lg font-bold text-xs uppercase tracking-wider text-primary gap-2 cursor-pointer"
                                   onClick={() => onGrantAdmin?.(emp.id)}
                                 >
-                                  <Shield className="h-3 w-3" /> Grant Admin
+                                  <Shield className="h-3 w-3" /> Grant Admin Rights
                                 </DropdownMenuItem>
                               )}
                             </>
@@ -244,7 +303,7 @@ export function EmployeeManager({
                             className="rounded-lg font-bold text-xs uppercase tracking-wider text-rose-600 gap-2 cursor-pointer focus:bg-rose-50 focus:text-rose-600"
                             onClick={() => onDeleteEmployee(emp.id)}
                           >
-                            <UserMinus className="h-3 w-3" /> Terminate Access
+                            <UserMinus className="h-3 w-3" /> {isRoleManagement ? "Terminate Access" : "Remove Staff Member"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -257,11 +316,11 @@ export function EmployeeManager({
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog (Staff only) */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl">
+        <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Modify System Profile</DialogTitle>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Edit Staff Record</DialogTitle>
           </DialogHeader>
           {editingEmployee && (
             <form onSubmit={handleSubmitEdit} className="space-y-6 mt-4">
@@ -294,7 +353,7 @@ export function EmployeeManager({
               </div>
               <DialogFooter className="pt-4">
                 <Button type="submit" className="w-full rounded-xl h-12 bg-primary font-bold shadow-lg shadow-primary/20">
-                  Update System Record
+                  Update Staff Record
                 </Button>
               </DialogFooter>
             </form>

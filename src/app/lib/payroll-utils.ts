@@ -1,3 +1,4 @@
+
 import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollItem, ComputedTotals } from './types';
 
 export const DIRECT_DEPOSIT_FEE = 4;

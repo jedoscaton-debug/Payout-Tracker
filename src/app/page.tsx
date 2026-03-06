@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { 
   LayoutDashboard, 
   Users, 
@@ -61,6 +61,7 @@ export default function AppShell() {
   const db = useFirestore();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
+  const initializationRef = useRef(false);
 
   // Role Checks
   const adminDocRef = useMemoFirebase(() => user ? doc(db, "roles_admin", user.uid) : null, [db, user]);
@@ -97,10 +98,11 @@ export default function AppShell() {
 
   // Guard initialization to prevent infinite update loop
   useEffect(() => {
-    if (isAdmin && employees.length > 0 && payrollItems.length === 0) {
+    if (isAdmin && employees.length > 0 && !initializationRef.current) {
       setPayrollItems(employees.map(e => createPayrollItem(e, payrollRun, routeTracker)));
+      initializationRef.current = true;
     }
-  }, [employees, payrollRun, routeTracker, isAdmin, payrollItems.length]);
+  }, [employees, payrollRun, routeTracker, isAdmin]);
 
   const payrollSummary = useMemo(() => {
     const totals = payrollItems.map(computeTotals);
@@ -117,8 +119,8 @@ export default function AppShell() {
     const docRef = doc(db, "employees", newEmployee.id);
     setDocumentNonBlocking(docRef, newEmployee, { merge: true });
     toast({
-      title: "Employee Added",
-      description: `${newEmployee.fullName} has been added to the system.`
+      title: "Staff Member Registered",
+      description: `${newEmployee.fullName} has been added to the directory.`
     });
   };
 
@@ -134,12 +136,9 @@ export default function AppShell() {
   const handleDeleteEmployee = (id: string) => {
     const docRef = doc(db, "employees", id);
     deleteDocumentNonBlocking(docRef);
-    // Also remove admin role if it exists
-    const adminRef = doc(db, "roles_admin", id);
-    deleteDocumentNonBlocking(adminRef);
     toast({
-      title: "Record Terminated",
-      description: "Access has been revoked and record removed from system.",
+      title: "Staff Member Removed",
+      description: "Record has been deleted from the directory.",
       variant: "destructive"
     });
   };
@@ -148,8 +147,8 @@ export default function AppShell() {
     const docRef = doc(db, "roles_admin", uid);
     setDocumentNonBlocking(docRef, { role: "admin", createdAt: new Date().toISOString() }, { merge: true });
     toast({
-      title: "Admin Role Granted",
-      description: "Administrative privileges have been enabled for this account."
+      title: "Admin Privileges Granted",
+      description: "Administrative access enabled for this account."
     });
   };
 
@@ -165,8 +164,8 @@ export default function AppShell() {
     const docRef = doc(db, "roles_admin", uid);
     deleteDocumentNonBlocking(docRef);
     toast({
-      title: "Admin Role Revoked",
-      description: "Administrative privileges have been disabled for this account.",
+      title: "Admin Privileges Revoked",
+      description: "Administrative access disabled for this account.",
       variant: "destructive"
     });
   };
@@ -270,19 +269,16 @@ export default function AppShell() {
           </div>
           <div className="space-y-2">
             <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Access Pending</h1>
-            <p className="text-sm text-slate-500 font-medium">Your account ({user.email}) is not yet registered in the workforce directory. Please contact your administrator to set up your profile.</p>
+            <p className="text-sm text-slate-500 font-medium">Your account ({user.email}) is authenticated but not yet authorized by an administrator. Please wait for access activation.</p>
           </div>
           <div className="grid gap-3">
-            <Button className="rounded-xl h-12 w-full font-bold uppercase tracking-wider bg-slate-900" onClick={handleBootstrapAdmin}>
-              <ShieldCheck className="mr-2 h-4 w-4" /> Grant Admin Privileges (Dev)
+            <Button className="rounded-xl h-12 w-full font-bold uppercase tracking-wider bg-slate-900 shadow-xl shadow-slate-900/20" onClick={handleBootstrapAdmin}>
+              <ShieldCheck className="mr-2 h-4 w-4" /> Bootstrap First Admin
             </Button>
             <Button variant="outline" className="rounded-xl h-12 w-full font-bold uppercase tracking-wider" onClick={handleSignOut}>
               <LogOut className="mr-2 h-4 w-4" /> Sign Out
             </Button>
           </div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            Bootstrap button is for initial prototype setup only.
-          </p>
         </div>
       </div>
     );
@@ -364,7 +360,7 @@ export default function AppShell() {
         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">System</span>
         <ChevronRight className="h-3 w-3 text-slate-300" />
         <h2 className="text-[10px] font-black uppercase tracking-widest text-primary">
-          {activeView === "payroll" ? "Payroll Runs" : activeView === "routes" ? "Route Tracker" : activeView === "my-stubs" ? "My Statements" : activeView === "admin-board" ? "Admin Board" : activeView.toUpperCase()}
+          {activeView === "payroll" ? "Payroll Runs" : activeView === "routes" ? "Route Tracker" : activeView === "my-stubs" ? "My Statements" : activeView === "admin-board" ? "Admin Access Board" : activeView.toUpperCase()}
         </h2>
       </div>
 
@@ -379,6 +375,7 @@ export default function AppShell() {
                   onAddEmployee={handleAddEmployee}
                   onUpdateEmployee={handleUpdateEmployee}
                   onDeleteEmployee={handleDeleteEmployee}
+                  isRoleManagement={false}
                 />
               )}
               {activeView === "payroll" && (
