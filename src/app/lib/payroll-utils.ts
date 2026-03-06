@@ -16,6 +16,7 @@ export function currency(value: number) {
 export function shortDate(input: string) {
   if (!input) return "";
   const d = new Date(`${input}T00:00:00`);
+  if (isNaN(d.getTime())) return input;
   return d.toLocaleDateString("en-US", {
     month: "numeric",
     day: "numeric",
@@ -26,6 +27,7 @@ export function shortDate(input: string) {
 export function getDayOfWeek(input: string) {
   if (!input) return "";
   const d = new Date(`${input}T00:00:00`);
+  if (isNaN(d.getTime())) return "";
   return d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
 }
 
@@ -66,7 +68,6 @@ function amountForRole(row: RouteTrackerRow, role: RoleType) {
   const estPay = row.estimatedPay || estimatePay(row.stops);
   if (role === "Driver") return driverPay(row.stops, row.route, row.vehicleNumber, estPay);
   if (role === "Helper") return helperPay(row.stops, row.route, row.vehicleNumber, estPay);
-  // Combined role
   return driverPay(row.stops, row.route, row.vehicleNumber, estPay) + helperPay(row.stops, row.route, row.vehicleNumber, estPay);
 }
 

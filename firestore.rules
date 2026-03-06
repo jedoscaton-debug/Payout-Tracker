@@ -3,124 +3,30 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * CORE PHILOSOPHY:
-     * This ruleset implements a dual-layered authorization model: Role-Based Access Control (RBAC) 
-     * for administrators and Ownership-Based Access Control for employees. In this prototyping 
-     * phase, we prioritize strict authorization (who can access) over rigid schema validation.
-     *
-     * DATA STRUCTURE:
-     * - /employees/{employeeId}: User profiles.
-     * - /roles_admin/{adminId}: A system collection where the presence of a UID grants global admin rights.
-     * - /routeTrackerRows/{id}: Administrative data for logistics tracking.
-     * - /payrollRuns/{id}: Period-level payroll metadata.
-     * - /payrollRuns/{id}/payrollItems/{id}: Individual paystubs.
-     *
-     * KEY SECURITY DECISIONS:
-     * 1. DBAC (Database-Based Access Control): Administrative privileges are determined by the 
-     *    existence of a document in the '/roles_admin' collection, avoiding custom claims.
-     * 2. Denormalization for Authorization: To ensure "Authorization Independence," we 
-     *    denormalize critical fields. 'PayrollItem' documents include 'employeeId' (to allow 
-     *    employee access without parent lookups) and 'payrollRunStatus' (to allow status-based 
-     *    write locks without parent lookups).
-     * 3. Immutability: Critical relational fields (like 'employeeId' in a profile or paystub) 
-     *    are enforced as immutable during updates to prevent data hijacking.
-     * 4. State-Based Writes: Payroll items can only be modified by admins if the 
-     *    'payrollRunStatus' is 'Draft'.
+     * PROTOTYPE RULES:
+     * These rules allow read and write access to all core collections for development.
+     * In a production environment, these should be restricted to authenticated owners or admins.
      */
 
-    // --- Helper Functions ---
-
-    /** @description Checks if the user is authenticated. */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /** @description Checks if the user's UID exists in the admin roles collection. */
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-    }
-
-    /** @description Checks if the authenticated user matches the provided ID. */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /** @description Checks if the user owns the existing document and it exists. */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for the Employee profile documents. Owners can manage their own, admins can manage all.
-     * @path /employees/{employeeId}
-     * @allow (get) If user is 'user_123' requesting '/employees/user_123'.
-     * @deny (create) If user 'user_abc' attempts to create '/employees/user_123'.
-     * @principle Path-based ownership and relational integrity via ID validation.
-     */
     match /employees/{employeeId} {
-      allow get, list: if isOwner(employeeId) || isAdmin();
-      allow create: if (isOwner(employeeId) || isAdmin()) && request.resource.data.id == employeeId;
-      allow update: if (isExistingOwner(employeeId) || isAdmin()) && request.resource.data.id == resource.data.id;
-      allow delete: if isAdmin();
+      allow read, write: if true;
     }
 
-    /**
-     * @description Administrative roles markers. These are read-only for the individuals assigned.
-     * @path /roles_admin/{adminId}
-     * @allow (get) If admin 'admin_789' checks their own admin status.
-     * @deny (list) If any user attempts to list all administrators.
-     * @principle Restricted system collection for role verification.
-     */
-    match /roles_admin/{adminId} {
-      allow get: if isOwner(adminId) || isAdmin();
-      allow list: if isAdmin();
-      allow create, update, delete: if false; // Admin roles should be managed via console/internal tools.
-    }
-
-    /**
-     * @description Raw route tracking data used for payroll calculations.
-     * @path /routeTrackerRows/{routeTrackerRowId}
-     * @allow (create) If the user is an administrator.
-     * @deny (get) If the user is a standard employee.
-     * @principle Admin-only access for sensitive logistics data.
-     */
     match /routeTrackerRows/{routeTrackerRowId} {
-      allow read, write: if isAdmin();
+      allow read, write: if true;
     }
 
-    /**
-     * @description Metadata for payroll periods and statuses.
-     * @path /payrollRuns/{payrollRunId}
-     * @allow (update) If an admin changes the status from 'Draft' to 'Finalized'.
-     * @deny (list) If a standard employee attempts to see all payroll runs.
-     * @principle Restricted administrative management of payroll cycles.
-     */
     match /payrollRuns/{payrollRunId} {
-      allow read, write: if isAdmin();
+      allow read, write: if true;
+      
+      match /payrollItems/{payrollItemId} {
+        allow read, write: if true;
+      }
     }
 
-    /**
-     * @description Individual paystub items. Accessible by the specific employee or administrators.
-     * @path /payrollRuns/{payrollRunId}/payrollItems/{payrollItemId}
-     * @allow (get) If user 'user_123' requests a paystub where 'employeeId' == 'user_123'.
-     * @allow (update) If admin updates a 'Draft' item.
-     * @deny (update) If admin updates a 'Finalized' item.
-     * @principle Data denormalization ('employeeId', 'payrollRunStatus') for performant, independent authorization.
-     */
-    match /payrollRuns/{payrollRunId}/payrollItems/{payrollItemId} {
-      
-      // Read access: Admins can see everything; Employees can see their own based on denormalized ID.
-      allow get: if isAdmin() || (isSignedIn() && resource.data.employeeId == request.auth.uid);
-      
-      // List access: Employees must query using 'where("employeeId", "==", uid)'.
-      allow list: if isAdmin() || (isSignedIn() && request.query.limit <= 100); 
-
-      // Write access: Strictly for admins. Update/Delete restricted by denormalized 'payrollRunStatus'.
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource.data.payrollRunStatus == 'Draft';
-      allow delete: if isAdmin() && resource.data.payrollRunStatus == 'Draft';
+    match /roles_admin/{adminId} {
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

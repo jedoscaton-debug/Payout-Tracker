@@ -38,7 +38,9 @@ import {
   useMemoFirebase,
   updateDocumentNonBlocking,
   setDocumentNonBlocking,
-  deleteDocumentNonBlocking
+  deleteDocumentNonBlocking,
+  useAuth,
+  initiateAnonymousSignIn
 } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 
@@ -48,6 +50,12 @@ export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
   const { toast } = useToast();
   const db = useFirestore();
+  const auth = useAuth();
+
+  // Ensure user is signed in for Firestore access
+  useEffect(() => {
+    initiateAnonymousSignIn(auth);
+  }, [auth]);
   
   // Firestore Subscriptions
   const employeesQuery = useMemoFirebase(() => collection(db, "employees"), [db]);
