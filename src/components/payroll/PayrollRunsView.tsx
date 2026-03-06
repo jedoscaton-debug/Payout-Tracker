@@ -224,7 +224,7 @@ export function PayrollRunsView({
                                 value={deduction.amount}
                                 className="h-8 w-20 text-[11px] rounded-lg border-slate-100 font-black text-rose-500"
                                 disabled={payrollRun.status === "Finalized" || !item.deductionsLines[index] || deduction.deductionName === "Direct Deposit Fee"}
-                                onChange={(e) => updateItem(item.id, (c) => ({ ...c, amount: Number(e.target.value) }))}
+                                onChange={(e) => updateItem(item.id, (c) => ({ ...c, deductionsLines: c.deductionsLines.map((x, i) => i === index ? { ...x, amount: Number(e.target.value) } : x) }))}
                               />
                             </td>
                           </React.Fragment>
