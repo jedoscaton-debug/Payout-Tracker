@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Loader2,
   LogOut,
-  ShieldAlert
+  ShieldAlert,
+  ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -199,6 +200,16 @@ export default function AppShell() {
     setActiveView("dashboard");
   };
 
+  const handleBootstrapAdmin = () => {
+    if (!user) return;
+    const docRef = doc(db, "roles_admin", user.uid);
+    setDocumentNonBlocking(docRef, { role: "admin", createdAt: new Date().toISOString() }, { merge: true });
+    toast({
+      title: "Admin Role Granted",
+      description: "You now have full system access. Page will refresh."
+    });
+  };
+
   if (isUserLoading || adminLoading || profileLoading) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
@@ -224,9 +235,17 @@ export default function AppShell() {
             <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Access Pending</h1>
             <p className="text-sm text-slate-500 font-medium">Your account ({user.email}) is not yet registered in the workforce directory. Please contact your administrator to set up your profile.</p>
           </div>
-          <Button variant="outline" className="rounded-xl h-12 w-full font-bold uppercase tracking-wider" onClick={handleSignOut}>
-            <LogOut className="mr-2 h-4 w-4" /> Sign Out
-          </Button>
+          <div className="grid gap-3">
+            <Button className="rounded-xl h-12 w-full font-bold uppercase tracking-wider bg-slate-900" onClick={handleBootstrapAdmin}>
+              <ShieldCheck className="mr-2 h-4 w-4" /> Grant Admin Privileges (Dev)
+            </Button>
+            <Button variant="outline" className="rounded-xl h-12 w-full font-bold uppercase tracking-wider" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" /> Sign Out
+            </Button>
+          </div>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            Bootstrap button is for initial prototype setup only.
+          </p>
         </div>
       </div>
     );

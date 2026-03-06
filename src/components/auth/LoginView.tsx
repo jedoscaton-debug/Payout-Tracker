@@ -6,21 +6,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useAuth } from "@/firebase";
-import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
-import { Loader2, ShieldCheck, Mail, Lock } from "lucide-react";
+import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
+import { Loader2, ShieldCheck, Mail, Lock, UserPlus } from "lucide-react";
 
 export function LoginView() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const auth = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Non-blocking sign-in: UI state will be updated via useUser() hook in shell
-    initiateEmailSignIn(auth, email, password);
-    // Add a slight delay for better UX before re-evaluating
+    
+    if (isSignUp) {
+      initiateEmailSignUp(auth, email, password);
+    } else {
+      initiateEmailSignIn(auth, email, password);
+    }
+    
     setTimeout(() => setIsLoading(false), 2000);
   };
 
@@ -42,11 +47,15 @@ export function LoginView() {
 
         <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-10 pb-8 text-center">
-            <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Secure Authentication</CardTitle>
-            <CardDescription className="text-xs font-medium text-slate-500 mt-2">Enter your professional credentials to manage payroll logs.</CardDescription>
+            <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+              {isSignUp ? "Create Account" : "Secure Authentication"}
+            </CardTitle>
+            <CardDescription className="text-xs font-medium text-slate-500 mt-2">
+              {isSignUp ? "Register your professional credentials below." : "Enter your professional credentials to manage payroll logs."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="p-10 pt-8">
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Email Address</Label>
                 <div className="relative">
@@ -78,15 +87,30 @@ export function LoginView() {
                 </div>
               </div>
               
-              <Button type="submit" className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-xl shadow-primary/20 hover:-translate-y-0.5 transition-all" disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <ShieldCheck className="mr-2 h-5 w-5" /> Authenticate Account
-                  </>
-                )}
-              </Button>
+              <div className="space-y-4">
+                <Button type="submit" className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-xl shadow-primary/20 hover:-translate-y-0.5 transition-all" disabled={isLoading}>
+                  {isLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : isSignUp ? (
+                    <>
+                      <UserPlus className="mr-2 h-5 w-5" /> Create Profile
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="mr-2 h-5 w-5" /> Authenticate Account
+                    </>
+                  )}
+                </Button>
+                
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="w-full text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary hover:bg-slate-50 rounded-xl"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                >
+                  {isSignUp ? "Already have an account? Log In" : "Need an account? Sign Up"}
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
