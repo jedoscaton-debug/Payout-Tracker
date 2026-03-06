@@ -22,7 +22,6 @@ import {
   Lock,
   Download
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -203,9 +202,6 @@ export default function AppShell() {
             </div>
             
             <div className="flex items-center gap-3">
-              <Badge variant={payrollRun.status === "Draft" ? "secondary" : "default"} className={`rounded-full px-4 py-1 font-bold tracking-widest text-[10px] uppercase`}>
-                {payrollRun.status}
-              </Badge>
               <Button variant="outline" size="sm" className="rounded-xl h-9 border-slate-200 font-bold text-[10px] uppercase tracking-wider" onClick={exportCsv}>
                 <Download className="mr-2 h-3 w-3" /> Export
               </Button>
