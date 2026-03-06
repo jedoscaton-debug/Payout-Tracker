@@ -75,6 +75,9 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
+        // CRITICAL: Unsubscribe immediately on error to prevent SDK ID:ca9 crash
+        unsubscribe();
+
         // Only propagate permission errors to the global listener
         if (err.code === 'permission-denied') {
           const path: string =

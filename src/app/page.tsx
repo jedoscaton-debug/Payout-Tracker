@@ -40,18 +40,21 @@ export default function AppShell() {
   const adminDocRef = useMemoFirebase(() => user ? doc(db, "roles_admin", user.uid) : null, [db, user]);
   const { data: adminRole, isLoading: adminLoading } = useDoc(adminDocRef);
   
+  // Master Admin check via email as fallback for bootstrap phase
+  const isMasterByEmail = userEmail === "admin@systemoriented.com" || userEmail === "jedocaton1997@gmail.com";
+  const isAdmin = !!adminRole || isMasterByEmail;
+  const isMasterAdmin = adminRole?.role === 'master' || isMasterByEmail;
+
+  // Employee Profile Handshake
   const employeeQuery = useMemoFirebase(() => userEmail ? query(collection(db, "employees"), where("email", "==", userEmail)) : null, [db, userEmail]);
   const { data: employeesFound, isLoading: profileLoading } = useCollection<Employee>(employeeQuery);
   const employeeProfile = employeesFound?.[0] || null;
-
-  const isAdmin = !!adminRole;
-  const isMasterAdmin = adminRole?.role === 'master';
   const isEmployee = !!employeeProfile;
 
   // System Bootstrap Check
   const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
   const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef);
-  const isSystemFresh = !bootstrapLoading && !bootstrapDoc;
+  const isSystemFresh = !bootstrapLoading && !bootstrapDoc && !isMasterByEmail;
 
   useEffect(() => {
     if (!isUserLoading && !adminLoading && !profileLoading && !bootstrapLoading && user) {
@@ -61,6 +64,7 @@ export default function AppShell() {
     }
   }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, bootstrapLoading, user]);
   
+  // Guarded Admin Collections - Only query if confirmed admin
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
   const { data: employeesData } = useCollection<Employee>(employeesQuery);
   const employees = useMemo(() => (employeesData || []) as Employee[], [employeesData]);
@@ -75,12 +79,12 @@ export default function AppShell() {
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
 
-  // Sync Payroll Items with Active Directory
+  // Sync Payroll Items
   useEffect(() => {
     if (!isAdmin || employees.length === 0) return;
     setPayrollItems(prev => {
       const existingIds = new Set(prev.map(i => i.employeeId));
-      const newItems = employees.filter(e => !existingIds.size || !existingIds.has(e.id)).map(e => createPayrollItem(e, payrollRun, routeTracker));
+      const newItems = employees.filter(e => !existingIds.has(e.id)).map(e => createPayrollItem(e, payrollRun, routeTracker));
       return [...prev, ...newItems];
     });
   }, [employees, isAdmin, payrollRun, routeTracker]);
@@ -115,7 +119,7 @@ export default function AppShell() {
     toast({ title: "Admin Privileges Revoked" });
   };
 
-  if (isUserLoading || adminLoading || profileLoading || bootstrapLoading) {
+  if (isUserLoading || (user && (adminLoading || profileLoading || bootstrapLoading))) {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 

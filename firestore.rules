@@ -4,19 +4,22 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isAdmin() {
-      return request.auth != null && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return request.auth != null && (
+        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) ||
+        request.auth.token.email.lower() == "admin@systemoriented.com" ||
+        request.auth.token.email.lower() == "jedocaton1997@gmail.com"
+      );
     }
 
     /**
      * Case-insensitive email ownership check.
-     * Ensures employees can only access records matching their verified email.
      */
     function isEmployee(email) {
       return request.auth != null && 
              request.auth.token.email.lower() == email.lower();
     }
 
-    // Collection Group Rule for Payroll Items - supports global history search for employees
+    // Collection Group Rule for Payroll Items
     match /{path=**}/payrollItems/{payrollItemId} {
       allow read: if request.auth != null && (
         isAdmin() || 
@@ -26,7 +29,9 @@ service cloud.firestore {
     }
 
     match /employees/{employeeId} {
-      allow read: if request.auth != null && (
+      // Allow list for identity handshake (searching by email)
+      allow list: if request.auth != null;
+      allow get: if request.auth != null && (
         isAdmin() || 
         isEmployee(resource.data.email) ||
         (request.auth.uid == resource.data.authUid) ||
@@ -36,7 +41,12 @@ service cloud.firestore {
     }
 
     match /routeTrackerRows/{routeTrackerRowId} {
-      allow read: if request.auth != null;
+      allow list: if request.auth != null;
+      allow get: if request.auth != null && (
+        isAdmin() || 
+        isEmployee(resource.data.driver) ||
+        isEmployee(resource.data.helper)
+      );
       allow write: if isAdmin();
     }
 
