@@ -62,41 +62,46 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
 
   return (
     <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white">
-      {/* Main Document View */}
-      <div className="flex-1 h-full overflow-hidden bg-white">
-        <ScrollArea className="h-full p-4 sm:p-12 print:p-0 print:bg-white">
-          <style jsx global>{`
-            @media print {
-              @page {
-                size: portrait;
-                margin: 0;
-              }
-              body * {
-                visibility: hidden;
-              }
-              #paystub-document, #paystub-document * {
-                visibility: visible;
-              }
-              #paystub-document {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                margin: 0;
-                padding: 20mm !important;
-                box-shadow: none !important;
-                border: none !important;
-                background: white !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-              .no-print {
-                display: none !important;
-              }
-            }
-          `}</style>
+      <style jsx global>{`
+        @media print {
+          @page {
+            size: portrait;
+            margin: 0;
+          }
+          body > *:not(.print-root) {
+            display: none !important;
+          }
+          .print-root {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: white !important;
+          }
+          #paystub-document {
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 20mm !important;
+            width: 100% !important;
+            height: 100% !important;
+            min-height: auto !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
 
+      {/* Main Document View */}
+      <div className="flex-1 h-full overflow-hidden bg-white print-root">
+        <ScrollArea className="h-full p-4 sm:p-12 print:p-0 print:bg-white">
           <div 
             id="paystub-document" 
             className="mx-auto max-w-[800px] bg-white p-12 shadow-2xl print:shadow-none print:border-none my-4 flex flex-col gap-12 min-h-[1050px]"
@@ -104,9 +109,9 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             {/* Header Section */}
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-4">
-                <div className="h-14 w-14 bg-black rounded-xl flex items-center justify-center text-white font-black text-2xl shadow-lg">S</div>
+                <div className="h-14 w-14 bg-[#1a1f2e] rounded-xl flex items-center justify-center text-white font-black text-2xl shadow-lg">S</div>
                 <div className="space-y-1">
-                  <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">SYSTEM ORIENTED LLC</h2>
+                  <h2 className="text-2xl font-black tracking-tight text-[#1a1f2e] uppercase">SYSTEM ORIENTED LLC</h2>
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
                     Upper Marlboro, MD
                   </div>
@@ -121,28 +126,28 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
 
             {/* Info Grid */}
             <div className="grid grid-cols-2 gap-12 px-2">
-              <div className="grid grid-cols-1 gap-y-6">
+              <div className="grid grid-cols-1 gap-y-8">
                 <div>
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Employee Name</label>
-                  <p className="text-sm font-bold text-slate-900">{item.employeeNameSnapshot}</p>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Employee Name</label>
+                  <p className="text-sm font-bold text-[#1a1f2e]">{item.employeeNameSnapshot}</p>
                 </div>
                 <div>
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Daily Rate</label>
-                  <p className="text-sm font-bold text-slate-900">{item.dailyRateSnapshot}</p>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Daily Rate</label>
+                  <p className="text-sm font-bold text-[#1a1f2e]">{item.dailyRateSnapshot}</p>
                 </div>
                 <div>
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Payment Type</label>
-                  <p className="text-sm font-bold text-slate-900">Direct Deposit</p>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Payment Type</label>
+                  <p className="text-sm font-bold text-[#1a1f2e]">Direct Deposit</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-y-6">
+              <div className="grid grid-cols-1 gap-y-8">
                 <div>
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Pay Period Range</label>
-                  <p className="text-sm font-bold text-slate-900">{shortDate(run.payPeriodStart)} — {shortDate(run.payPeriodEnd)}</p>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Pay Period Range</label>
+                  <p className="text-sm font-bold text-[#1a1f2e]">{shortDate(run.payPeriodStart)} — {shortDate(run.payPeriodEnd)}</p>
                 </div>
                 <div>
-                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Pay Date</label>
-                  <p className="text-sm font-bold text-slate-900">{shortDate(run.payDate)}</p>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Pay Date</label>
+                  <p className="text-sm font-bold text-[#1a1f2e]">{shortDate(run.payDate)}</p>
                 </div>
               </div>
             </div>
@@ -158,50 +163,55 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 <div className="flex flex-col bg-white">
                   {item.earningsLines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_130px] text-xs">
-                      <div className="px-6 py-3.5 font-bold text-slate-700 border-r-2 border-[#1a1f2e] whitespace-nowrap">{line.description}</div>
-                      <div className="px-6 py-3.5 text-right font-black text-slate-900">{currency(line.amount)}</div>
+                      <div className="px-6 py-4 font-bold text-slate-700 border-r-2 border-[#1a1f2e] whitespace-nowrap">{line.description}</div>
+                      <div className="px-6 py-4 text-right font-black text-[#1a1f2e]">{currency(line.amount)}</div>
                     </div>
                   ))}
                   {item.otherEarningsLines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_130px] text-xs">
-                      <div className="px-6 py-3.5 font-bold text-slate-700 italic border-r-2 border-[#1a1f2e] whitespace-nowrap">{line.description || "Other Earning"}</div>
-                      <div className="px-6 py-3.5 text-right font-black text-slate-900">{currency(line.amount)}</div>
+                      <div className="px-6 py-4 font-bold text-slate-700 italic border-r-2 border-[#1a1f2e] whitespace-nowrap">{line.description || "Other Earning"}</div>
+                      <div className="px-6 py-4 text-right font-black text-[#1a1f2e]">{currency(line.amount)}</div>
                     </div>
                   ))}
-                </div>
-                <div className="grid grid-cols-[1fr_130px] bg-slate-50 border-t-2 border-[#1a1f2e] font-black text-xs">
-                  <div className="px-6 py-4 uppercase tracking-[0.15em] text-[9px] text-slate-500 border-r-2 border-[#1a1f2e]">Total Gross Earnings</div>
-                  <div className="px-6 py-4 text-right text-[#1a1f2e]">{currency(totals.grossPay)}</div>
                 </div>
               </div>
 
               {/* Deductions Table */}
               <div className="rounded-2xl border-2 border-slate-200 overflow-hidden">
                 <div className="grid grid-cols-[1fr_130px] bg-slate-100 text-[#1a1f2e] text-[10px] font-black uppercase tracking-[0.15em] border-b border-slate-200">
-                  <div className="px-6 py-3.5 border-r-2 border-slate-200">Deductions / Withholdings</div>
-                  <div className="px-6 py-3.5 text-right">Amount</div>
+                  <div className="px-6 py-4 border-r-2 border-slate-200">Deductions / Withholdings</div>
+                  <div className="px-6 py-4 text-right">Amount</div>
                 </div>
                 <div className="flex flex-col bg-white">
                   {item.deductionsLines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_130px] text-xs">
-                      <div className="px-6 py-3 font-bold text-slate-500 border-r-2 border-slate-200 whitespace-nowrap">{line.deductionName || "Deduction"}</div>
-                      <div className="px-6 py-3 text-right font-black text-rose-600">({currency(line.amount)})</div>
+                      <div className="px-6 py-4 font-bold text-slate-500 border-r-2 border-slate-200 whitespace-nowrap">{line.deductionName || "Deduction"}</div>
+                      <div className="px-6 py-4 text-right font-black text-rose-600">({currency(line.amount)})</div>
                     </div>
                   ))}
-                </div>
-                <div className="grid grid-cols-[1fr_130px] bg-slate-50 border-t border-slate-200 font-black text-xs">
-                  <div className="px-6 py-4 uppercase tracking-[0.15em] text-[9px] text-slate-400 border-r-2 border-slate-200">Total Deductions</div>
-                  <div className="px-6 py-4 text-right text-rose-600">({currency(totals.totalDeductions)})</div>
                 </div>
               </div>
             </div>
 
-            {/* Final Net Pay Highlight */}
-            <div className="mt-auto pt-10 border-t-2 border-slate-100">
-              <div className="flex flex-col items-center gap-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">NET PAYMENT DISBURSED</p>
-                <p className="text-5xl font-black tracking-tighter text-[#1a1f2e]">{currency(totals.netPay)}</p>
+            {/* Summary Block */}
+            <div className="mt-auto">
+              <div className="rounded-3xl border-2 border-[#1a1f2e] overflow-hidden shadow-sm">
+                <div className="grid grid-cols-3 divide-x-2 divide-[#1a1f2e] bg-slate-50">
+                  <div className="p-8 text-center space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total Gross</p>
+                    <p className="text-2xl font-black text-[#1a1f2e]">{currency(totals.grossPay)}</p>
+                  </div>
+                  <div className="p-8 text-center space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total Deductions</p>
+                    <p className="text-2xl font-black text-rose-600">({currency(totals.totalDeductions)})</p>
+                  </div>
+                  <div className="p-8 text-center space-y-2 bg-[#1a1f2e] text-white">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Net Payment</p>
+                    <p className="text-3xl font-black">{currency(totals.netPay)}</p>
+                  </div>
+                </div>
               </div>
+              <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.5em] text-center mt-8">System Oriented LLC — Official Payroll Statement</p>
             </div>
           </div>
         </ScrollArea>
@@ -211,7 +221,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
       <div className="w-full lg:w-[350px] bg-white p-10 no-print flex flex-col gap-6 shadow-2xl z-10 border-l border-slate-100">
         <div>
           <h3 className="text-xl font-black tracking-tighter text-slate-900 uppercase">Document Controls</h3>
-          <p className="text-xs text-slate-500 font-medium mt-1">Export, share, or archive this statement.</p>
+          <p className="text-xs text-slate-500 font-medium mt-1">Export or archive this statement.</p>
         </div>
         
         <div className="space-y-3">
