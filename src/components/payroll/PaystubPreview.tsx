@@ -151,7 +151,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                   <div className="px-5 py-3 border-r-2 border-white/20">Earnings Description</div>
                   <div className="px-5 py-3 text-right">Amount</div>
                 </div>
-                <div className="divide-y-2 divide-slate-100">
+                <div className="flex flex-col bg-white">
                   {item.earningsLines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_120px] text-xs">
                       <div className="px-5 py-3 font-bold text-slate-900 border-r-2 border-slate-900 whitespace-nowrap">{line.description}</div>
@@ -177,7 +177,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                   <div className="px-5 py-3 border-r-2 border-slate-900">Deductions / Withholdings</div>
                   <div className="px-5 py-3 text-right">Amount</div>
                 </div>
-                <div className="divide-y-2 divide-slate-100">
+                <div className="flex flex-col bg-white">
                   {item.deductionsLines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_120px] text-xs">
                       <div className="px-5 py-3 font-bold text-slate-600 border-r-2 border-slate-900 whitespace-nowrap">{line.deductionName || "Deduction"}</div>
