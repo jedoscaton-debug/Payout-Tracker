@@ -67,7 +67,7 @@ export function RouteTrackerView({
   
   const [newRoute, setNewRoute] = useState<Partial<RouteTrackerRow>>({
     route: "",
-    routeType: "EA",
+    routeType: "IKEA", // Default set to IKEA
     vehicleNumber: "",
     date: new Date().toISOString().split('T')[0],
     miles: 0,
@@ -214,7 +214,7 @@ export function RouteTrackerView({
       setIsAddOpen(false);
       setNewRoute({
         route: "",
-        routeType: "EA",
+        routeType: "IKEA", // Reset to default IKEA
         vehicleNumber: "",
         date: new Date().toISOString().split('T')[0],
         miles: 0,
@@ -308,13 +308,13 @@ export function RouteTrackerView({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Route Type</Label>
-                    <Select value={newRoute.routeType || "EA"} onValueChange={(v) => setNewRoute({...newRoute, routeType: v})}>
+                    <Select value={newRoute.routeType || "IKEA"} onValueChange={(v) => setNewRoute({...newRoute, routeType: v})}>
                       <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="EA">EA</SelectItem>
                         <SelectItem value="IKEA">IKEA</SelectItem>
+                        <SelectItem value="EA">EA</SelectItem>
                         <SelectItem value="GAS">GAS</SelectItem>
                         <SelectItem value="EV">EV</SelectItem>
                       </SelectContent>
@@ -566,13 +566,13 @@ export function RouteTrackerView({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Route Type</Label>
-                  <Select value={editingRoute.routeType || "EA"} onValueChange={(v) => setEditingRoute({...editingRoute, routeType: v})}>
+                  <Select value={editingRoute.routeType || "IKEA"} onValueChange={(v) => setEditingRoute({...editingRoute, routeType: v})}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="EA">EA</SelectItem>
                       <SelectItem value="IKEA">IKEA</SelectItem>
+                      <SelectItem value="EA">EA</SelectItem>
                       <SelectItem value="GAS">GAS</SelectItem>
                       <SelectItem value="EV">EV</SelectItem>
                     </SelectContent>
