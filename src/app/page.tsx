@@ -27,7 +27,7 @@ import { signOut } from "firebase/auth";
 type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "emp-dashboard" | "emp-payslips" | "emp-routes" | "emp-profile";
 
 export default function AppShell() {
-  const [activeView, setActiveView] = useState<ActiveView>("dashboard");
+  const [activeView, setActiveView] = useState<ActiveView | null>(null);
   const { toast } = useToast();
   const db = useFirestore();
   const auth = useAuth();
@@ -42,7 +42,6 @@ export default function AppShell() {
   // Master Admin check via email as fallback for bootstrap phase
   const isMasterByEmail = userEmail === "admin@systemoriented.com" || userEmail === "jedocaton1997@gmail.com";
   const isAdmin = !!adminRole || isMasterByEmail;
-  const isMasterAdmin = adminRole?.role === 'master' || isMasterByEmail;
 
   // Employee Profile Handshake
   const employeeQuery = useMemoFirebase(() => userEmail ? query(collection(db, "employees"), where("email", "==", userEmail)) : null, [db, userEmail]);
@@ -53,17 +52,26 @@ export default function AppShell() {
   // System Bootstrap Check
   const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
   const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef);
-  const isSystemFresh = !bootstrapLoading && !bootstrapDoc && !isMasterByEmail;
+  const isSystemFresh = !bootstrapLoading && !bootstrapDoc && !isMasterByEmail && !isAdmin && !isEmployee && user;
 
+  // Redirection Logic
   useEffect(() => {
-    if (!isUserLoading && !adminLoading && !profileLoading && !bootstrapLoading && user) {
-      if (isAdmin) setActiveView("dashboard");
-      else if (isEmployee) setActiveView("emp-dashboard");
-      else setActiveView("emp-profile");
+    if (isUserLoading || adminLoading || profileLoading || bootstrapLoading || !user) return;
+
+    if (isAdmin) {
+      if (!activeView || activeView.startsWith('emp-')) {
+        setActiveView("dashboard");
+      }
+    } else if (isEmployee) {
+      if (!activeView || !activeView.startsWith('emp-')) {
+        setActiveView("emp-dashboard");
+      }
+    } else {
+      setActiveView("emp-profile");
     }
-  }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, bootstrapLoading, user]);
+  }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, bootstrapLoading, user, activeView]);
   
-  // Guarded Admin Collections - Only query if confirmed admin AND data is fully verified
+  // Guarded Admin Collections - Only query if confirmed admin
   const shouldLoadAdminData = isAdmin && !adminLoading;
   
   const employeesQuery = useMemoFirebase(() => shouldLoadAdminData ? collection(db, "employees") : null, [db, shouldLoadAdminData]);
@@ -80,7 +88,7 @@ export default function AppShell() {
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
 
-  // Sync Payroll Items
+  // Sync Payroll Items for Admin
   useEffect(() => {
     if (!isAdmin || employees.length === 0) return;
     setPayrollItems(prev => {
@@ -169,10 +177,12 @@ export default function AppShell() {
         </div>
       </header>
       <main className="flex-1 p-8 max-w-[1600px] mx-auto w-full">
-        {isAdmin ? (
+        {!activeView ? (
+          <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary/20" /></div>
+        ) : isAdmin ? (
           <>
             {activeView === "dashboard" && <DashboardView summary={payrollSummary} />}
-            {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={e => setDocumentNonBlocking(doc(db, "employees", e.id), e, {merge: true})} onUpdateEmployee={e => updateDocumentNonBlocking(doc(db, "employees", e.id), e)} onDeleteEmployee={id => deleteDocumentNonBlocking(doc(db, "employees", id))} allAdmins={allAdmins || []} onGrantAdmin={handleGrantAdmin} onRevokeAdmin={handleRevokeAdmin} isMasterAdmin={isMasterAdmin} />}
+            {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={e => setDocumentNonBlocking(doc(db, "employees", e.id), e, {merge: true})} onUpdateEmployee={e => updateDocumentNonBlocking(doc(db, "employees", e.id), e)} onDeleteEmployee={id => deleteDocumentNonBlocking(doc(db, "employees", id))} allAdmins={allAdmins || []} onGrantAdmin={handleGrantAdmin} onRevokeAdmin={handleRevokeAdmin} isMasterAdmin={isAdmin} />}
             {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} />}
             {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} />}
           </>
