@@ -1,257 +1,62 @@
+
 {
   "entities": {
-    "SystemUser": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SystemUser",
-      "type": "object",
-      "description": "Represents a user with system access, identified by a username and a linked UID.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "The unique system UID."
-        },
-        "username": {
-          "type": "string",
-          "description": "The user's login username."
-        }
-      },
-      "required": ["id", "username"]
-    },
     "Employee": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Employee",
       "type": "object",
-      "description": "Represents an individual employee within the system, storing their core details and default payment information.",
+      "description": "Represents an individual employee within the system.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Employee entity."
-        },
-        "fullName": {
-          "type": "string",
-          "description": "The full name of the employee."
-        },
-        "role": {
-          "type": "string",
-          "enum": ["Driver", "Helper"],
-          "description": "The primary role of the employee."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The email address of the employee."
-        },
-        "contactNumber": {
-          "type": "string",
-          "description": "The contact phone number of the employee."
-        },
-        "defaultDailyRate": {
-          "type": "string",
-          "description": "The employee's default daily rate, which can be 'Varies' or a specific value."
-        },
-        "paymentMethod": {
-          "type": "string",
-          "description": "The preferred payment method for the employee, defaults to 'Direct Deposit'."
-        }
+        "id": { "type": "string", "description": "Unique Access Key (UID) for the employee." },
+        "fullName": { "type": "string" },
+        "role": { "type": "string", "enum": ["Driver", "Helper"] },
+        "email": { "type": "string", "format": "email" },
+        "contactNumber": { "type": "string" },
+        "defaultDailyRate": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "authUid": { "type": "string", "description": "Firebase Auth UID, linked after first login." }
       },
-      "required": [
-        "id",
-        "fullName",
-        "role",
-        "email",
-        "defaultDailyRate"
-      ]
-    },
-    "RouteTrackerRow": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "RouteTrackerRow",
-      "type": "object",
-      "description": "Represents a single entry from the route tracker, detailing a specific route's activity for payroll calculation.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the RouteTrackerRow entity."
-        },
-        "date": {
-          "type": "string",
-          "description": "The date of the route activity.",
-          "format": "date"
-        },
-        "client": {
-          "type": "string",
-          "description": "The client associated with this route activity."
-        },
-        "miles": {
-          "type": "number",
-          "description": "The total miles driven for this route."
-        },
-        "stops": {
-          "type": "number",
-          "description": "The total number of stops made for this route."
-        },
-        "driverId": {
-          "type": "string",
-          "description": "Reference to the Employee who served as the driver for this route. (Relationship: Employee 1:N RouteTrackerRow)"
-        },
-        "helperId": {
-          "type": "string",
-          "description": "Reference to the Employee who served as the helper for this route. Can be null if no helper. (Relationship: Employee 1:N RouteTrackerRow)"
-        },
-        "actualPayAudit": {
-          "type": "number",
-          "description": "Optional audit field for actual pay related to this route."
-        },
-        "deltaAudit": {
-          "type": "number",
-          "description": "Optional audit field for pay delta related to this route."
-        }
-      },
-      "required": [
-        "id",
-        "date",
-        "client",
-        "miles",
-        "stops",
-        "driverId"
-      ]
-    },
-    "PayrollRun": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "PayrollRun",
-      "type": "object",
-      "description": "Defines a complete payroll period, including its start and end dates, pay date, and current status.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the PayrollRun entity."
-        },
-        "payPeriodStart": {
-          "type": "string",
-          "description": "The starting date of the pay period.",
-          "format": "date"
-        },
-        "payPeriodEnd": {
-          "type": "string",
-          "description": "The ending date of the pay period.",
-          "format": "date"
-        },
-        "payDate": {
-          "type": "string",
-          "description": "The date when employees are paid for this period.",
-          "format": "date"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the payroll run.",
-          "format": "enum",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "payPeriodStart",
-        "payPeriodEnd",
-        "payDate",
-        "status"
-      ]
+      "required": ["id", "fullName", "role", "email"]
     },
     "PayrollItem": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "PayrollItem",
       "type": "object",
-      "description": "Represents a single employee's paystub details for a specific payroll run, including earnings and deductions.",
+      "description": "Employee paystub details for a specific payroll run.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the PayrollItem entity."
-        },
-        "payrollRunId": {
-          "type": "string",
-          "description": "Reference to the PayrollRun this item belongs to. (Relationship: PayrollRun 1:N PayrollItem)"
-        },
-        "employeeId": {
-          "type": "string",
-          "description": "Reference to the Employee this payroll item is for. (Relationship: Employee 1:N PayrollItem)"
-        },
-        "employeeNameSnapshot": {
-          "type": "string",
-          "description": "A snapshot of the employee's name at the time of payroll run, for historical accuracy."
-        },
-        "dailyRateSnapshot": {
-          "type": "string",
-          "description": "A snapshot of the employee's daily rate at the time of payroll run, for historical accuracy."
-        },
-        "notes": {
-          "type": "string",
-          "description": "General notes or special instructions for this employee's payroll item."
-        },
-        "earningsLines": {
-          "type": "array",
-          "description": "A list of automatically generated earnings lines based on route tracker data.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "otherEarningsLines": {
-          "type": "array",
-          "description": "A list of manually added or modified other earnings for the employee.",
-          "items": {
-            "type": "string"
-          }
-        },
-        "deductionsLines": {
-          "type": "array",
-          "description": "A list of deductions applied to the employee's pay.",
-          "items": {
-            "type": "string"
-          }
-        }
+        "id": { "type": "string" },
+        "payrollRunId": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeEmailSnapshot": { "type": "string", "description": "Snapshot of employee email for security filtering." },
+        "employeeNameSnapshot": { "type": "string" },
+        "dailyRateSnapshot": { "type": "string" },
+        "notes": { "type": "string" },
+        "earningsLines": { "type": "array", "items": { "type": "string" } },
+        "otherEarningsLines": { "type": "array", "items": { "type": "string" } },
+        "deductionsLines": { "type": "array", "items": { "type": "string" } }
       },
-      "required": [
-        "id",
-        "payrollRunId",
-        "employeeId",
-        "employeeNameSnapshot",
-        "dailyRateSnapshot",
-        "notes",
-        "earningsLines",
-        "otherEarningsLines",
-        "deductionsLines"
-      ]
+      "required": ["id", "payrollRunId", "employeeId", "employeeEmailSnapshot"]
     }
   },
   "auth": {
-    "providers": ["password", "anonymous"]
+    "providers": ["password"]
   },
   "firestore": {
     "structure": [
-      {
-        "path": "/system_users/{userId}",
-        "definition": {
-          "entityName": "SystemUser",
-          "schema": { "$ref": "#/backend/entities/SystemUser" },
-          "description": "Stores access nodes for users. Linked by UID.",
-          "params": [{ "name": "userId", "description": "The system UID." }]
-        }
-      },
       {
         "path": "/employees/{employeeId}",
         "definition": {
           "entityName": "Employee",
           "schema": { "$ref": "#/backend/entities/Employee" },
-          "description": "Stores core HR details for staff.",
-          "params": [{ "name": "employeeId", "description": "The employee UID." }]
+          "description": "Stores HR records and Access Keys."
         }
       },
       {
-        "path": "/roles_admin/{adminId}",
+        "path": "/payrollRuns/{runId}/payrollItems/{itemId}",
         "definition": {
-          "entityName": "AdminRole",
-          "schema": { "type": "object", "properties": { "role": { "type": "string" } } },
-          "description": "Determines administrative privileges.",
-          "params": [{ "name": "adminId", "description": "The UID." }]
+          "entityName": "PayrollItem",
+          "schema": { "$ref": "#/backend/entities/PayrollItem" },
+          "description": "Detailed paystub records."
         }
       }
     ]

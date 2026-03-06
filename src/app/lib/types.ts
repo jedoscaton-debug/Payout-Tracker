@@ -1,3 +1,4 @@
+
 export type RoleType = "Driver" | "Helper" | "Driver&Helper";
 export type PayrollStatus = "Draft" | "Finalized";
 
@@ -9,7 +10,7 @@ export type RouteTrackerRow = {
   date: string;
   miles: number;
   stops: number;
-  estimatedPay?: number; // Optional override
+  estimatedPay?: number;
   actualPayAudit: number;
   truckRental: number;
   insurance: number;
@@ -47,7 +48,7 @@ export type Employee = {
   contactNumber: string;
   defaultDailyRate: string;
   paymentMethod?: string;
-  authUid?: string; // Linked Firebase Auth UID for security rules
+  authUid?: string; // Linked Firebase Auth UID
 };
 
 export type PayrollRun = {
@@ -62,7 +63,7 @@ export type PayrollItem = {
   id: string;
   payrollRunId: string;
   employeeId: string;
-  authUid?: string; // Duplicate for collection group query performance
+  employeeEmailSnapshot: string; // Critical for security rules
   employeeNameSnapshot: string;
   dailyRateSnapshot: string;
   notes: string;

@@ -4,12 +4,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Employee, PayrollItem, PayrollRun } from "@/app/lib/types";
 import { FileText, Receipt, Loader2 } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -26,29 +21,20 @@ export function MyPaystubsView({ employee }: MyPaystubsViewProps) {
   const [selectedRun, setSelectedRun] = useState<PayrollRun | null>(null);
   const db = useFirestore();
   const { user } = useUser();
+  const userEmail = user?.email?.toLowerCase().trim();
 
-  // Fetch all payroll items across all runs for this employee using authUid for security rule validation
+  // Fetch all payroll items using email filter for security rules
   const itemsQuery = useMemoFirebase(() => 
-    user ? query(collectionGroup(db, "payrollItems"), where("authUid", "==", user.uid)) : null, 
-    [db, user]
+    userEmail ? query(
+      collectionGroup(db, "payrollItems"), 
+      where("employeeEmailSnapshot", "==", userEmail)
+    ) : null, 
+    [db, userEmail]
   );
   const { data: paystubs, isLoading: itemsLoading } = useCollection<PayrollItem>(itemsQuery);
 
-  // Fetch all payroll runs to associate dates
   const runsQuery = useMemoFirebase(() => collection(db, "payrollRuns"), [db]);
   const { data: runs, isLoading: runsLoading } = useCollection<PayrollRun>(runsQuery);
-
-  if (!employee) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 text-center animate-in fade-in duration-500">
-        <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-4">
-          <Receipt className="h-8 w-8" />
-        </div>
-        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter">Profile Not Found</h3>
-        <p className="text-sm text-slate-500 max-w-xs mt-2 font-medium">Your account is authenticated, but no employee record matches your ID.</p>
-      </div>
-    );
-  }
 
   const handlePreview = (item: PayrollItem) => {
     const run = (runs || []).find(r => r.id === item.payrollRunId);
@@ -63,77 +49,46 @@ export function MyPaystubsView({ employee }: MyPaystubsViewProps) {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-2">
-        <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">My Earnings Statement</h3>
-        <p className="text-sm text-slate-500 font-medium">Access your official paystubs and historical earnings history.</p>
+        <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">My Earnings Statements</h3>
+        <p className="text-sm text-slate-500 font-medium">Historical earnings history and official paystubs.</p>
       </div>
 
-      <div className="grid gap-6">
-        <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Available Statements</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-12 flex justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
-              </div>
-            ) : !paystubs || paystubs.length === 0 ? (
-              <div className="p-12 text-center">
-                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">No payroll records found yet.</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {paystubs.map((item) => {
+      <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
+        <CardHeader className="bg-slate-50/50 border-b p-8"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Available Statements</CardTitle></CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? <div className="p-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary/20" /></div> : (
+            !paystubs?.length ? <div className="p-12 text-center text-slate-400 font-bold uppercase text-[10px]">No payroll records found</div> : (
+              <div className="divide-y">
+                {paystubs.map(item => {
                   const totals = computeTotals(item);
                   const run = (runs || []).find(r => r.id === item.payrollRunId);
-                  
                   return (
-                    <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-8 hover:bg-slate-50 transition-colors gap-6">
+                    <div key={item.id} className="flex flex-col sm:flex-row items-center justify-between p-8 hover:bg-slate-50 gap-6">
                       <div className="flex items-center gap-6">
-                        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                          <Receipt className="h-6 w-6" />
-                        </div>
+                        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary"><Receipt className="h-6 w-6" /></div>
                         <div>
                           <p className="font-black text-slate-900 text-lg">Statement for {run?.payDate ? shortDate(run.payDate) : "Period"}</p>
-                          <div className="flex items-center gap-4 mt-1">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">
-                              {run ? `${shortDate(run.payPeriodStart)} - ${shortDate(run.payPeriodEnd)}` : "Pending Run"}
-                            </p>
-                            <div className="h-1 w-1 rounded-full bg-slate-300" />
-                            <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.1em]">{item.dailyRateSnapshot} Basis</p>
-                          </div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
+                            {run ? `${shortDate(run.payPeriodStart)} - ${shortDate(run.payPeriodEnd)}` : "Pending"}
+                          </p>
                         </div>
                       </div>
-                      
                       <div className="flex items-center gap-10">
-                        <div className="text-right">
-                          <p className="text-xl font-black text-slate-900 leading-none">{currency(totals.netPay)}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Take-Home Amount</p>
-                        </div>
-                        <Button 
-                          className="rounded-xl h-12 px-6 bg-slate-900 text-white font-bold text-[10px] uppercase tracking-wider hover:bg-black shadow-lg shadow-slate-900/10"
-                          onClick={() => handlePreview(item)}
-                        >
-                          <FileText className="mr-2 h-4 w-4" /> View Detailed Statement
-                        </Button>
+                        <div className="text-right"><p className="text-xl font-black">{currency(totals.netPay)}</p><p className="text-[10px] font-bold text-slate-400 uppercase">Net Amount</p></div>
+                        <Button className="rounded-xl h-12 px-6 bg-slate-900 font-bold text-[10px] uppercase" onClick={() => handlePreview(item)}><FileText className="mr-2 h-4 w-4" /> View PDF</Button>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
-        <DialogContent className="max-w-[850px] w-full p-0 border-none shadow-2xl bg-white overflow-y-auto max-h-[95vh] rounded-[2.5rem]">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Paystub Statement Preview</DialogTitle>
-          </DialogHeader>
-          {previewItem && selectedRun && (
-            <PaystubPreview item={previewItem} run={selectedRun} />
+            )
           )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={!!previewItem} onOpenChange={(o) => !o && setPreviewItem(null)}>
+        <DialogContent className="max-w-[850px] w-full p-0 border-none shadow-2xl bg-white rounded-[2.5rem] overflow-y-auto max-h-[95vh]">
+          {previewItem && selectedRun && <PaystubPreview item={previewItem} run={selectedRun} />}
         </DialogContent>
       </Dialog>
     </div>

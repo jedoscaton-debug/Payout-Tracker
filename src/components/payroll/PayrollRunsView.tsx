@@ -51,7 +51,6 @@ export function PayrollRunsView({
         const refreshed = createPayrollItem(employee, payrollRun, routeTracker);
         return {
           ...item,
-          authUid: employee.authUid || "",
           earningsLines: refreshed.earningsLines,
           deductionsLines: item.deductionsLines.length ? item.deductionsLines : refreshed.deductionsLines,
         };
