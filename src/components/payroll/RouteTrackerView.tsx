@@ -235,7 +235,7 @@ export function RouteTrackerView({ routeTracker, onAddRoute, employees = [] }: R
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-900">
-                    <th className="sticky left-0 z-40 bg-slate-900 border-r-2 border-slate-800 px-4 py-5 text-center text-[10px] font-black uppercase tracking-wider text-white whitespace-nowrap">
+                    <th className="sticky left-0 z-40 bg-slate-900 border-r-2 border-slate-800 px-4 py-5 text-center text-[10px] font-black uppercase tracking-wider text-white whitespace-nowrap shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
                       {headers[0]}
                     </th>
                     {headers.slice(1).map((header, i) => (
@@ -249,7 +249,7 @@ export function RouteTrackerView({ routeTracker, onAddRoute, employees = [] }: R
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {filtered.map((row, idx) => {
+                  {filtered.map((row) => {
                     const estRev = estimatePay(row.stops);
                     const actualPay = row.actualPayAudit || 0;
                     const delta = actualPay ? actualPay - estRev : 0;
@@ -260,11 +260,9 @@ export function RouteTrackerView({ routeTracker, onAddRoute, employees = [] }: R
                     const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
                     const netProfit = (actualPay || estRev) - totalExp - dPay - hPay;
                     
-                    const isYellow = row.route === "EV" || row.route === "GAS" || idx % 4 === 1;
-
                     return (
-                      <tr key={row.id} className={cn("transition-colors group align-middle h-14", isYellow ? "bg-yellow-300/80" : "bg-white hover:bg-slate-50")}>
-                        <td className={cn("sticky left-0 z-30 px-4 py-2 font-bold text-slate-900 text-center whitespace-nowrap border-r-2 border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.05)]", isYellow ? "bg-yellow-300" : "bg-white group-hover:bg-slate-50")}>
+                      <tr key={row.id} className="transition-colors group align-middle h-14 bg-white hover:bg-slate-50">
+                        <td className="sticky left-0 z-30 px-4 py-2 font-bold text-slate-900 text-center whitespace-nowrap border-r-2 border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.05)] bg-white group-hover:bg-slate-50">
                           {row.route}
                         </td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{row.routeType}</td>
@@ -298,7 +296,7 @@ export function RouteTrackerView({ routeTracker, onAddRoute, employees = [] }: R
                 </tbody>
                 <tfoot>
                   <tr className="bg-slate-900 text-white font-black text-[11px] h-16">
-                    <td className="sticky left-0 z-40 bg-slate-900 border-r-2 border-slate-800 px-4 py-2 text-center uppercase tracking-widest">Totals</td>
+                    <td className="sticky left-0 z-40 bg-slate-900 border-r-2 border-slate-800 px-4 py-2 text-center uppercase tracking-widest shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Totals</td>
                     <td colSpan={4} className="border-r border-slate-800"></td>
                     <td className="px-3 py-2 text-center border-r border-slate-800">{totals.miles}</td>
                     <td className="px-3 py-2 text-center border-r border-slate-800">{totals.stops}</td>

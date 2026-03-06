@@ -30,23 +30,23 @@ export function getDayOfWeek(input: string) {
 }
 
 export function estimatePay(stops: number) {
-  return 27 * stops;
+  return 27 * (stops || 0);
 }
 
 export function estimateFuel(miles: number) {
-  return 0.47 * miles;
+  return 0.47 * (miles || 0);
 }
 
 export function driverPay(stops: number) {
-  return estimatePay(stops) * 0.27;
+  return Number((estimatePay(stops) * 0.27).toFixed(2));
 }
 
 export function helperPay(stops: number) {
-  return estimatePay(stops) * 0.23;
+  return Number((estimatePay(stops) * 0.23).toFixed(2));
 }
 
 export function truckRentalMileageCost(miles: number) {
-  return (miles || 0) * TRUCK_MILEAGE_RATE;
+  return Number(((miles || 0) * TRUCK_MILEAGE_RATE).toFixed(2));
 }
 
 function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType | null {
