@@ -5,7 +5,7 @@ import { PayrollItem, PayrollRun } from "@/app/lib/types";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { FileDown, Printer, Share2 } from "lucide-react";
+import { Printer, Download, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PaystubPreviewProps {
@@ -21,65 +21,29 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
     window.print();
   };
 
-  const handleDownloadPDF = () => {
-    toast({
-      title: "Opening Print Dialog",
-      description: "Select 'Save as PDF' in your browser's print destination.",
-    });
-    setTimeout(() => {
-      window.print();
-    }, 500);
-  };
-
-  const handleShare = async () => {
-    const shareText = `Paystub for ${item.employeeNameSnapshot} - Net Pay: ${currency(totals.netPay)}`;
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({ title: `Paystub - ${item.employeeNameSnapshot}`, text: shareText, url: window.location.href });
-        return;
-      } catch (err) {}
-    }
-    try {
-      await navigator.clipboard.writeText(shareText);
-      toast({ title: "Copied to Clipboard", description: "Paystub details copied." });
-    } catch (err) {}
-  };
-
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white">
+    <div className="flex flex-col w-full h-full bg-white text-black font-sans">
       <style jsx global>{`
         @media print {
           @page {
             size: portrait;
-            margin: 0;
+            margin: 20mm;
           }
-          body {
-            background-color: white !important;
-          }
-          /* Hide everything in the app */
           body * {
             visibility: hidden !important;
           }
-          /* Show the paystub document and its children */
           #paystub-document, #paystub-document * {
             visibility: visible !important;
           }
-          /* Force the document to the very top left of the page */
           #paystub-document {
-            position: fixed !important;
-            top: 0 !important;
+            position: absolute !important;
             left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
+            top: 0 !important;
+            width: 100% !important;
             margin: 0 !important;
-            padding: 20mm !important;
-            box-sizing: border-box !important;
-            background: white !important;
+            padding: 0 !important;
             box-shadow: none !important;
             border: none !important;
-            display: flex !important;
-            flex-direction: column !important;
-            overflow: hidden !important;
           }
           .no-print {
             display: none !important;
@@ -87,154 +51,141 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
         }
       `}</style>
 
-      {/* Main Document View */}
-      <div className="flex-1 h-full overflow-hidden bg-white">
-        <ScrollArea className="h-full p-4 sm:p-12">
-          <div 
-            id="paystub-document" 
-            className="mx-auto max-w-[800px] bg-white p-12 shadow-2xl my-4 flex flex-col gap-10 min-h-[1050px] border border-slate-100"
-          >
-            {/* Header Section */}
-            <div className="flex justify-between items-start">
-              <div className="flex items-center gap-4">
-                <div className="h-14 w-14 bg-[#1a1f2e] rounded-xl flex items-center justify-center text-white font-black text-2xl">S</div>
-                <div className="space-y-1">
-                  <h2 className="text-xl font-black tracking-tight text-[#1a1f2e] uppercase">SYSTEM ORIENTED LLC</h2>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    Upper Marlboro, MD
-                  </div>
-                </div>
-              </div>
-              <div className="bg-[#1a1f2e] text-white px-8 py-10 rounded-2xl min-w-[240px] flex items-center justify-center">
-                <p className="text-xl font-black uppercase tracking-[0.15em] leading-tight text-center">PAYSLIP<br/>SUMMARY</p>
-              </div>
-            </div>
-
-            <div className="w-full h-px bg-slate-200" />
-
-            {/* Info Grid */}
-            <div className="grid grid-cols-2 gap-12 px-2">
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Employee Name</label>
-                  <p className="text-sm font-bold text-[#1a1f2e]">{item.employeeNameSnapshot}</p>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Daily Rate</label>
-                  <p className="text-sm font-bold text-[#1a1f2e]">{item.dailyRateSnapshot}</p>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Payment Type</label>
-                  <p className="text-sm font-bold text-[#1a1f2e]">Direct Deposit</p>
-                </div>
-              </div>
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Pay Period Range</label>
-                  <p className="text-sm font-bold text-[#1a1f2e]">{shortDate(run.payPeriodStart)} — {shortDate(run.payPeriodEnd)}</p>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">Pay Date</label>
-                  <p className="text-sm font-bold text-[#1a1f2e]">{shortDate(run.payDate)}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Earnings Table */}
-            <div className="rounded-2xl border-2 border-[#1a1f2e] overflow-hidden">
-              <div className="grid grid-cols-[1fr_130px] bg-[#1a1f2e] text-white text-[10px] font-black uppercase tracking-[0.15em]">
-                <div className="px-6 py-4 border-r border-white/10">Earnings Description</div>
-                <div className="px-6 py-4 text-right">Amount</div>
-              </div>
-              <div className="flex flex-col bg-white">
-                {item.earningsLines.map((line) => (
-                  <div key={line.id} className="grid grid-cols-[1fr_130px] text-xs">
-                    <div className="px-6 py-4 font-bold text-slate-700 border-r-2 border-[#1a1f2e] whitespace-nowrap">{line.description}</div>
-                    <div className="px-6 py-4 text-right font-black text-[#1a1f2e]">{currency(line.amount)}</div>
-                  </div>
-                ))}
-                {item.otherEarningsLines.map((line) => (
-                  <div key={line.id} className="grid grid-cols-[1fr_130px] text-xs">
-                    <div className="px-6 py-4 font-bold text-slate-700 italic border-r-2 border-[#1a1f2e] whitespace-nowrap">{line.description || "Other Earning"}</div>
-                    <div className="px-6 py-4 text-right font-black text-[#1a1f2e]">{currency(line.amount)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Deductions Table */}
-            <div className="rounded-2xl border-2 border-slate-200 overflow-hidden">
-              <div className="grid grid-cols-[1fr_130px] bg-slate-50 text-[#1a1f2e] text-[10px] font-black uppercase tracking-[0.15em] border-b border-slate-200">
-                <div className="px-6 py-4 border-r-2 border-slate-200">Deductions / Withholdings</div>
-                <div className="px-6 py-4 text-right">Amount</div>
-              </div>
-              <div className="flex flex-col bg-white">
-                {item.deductionsLines.map((line) => (
-                  <div key={line.id} className="grid grid-cols-[1fr_130px] text-xs">
-                    <div className="px-6 py-4 font-bold text-slate-500 border-r-2 border-slate-200 whitespace-nowrap">{line.deductionName || "Deduction"}</div>
-                    <div className="px-6 py-4 text-right font-black text-rose-600">({currency(line.amount)})</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Summary Block */}
-            <div className="mt-auto">
-              <div className="rounded-2xl border-2 border-[#1a1f2e] overflow-hidden">
-                <div className="grid grid-cols-3 divide-x-2 divide-[#1a1f2e] bg-slate-50">
-                  <div className="p-6 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Total Gross</p>
-                    <p className="text-xl font-black text-[#1a1f2e]">{currency(totals.grossPay)}</p>
-                  </div>
-                  <div className="p-6 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Total Deductions</p>
-                    <p className="text-xl font-black text-rose-600">({currency(totals.totalDeductions)})</p>
-                  </div>
-                  <div className="p-6 text-center bg-[#1a1f2e] text-white">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50 mb-1">Net Payment</p>
-                    <p className="text-2xl font-black">{currency(totals.netPay)}</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.5em] text-center mt-8">System Oriented LLC — Official Payroll Statement</p>
-            </div>
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Sidebar Controls */}
-      <div className="w-full lg:w-[350px] bg-white p-10 no-print flex flex-col gap-6 border-l border-slate-100 z-10 shadow-xl">
+      {/* Control Bar (Internal to Dialog) */}
+      <div className="no-print flex items-center justify-between p-6 border-b bg-slate-50 sticky top-0 z-10">
         <div>
-          <h3 className="text-xl font-black tracking-tighter text-slate-900 uppercase">Document Controls</h3>
-          <p className="text-xs text-slate-500 font-medium mt-1">Export or archive this statement.</p>
+          <h3 className="text-sm font-black uppercase tracking-tighter">Payslip Preview</h3>
+          <p className="text-[10px] text-slate-500">Review employee statement before finalizing.</p>
         </div>
-        
-        <div className="space-y-3">
-          <Button className="w-full rounded-2xl h-14 bg-slate-900 font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-all" onClick={handlePrint}>
-            <Printer className="mr-3 h-5 w-5" /> Print Statement
-          </Button>
-          <Button variant="outline" className="w-full rounded-2xl h-14 border-slate-200 font-black text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-50" onClick={handleDownloadPDF}>
-            <FileDown className="mr-3 h-5 w-5" /> Save PDF
-          </Button>
-          <Button variant="outline" className="w-full rounded-2xl h-14 border-slate-200 font-black text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-50" onClick={handleShare}>
-            <Share2 className="mr-3 h-5 w-5" /> Share Link
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="rounded-xl h-9 text-[10px] font-bold uppercase" onClick={handlePrint}>
+            <Printer className="mr-2 h-3.5 w-3.5" /> Print / Save PDF
           </Button>
         </div>
+      </div>
 
-        <div className="mt-auto p-6 rounded-3xl bg-slate-50 border-2 border-slate-100 flex flex-col gap-4">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">Cycle Metrics</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
-              <p className="text-lg font-black text-slate-900">{currency(totals.grossPay)}</p>
-              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Gross</p>
+      <ScrollArea className="flex-1 bg-slate-100 p-8 sm:p-12 min-h-0">
+        <div 
+          id="paystub-document" 
+          className="mx-auto bg-white p-10 shadow-xl border border-slate-200 max-w-[700px] flex flex-col gap-10 min-h-[900px]"
+        >
+          {/* Header */}
+          <div className="flex flex-col items-center gap-1">
+            <h1 className="text-xl font-black text-center tracking-tight uppercase">SYSTEM ORIENTED LLC</h1>
+            <p className="text-sm font-medium text-slate-600">Upper Marlboro, MD</p>
+          </div>
+
+          {/* Info & Summary Row */}
+          <div className="grid grid-cols-[1fr_260px] gap-8 items-start">
+            {/* Left: Info */}
+            <div className="grid grid-cols-[100px_1fr] gap-x-2 gap-y-4 text-sm pt-4">
+              <span className="font-bold">Name</span>
+              <span>{item.employeeNameSnapshot}</span>
+              
+              <span className="font-bold">Daily Rate</span>
+              <span>{item.dailyRateSnapshot || "150"}</span>
+              
+              <span className="font-bold">Pay Period</span>
+              <span>{run.payPeriodStart} - {run.payPeriodEnd}</span>
+              
+              <span className="font-bold">Pay Date</span>
+              <span>{run.payDate}</span>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
-              <p className="text-lg font-black text-emerald-600">{currency(totals.netPay)}</p>
-              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Net Pay</p>
+
+            {/* Right: Summary Table */}
+            <div className="border-2 border-black overflow-hidden rounded-sm">
+              <div className="bg-slate-200 border-b-2 border-black py-2 px-4 text-center">
+                <span className="text-sm font-black uppercase tracking-widest">PAYSLIP SUMMARY</span>
+              </div>
+              <div className="grid grid-cols-[1fr_100px] border-b-2 border-black">
+                <span className="px-4 py-2 text-xs font-bold">Total Gross</span>
+                <span className="px-4 py-2 text-xs font-black text-right border-l-2 border-black">{currency(totals.grossPay)}</span>
+              </div>
+              <div className="grid grid-cols-[1fr_100px] border-b-2 border-black">
+                <span className="px-4 py-2 text-xs font-bold">Total Deductions</span>
+                <span className="px-4 py-2 text-xs font-black text-right border-l-2 border-black">{currency(totals.totalDeductions)}</span>
+              </div>
+              <div className="grid grid-cols-[1fr_100px] bg-black text-white">
+                <span className="px-4 py-2 text-xs font-black uppercase tracking-widest">NET PAY</span>
+                <span className="px-4 py-2 text-xs font-black text-right border-l-2 border-white">{currency(totals.netPay)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full h-8 bg-slate-100/50" />
+
+          {/* Breakdown Header */}
+          <h2 className="text-2xl font-black tracking-tighter">Payslip Breakdown</h2>
+
+          {/* Breakdown Table */}
+          <div className="border-2 border-slate-300 rounded-sm overflow-hidden flex flex-col">
+            {/* Headers */}
+            <div className="grid grid-cols-2 bg-slate-200 border-b-2 border-slate-300">
+              <div className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider border-r-2 border-slate-300">Earnings</div>
+              <div className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider">Deductions</div>
+            </div>
+            
+            <div className="grid grid-cols-2 text-[10px] font-black uppercase tracking-widest bg-slate-50 border-b-2 border-slate-300">
+              <div className="grid grid-cols-[1fr_100px] border-r-2 border-slate-300">
+                <span className="px-4 py-2">DAYS WORKED</span>
+                <span className="px-4 py-2 text-right border-l-2 border-slate-300">AMOUNT</span>
+              </div>
+              <div className="grid grid-cols-[1fr_100px]">
+                <span className="px-4 py-2">DESCRIPTION</span>
+                <span className="px-4 py-2 text-right border-l-2 border-slate-300">AMOUNT</span>
+              </div>
+            </div>
+
+            {/* Content Rows */}
+            <div className="flex-1 min-h-[300px] flex">
+              {/* Earnings Column */}
+              <div className="flex-1 border-r-2 border-slate-300">
+                <div className="flex flex-col h-full">
+                  {item.earningsLines.map((line) => (
+                    <div key={line.id} className="grid grid-cols-[1fr_100px] border-b border-slate-100 text-[11px]">
+                      <span className="px-4 py-2 font-medium text-slate-600">{line.description} - {currency(line.amount)}</span>
+                      <span className="px-4 py-2 text-right font-black border-l-2 border-slate-300"></span>
+                    </div>
+                  ))}
+                  {/* Fill remaining space */}
+                  <div className="flex-1 border-b border-slate-100 grid grid-cols-[1fr_100px]">
+                    <span className="px-4 py-2"></span>
+                    <span className="border-l-2 border-slate-300"></span>
+                  </div>
+                </div>
+              </div>
+              {/* Deductions Column */}
+              <div className="flex-1">
+                <div className="flex flex-col h-full">
+                  {item.deductionsLines.map((line) => (
+                    <div key={line.id} className="grid grid-cols-[1fr_100px] border-b border-slate-100 text-[11px]">
+                      <span className="px-4 py-2 font-medium text-slate-600">{line.deductionName}</span>
+                      <span className="px-4 py-2 text-right font-black border-l-2 border-slate-300">{currency(line.amount)}</span>
+                    </div>
+                  ))}
+                  {/* Fill remaining space */}
+                  <div className="flex-1 border-b border-slate-100 grid grid-cols-[1fr_100px]">
+                    <span className="px-4 py-2"></span>
+                    <span className="border-l-2 border-slate-300"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Totals Row */}
+            <div className="grid grid-cols-2 bg-slate-50 border-t-2 border-slate-300 text-[11px] font-black">
+              <div className="grid grid-cols-[1fr_100px] border-r-2 border-slate-300">
+                <span className="px-4 py-3">Total</span>
+                <span className="px-4 py-3 text-right border-l-2 border-slate-300">{currency(totals.grossPay)}</span>
+              </div>
+              <div className="grid grid-cols-[1fr_100px]">
+                <span className="px-4 py-3">Total</span>
+                <span className="px-4 py-3 text-right border-l-2 border-slate-300">{currency(totals.totalDeductions)}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

@@ -110,12 +110,12 @@ export function PayrollRunsView({
 
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardContent className="p-0">
-          <div className="w-full overflow-x-auto">
+          <div className="w-full overflow-x-auto relative">
             <div className="min-w-[1800px]">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80">
-                    <th className="sticky left-0 z-30 bg-slate-50 border-b border-r border-slate-200 px-6 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)]">
+                    <th className="sticky left-0 z-30 bg-slate-100 border-b border-r border-slate-200 px-6 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                       Employee
                     </th>
                     {[
@@ -154,7 +154,7 @@ export function PayrollRunsView({
 
                     return (
                       <tr key={item.id} className="group hover:bg-slate-50/30 transition-all align-top">
-                        <td className="sticky left-0 z-20 bg-white px-6 py-6 font-bold text-slate-900 whitespace-nowrap border-r border-slate-100 shadow-[4px_0_10px_-4px_rgba(0,0,0,0.1)] group-hover:bg-slate-50">
+                        <td className="sticky left-0 z-20 bg-white px-6 py-6 font-bold text-slate-900 whitespace-nowrap border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50">
                           {item.employeeNameSnapshot}
                         </td>
                         <td className="px-4 py-6 text-sm text-slate-500 italic">{item.dailyRateSnapshot}</td>
@@ -224,7 +224,7 @@ export function PayrollRunsView({
                                 value={deduction.amount}
                                 className="h-8 w-20 text-[11px] rounded-lg border-slate-100 font-black text-rose-500"
                                 disabled={payrollRun.status === "Finalized" || !item.deductionsLines[index] || deduction.deductionName === "Direct Deposit Fee"}
-                                onChange={(e) => updateItem(item.id, (c) => ({ ...c, deductionsLines: c.deductionsLines.map((x, i) => i === index ? { ...x, amount: Number(e.target.value) } : x) }))}
+                                onChange={(e) => updateItem(item.id, (c) => ({ ...c, amount: Number(e.target.value) }))}
                               />
                             </td>
                           </React.Fragment>
@@ -255,7 +255,7 @@ export function PayrollRunsView({
       </Card>
 
       <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
-        <DialogContent className="h-[90vh] max-w-5xl overflow-hidden rounded-[2.5rem] p-0 border-none shadow-2xl">
+        <DialogContent className="max-w-[850px] w-full p-0 border-none shadow-2xl bg-white overflow-y-auto max-h-[95vh] rounded-[2.5rem]">
           <DialogHeader className="p-0 h-0 overflow-hidden">
             <DialogTitle className="sr-only">Paystub Preview</DialogTitle>
           </DialogHeader>
