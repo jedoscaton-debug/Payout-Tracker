@@ -141,8 +141,8 @@ export default function AppShell() {
         <div className="px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
-                <svg viewBox="0 0 100 100" className="h-5 w-5 fill-white">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
+                <svg viewBox="0 0 100 100" className="h-6 w-6 fill-white">
                   <circle cx="50" cy="50" r="40" fill="#4461B5"/>
                   <text x="35" y="68" style={{ fontFamily: 'Inter', fontWeight: 900, fontSize: '50px' }} fill="white">S</text>
                 </svg>

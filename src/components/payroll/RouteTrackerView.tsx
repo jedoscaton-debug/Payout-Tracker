@@ -307,7 +307,7 @@ export function RouteTrackerView({ routeTracker, onAddRoute, employees = [] }: R
                     <td className="px-3 py-2 text-center border-r border-slate-800">{currency(totals.driverPay)}</td>
                     <td className="px-3 py-2 text-center border-r border-slate-800">{currency(totals.helperPay)}</td>
                     <td className="px-3 py-2 text-center border-r border-slate-800">{currency(totals.truckRental)}</td>
-                    <td colSpan={3} className="border-r border-slate-800"></td>
+                    <td colSpan={2} className="border-r border-slate-800"></td>
                     <td className="px-3 py-2 text-center border-r border-slate-800">{currency(totals.fuel)}</td>
                     <td className="px-3 py-2 text-center border-r border-slate-800 font-mono">{currency(totals.totalExp)}</td>
                     <td className="px-4 py-2 text-center bg-slate-800 font-black text-lg">{currency(totals.netProfit)}</td>
