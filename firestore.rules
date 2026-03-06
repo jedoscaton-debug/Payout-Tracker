@@ -3,13 +3,21 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Check if the current user has an administrative role
     function isAdmin() {
       return request.auth != null && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    function isMaster() {
-      let adminPath = /databases/$(database)/documents/roles_admin/$(request.auth.uid);
-      return request.auth != null && exists(adminPath) && get(adminPath).data.role == 'master';
+    // Check if the current user is the owner of the system UID
+    function isOwner(systemUid) {
+      let userPath = /databases/$(database)/documents/system_users/$(systemUid);
+      return request.auth != null && exists(userPath) && get(userPath).data.authUid == request.auth.uid;
+    }
+
+    // GLOBAL RULES FOR COLLECTION GROUP QUERIES
+    // This allows employees to query their payroll items across all runs
+    match /{path=**}/payrollItems/{payrollItemId} {
+      allow read: if isAdmin() || (request.auth != null && isOwner(resource.data.employeeId));
     }
 
     // Allow anyone to check if the system is fresh (uninitialized)
@@ -17,12 +25,11 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Access mapping for System UIDs - Publicly readable to allow identity lookups
+    // Access mapping for System UIDs
     match /system_users/{userId} {
       allow read: if true;
       
-      // Allow Master Admin to self-register during bootstrap
-      // Also allow users to update their own authUid mapping
+      // Allow Master Admin bootstrap and users to manage their own mapping
       allow write: if isAdmin() || 
                     (request.auth != null && (
                       (userId == 'STUDIO-MASTER-2026' && request.auth.token.email == 'masteradmin@system.oriented') ||
@@ -46,7 +53,8 @@ service cloud.firestore {
       allow write: if isAdmin();
       
       match /payrollItems/{payrollItemId} {
-        allow read: if isAdmin() || (request.auth != null && resource.data.employeeId == request.auth.uid);
+        // Redundant with group rule but kept for standard document-path access
+        allow read: if isAdmin() || (request.auth != null && isOwner(resource.data.employeeId));
         allow write: if isAdmin();
       }
     }
@@ -55,7 +63,6 @@ service cloud.firestore {
       allow read: if request.auth != null;
       // Allow bootstrapping if no admins exist
       allow create: if request.auth != null && (!exists(/databases/$(database)/documents/roles_admin/first_admin_placeholder));
-      // Standard admins can be managed by Master or Standard, but Master is protected
       allow write: if isAdmin();
     }
   }
