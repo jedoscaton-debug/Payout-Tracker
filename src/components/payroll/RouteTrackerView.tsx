@@ -87,7 +87,7 @@ export function RouteTrackerView({
 
   const headers = [
     "Route",
-    "E Type",
+    "Route Type",
     "Vehicle #",
     "Date",
     "Day of Week",

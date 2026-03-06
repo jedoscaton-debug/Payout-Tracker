@@ -15,12 +15,14 @@ export function currency(value: number) {
 
 export function shortDate(input: string) {
   if (!input) return "";
-  const d = new Date(`${input}T00:00:00`);
-  return d.toLocaleDateString("en-US", { 
-    month: "numeric", 
-    day: "numeric", 
-    year: "numeric" 
-  });
+  // Robust manual formatting to avoid RangeErrors and locale inconsistencies
+  // input is expected as YYYY-MM-DD
+  const parts = input.split('-');
+  if (parts.length !== 3) return input;
+  const year = parts[0];
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  return `${month}/${day}/${year}`;
 }
 
 export function getDayOfWeek(input: string) {
@@ -70,7 +72,7 @@ export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: R
     .map((row) => {
       const role = roleForEmployee(row, employee.fullName);
       if (!role) return null;
-      const displayDate = new Date(`${row.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const displayDate = shortDate(row.date);
       return {
         id: `${employee.id}-${row.id}`,
         date: row.date,
