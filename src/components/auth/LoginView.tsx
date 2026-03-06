@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -20,6 +21,16 @@ export function LoginView() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (password.length < 6) {
+      toast({
+        variant: "destructive",
+        title: "Weak System UID",
+        description: "The System UID must be at least 6 characters long for security purposes.",
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     // Internal mapping to allow username-style login with Firebase Auth
@@ -43,14 +54,15 @@ export function LoginView() {
       console.error("Auth error:", error);
       let message = "An error occurred during authentication.";
       
+      // Handle Firebase merged error codes
       if (error.code === 'auth/invalid-credential') {
-        message = "Invalid username or system UID. Please check your credentials.";
+        message = isSignUp 
+          ? "This node may already be registered. Try Logging In instead." 
+          : "Invalid username or system UID. If this is your first time, please Register your node first.";
       } else if (error.code === 'auth/weak-password') {
         message = "The System UID must be at least 6 characters long.";
       } else if (error.code === 'auth/email-already-in-use') {
-        message = "This username is already registered in the system.";
-      } else if (error.code === 'auth/user-not-found') {
-        message = "No system node found for this username. Please register first.";
+        message = "This username is already registered in the system. Try logging in.";
       }
 
       toast({
@@ -85,7 +97,9 @@ export function LoginView() {
               {isSignUp ? "Register Node" : "Secure Authentication"}
             </CardTitle>
             <CardDescription className="text-xs font-medium text-slate-500 mt-2">
-              {isSignUp ? "Create your professional system identity." : "Enter your professional credentials to manage payroll logs."}
+              {isSignUp 
+                ? "First-time setup: Create your professional system identity." 
+                : "Enter your professional credentials to manage payroll logs."}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-10 pt-8">
@@ -113,12 +127,17 @@ export function LoginView() {
                   <Input 
                     required
                     type="password"
-                    placeholder="••••••••••••"
+                    placeholder="Minimum 6 characters"
                     className="h-14 rounded-2xl pl-12 border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
+                {password.length > 0 && password.length < 6 && (
+                  <p className="text-[9px] font-bold text-rose-500 uppercase px-1 mt-1 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> UID too short (Min 6 chars)
+                  </p>
+                )}
               </div>
               
               <div className="space-y-4">
@@ -142,7 +161,7 @@ export function LoginView() {
                   className="w-full text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary hover:bg-slate-50 rounded-xl"
                   onClick={() => setIsSignUp(!isSignUp)}
                 >
-                  {isSignUp ? "Already registered? Log In" : "Need to register? Sign Up"}
+                  {isSignUp ? "Already registered? Log In" : "Need to register for the first time? Sign Up"}
                 </Button>
               </div>
             </form>
