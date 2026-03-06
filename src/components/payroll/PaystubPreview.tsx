@@ -1,15 +1,12 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PayrollItem, PayrollRun } from "@/app/lib/types";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Printer, Download, Loader2 } from "lucide-react";
-
-// @ts-ignore
-import html2pdf from "html2pdf.js";
 
 interface PaystubPreviewProps {
   item: PayrollItem;
@@ -24,23 +21,31 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
     window.print();
   };
 
-  const downloadPaystub = () => {
+  const downloadPaystub = async () => {
     const element = document.getElementById("paystub-document");
     if (!element) return;
     
     setIsDownloading(true);
+    
+    // Dynamically import html2pdf to avoid SSR issues
+    try {
+      // @ts-ignore
+      const html2pdf = (await import('html2pdf.js')).default;
+      
+      const opt = {
+        margin: 10,
+        filename: `payslip_${item.employeeNameSnapshot.replace(/\s+/g, '_')}_${run.payDate}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
 
-    const opt = {
-      margin: 10,
-      filename: `payslip_${item.employeeNameSnapshot.replace(/\s+/g, '_')}_${run.payDate}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().from(element).set(opt).save().finally(() => {
+      await html2pdf().from(element).set(opt).save();
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+    } finally {
       setIsDownloading(false);
-    });
+    }
   };
 
   return (
@@ -48,14 +53,14 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
       <style jsx global>{`
         @media print {
           html, body {
-            height: 100%;
+            height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             overflow: hidden !important;
             background: white !important;
           }
 
-          header, main, footer, nav, [role="dialog"] > *:not(#paystub-print-container), .no-print {
+          header, main, nav, aside, footer, .no-print, [role="dialog"] > *:not(#paystub-print-container) {
             display: none !important;
           }
 
@@ -80,6 +85,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             box-shadow: none !important;
             border: none !important;
             height: auto !important;
+            border-radius: 0 !important;
           }
 
           .print-divider {
@@ -89,7 +95,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
         }
       `}</style>
 
-      {/* Dialog Header with Print/Download Buttons */}
+      {/* Toolbar */}
       <div className="no-print flex items-center justify-between p-6 border-b bg-slate-50/50 sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg">
@@ -130,7 +136,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
           id="paystub-document" 
           className="mx-auto bg-white p-12 shadow-2xl border border-slate-200 max-w-[800px] flex flex-col gap-10 min-h-[1050px] rounded-sm transition-all relative"
         >
-          {/* Company Branding */}
+          {/* Header Branding */}
           <div className="flex flex-col items-center gap-2">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl">
                <span className="text-4xl font-black">S</span>
@@ -141,9 +147,8 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             </div>
           </div>
 
-          {/* Employee & Summary Row */}
+          {/* Info Section */}
           <div className="grid grid-cols-[1.5fr_1fr] gap-12 items-start mt-4">
-            {/* Left: Employee Info */}
             <div className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-7 text-sm">
               <span className="font-bold text-slate-400 text-[10px] uppercase tracking-widest">Employee</span>
               <span className="font-black text-slate-900 uppercase tracking-tight">{item.employeeNameSnapshot}</span>
@@ -158,7 +163,6 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
               <span className="font-black text-slate-900">{run.payDate}</span>
             </div>
 
-            {/* Right: Summary Box */}
             <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-sm bg-white">
               <div className="bg-slate-50 border-b-2 border-slate-900 py-3 px-4 text-center">
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">Payslip Summary</span>
@@ -178,18 +182,16 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             </div>
           </div>
 
-          {/* Breakdown Ledger Table */}
+          {/* Breakdown Ledger */}
           <div className="flex flex-col mt-4">
             <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-6">Payslip Breakdown</h2>
             
-            <div className="border-2 border-slate-900 rounded-2xl overflow-hidden flex flex-col bg-white shadow-sm">
-              {/* Table Headers */}
+            <div className="border-2 border-slate-900 rounded-2xl overflow-hidden flex flex-col bg-white shadow-sm min-h-[400px]">
               <div className="grid grid-cols-2 bg-slate-50 border-b-2 border-slate-900">
                 <div className="px-6 py-5 text-center text-[11px] font-black uppercase tracking-widest border-r-2 border-slate-900 text-slate-900">Earnings</div>
                 <div className="px-6 py-5 text-center text-[11px] font-black uppercase tracking-widest text-slate-900">Deductions</div>
               </div>
               
-              {/* Sub-headers */}
               <div className="grid grid-cols-2 text-[10px] font-black uppercase tracking-[0.25em] bg-white border-b-2 border-slate-900 text-slate-400">
                 <div className="grid grid-cols-[1fr_110px] border-r-2 border-slate-900">
                   <span className="px-10 py-4">Description</span>
@@ -201,12 +203,9 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 </div>
               </div>
 
-              {/* Content Ledger Wrapper */}
-              <div className="flex-1 min-h-[400px] flex relative">
-                {/* Earnings Column */}
+              <div className="flex-1 flex relative">
                 <div className="flex-1 border-r-2 border-slate-900 relative">
-                  {/* Fixed Continuous Vertical Line */}
-                  <div className="absolute top-0 bottom-0 right-[110px] border-r-2 border-slate-900 pointer-events-none print-divider" />
+                  <div className="absolute top-0 bottom-0 right-[110px] border-r-2 border-slate-900 pointer-events-none" />
                   <div className="flex flex-col text-[12px] font-bold text-slate-700 py-4">
                     {item.earningsLines.map((line) => (
                       <div key={line.id} className="grid grid-cols-[1fr_110px]">
@@ -223,10 +222,8 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                   </div>
                 </div>
 
-                {/* Deductions Column */}
                 <div className="flex-1 relative">
-                  {/* Fixed Continuous Vertical Line */}
-                  <div className="absolute top-0 bottom-0 right-[110px] border-r-2 border-slate-900 pointer-events-none print-divider" />
+                  <div className="absolute top-0 bottom-0 right-[110px] border-r-2 border-slate-900 pointer-events-none" />
                   <div className="flex flex-col text-[12px] font-bold text-slate-700 py-4">
                     {item.deductionsLines.map((line) => (
                       <div key={line.id} className="grid grid-cols-[1fr_110px]">
@@ -238,7 +235,6 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 </div>
               </div>
 
-              {/* Ledger Summary Row */}
               <div className="grid grid-cols-2 bg-slate-50 border-t-2 border-slate-900">
                 <div className="grid grid-cols-[1fr_110px] border-r-2 border-slate-900">
                   <span className="px-10 py-5 uppercase tracking-[0.2em] text-slate-500 font-black text-[10px]">Total Gross</span>
@@ -252,7 +248,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             </div>
           </div>
 
-          {/* Statement Summary Table at Bottom */}
+          {/* Statement Summary */}
           <div className="flex flex-col gap-4 mt-auto pt-10 border-t border-slate-100">
              <div className="grid grid-cols-3 border-2 border-slate-900 rounded-2xl overflow-hidden text-center bg-white shadow-sm">
                 <div className="flex flex-col border-r-2 border-slate-900">
