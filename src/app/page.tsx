@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
-import { LayoutDashboard, Users, Receipt, Route, Lock, Download, Loader2, LogOut, Shield, UserCircle, History } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Route, Lock, Download, Loader2, LogOut, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -15,16 +16,12 @@ import { EmployeeManager } from "@/components/employees/EmployeeManager";
 import { PayrollRunsView } from "@/components/payroll/PayrollRunsView";
 import { RouteTrackerView } from "@/components/payroll/RouteTrackerView";
 import { LoginView } from "@/components/auth/LoginView";
-import { MyPaystubsView } from "@/components/employees/MyPaystubsView";
-import { EmployeeDashboard } from "@/components/employees/EmployeeDashboard";
-import { MyRoutesView } from "@/components/employees/MyRoutesView";
-import { EmployeeProfileView } from "@/components/employees/EmployeeProfileView";
 
 import { useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, useAuth, useUser } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 
-type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "emp-dashboard" | "emp-payslips" | "emp-routes" | "emp-profile";
+type ActiveView = "dashboard" | "employees" | "payroll" | "routes";
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView | null>(null);
@@ -33,43 +30,36 @@ export default function AppShell() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
 
-  // 1. Core Profile Handshake - Safe to check when user exists
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim(), [user]);
-  const employeeQuery = useMemoFirebase(() => userEmail ? query(collection(db, "employees"), where("email", "==", userEmail)) : null, [db, userEmail]);
-  const { data: employeesFound, isLoading: profileLoading } = useCollection<Employee>(employeeQuery, { enabled: !!userEmail });
-  const employeeProfile = employeesFound?.[0] || null;
-  const isEmployee = !!employeeProfile;
 
-  // 2. Admin Role Check
+  // 1. Admin Role Check
   const adminDocRef = useMemoFirebase(() => user ? doc(db, "roles_admin", user.uid) : null, [db, user]);
   const { data: adminRoleData, isLoading: adminLoading } = useDoc(adminDocRef, { enabled: !!user });
   
-  const isMasterByEmail = userEmail === "admin@systemoriented.com" || userEmail === "jedocaton1997@gmail.com";
+  const isMasterByEmail = userEmail === "admin@systemoriented.com" || userEmail === "jedocaton1997@gmail.com" || userEmail === "masteradmin@system.oriented";
   const isAdmin = !!adminRoleData || isMasterByEmail;
 
-  // 3. System Bootstrap Check
+  // 2. System Bootstrap Check
   const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
   const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef, { enabled: !!user });
-  const isSystemFresh = !bootstrapLoading && !bootstrapDoc && !isMasterByEmail && !isAdmin && !isEmployee && user;
+  const isSystemFresh = !bootstrapLoading && !bootstrapDoc && !isMasterByEmail && !isAdmin && user;
 
-  // 4. Redirection Logic
+  // 3. Redirection Logic
   useEffect(() => {
-    if (isUserLoading || adminLoading || profileLoading || bootstrapLoading || !user) return;
+    if (isUserLoading || adminLoading || bootstrapLoading || !user) return;
 
     if (isAdmin) {
-      if (!activeView || activeView.startsWith('emp-')) {
+      if (!activeView) {
         setActiveView("dashboard");
       }
-    } else if (isEmployee) {
-      if (!activeView || !activeView.startsWith('emp-')) {
-        setActiveView("emp-dashboard");
-      }
-    } else {
-      setActiveView("emp-profile");
+    } else if (!isSystemFresh) {
+      // If not an admin and not bootstrapping, sign out (Unauthorized)
+      signOut(auth);
+      toast({ title: "Access Denied", description: "Only authorized administrators may access this portal.", variant: "destructive" });
     }
-  }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, bootstrapLoading, user, activeView]);
+  }, [isAdmin, isUserLoading, adminLoading, bootstrapLoading, user, activeView, auth, isSystemFresh, toast]);
   
-  // 5. Admin Data Collections
+  // 4. Admin Data Collections
   const shouldLoadAdminData = isAdmin && !!user;
   
   const employeesQuery = useMemoFirebase(() => shouldLoadAdminData ? collection(db, "employees") : null, [db, shouldLoadAdminData]);
@@ -126,7 +116,7 @@ export default function AppShell() {
     toast({ title: "Admin Privileges Revoked" });
   };
 
-  if (isUserLoading || (user && (adminLoading || profileLoading || bootstrapLoading))) {
+  if (isUserLoading || (user && (adminLoading || bootstrapLoading))) {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
@@ -145,16 +135,11 @@ export default function AppShell() {
     );
   }
 
-  const navItems = isAdmin ? [
+  const navItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "employees", label: "Employees", icon: Users },
     { id: "payroll", label: "Payroll Runs", icon: Receipt },
     { id: "routes", label: "Route Tracker", icon: Route },
-  ] : [
-    { id: "emp-dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "emp-payslips", label: "My Payslips", icon: Receipt },
-    { id: "emp-routes", label: "My Routes", icon: History },
-    { id: "emp-profile", label: "Profile", icon: UserCircle },
   ];
 
   return (
@@ -177,19 +162,12 @@ export default function AppShell() {
       <main className="flex-1 p-8 max-w-[1600px] mx-auto w-full">
         {!activeView ? (
           <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary/20" /></div>
-        ) : isAdmin ? (
+        ) : (
           <>
             {activeView === "dashboard" && <DashboardView summary={payrollSummary} />}
             {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={e => setDocumentNonBlocking(doc(db, "employees", e.id), e, {merge: true})} onUpdateEmployee={e => updateDocumentNonBlocking(doc(db, "employees", e.id), e)} onDeleteEmployee={id => deleteDocumentNonBlocking(doc(db, "employees", id))} allAdmins={allAdmins || []} onGrantAdmin={handleGrantAdmin} onRevokeAdmin={handleRevokeAdmin} isMasterAdmin={isAdmin} />}
             {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} />}
             {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} />}
-          </>
-        ) : (
-          <>
-            {activeView === "emp-dashboard" && <EmployeeDashboard employee={employeeProfile} />}
-            {activeView === "emp-payslips" && <MyPaystubsView employee={employeeProfile} />}
-            {activeView === "emp-routes" && <MyRoutesView employee={employeeProfile} />}
-            {activeView === "emp-profile" && <EmployeeProfileView employee={employeeProfile} />}
           </>
         )}
       </main>
