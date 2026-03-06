@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Employee, PayrollItem, PayrollRun } from "@/app/lib/types";
 import { FileText, Receipt, Loader2 } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collectionGroup, query, where, collection } from "firebase/firestore";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { PaystubPreview } from "@/components/payroll/PaystubPreview";
@@ -24,14 +25,12 @@ export function MyPaystubsView({ employee }: MyPaystubsViewProps) {
   const [previewItem, setPreviewItem] = useState<PayrollItem | null>(null);
   const [selectedRun, setSelectedRun] = useState<PayrollRun | null>(null);
   const db = useFirestore();
+  const { user } = useUser();
 
-  // Safely extract employee ID for the query
-  const employeeId = employee?.id;
-
-  // Fetch all payroll items across all runs for this employee
+  // Fetch all payroll items across all runs for this employee using authUid for security rule validation
   const itemsQuery = useMemoFirebase(() => 
-    employeeId ? query(collectionGroup(db, "payrollItems"), where("employeeId", "==", employeeId)) : null, 
-    [db, employeeId]
+    user ? query(collectionGroup(db, "payrollItems"), where("authUid", "==", user.uid)) : null, 
+    [db, user]
   );
   const { data: paystubs, isLoading: itemsLoading } = useCollection<PayrollItem>(itemsQuery);
 
@@ -46,7 +45,7 @@ export function MyPaystubsView({ employee }: MyPaystubsViewProps) {
           <Receipt className="h-8 w-8" />
         </div>
         <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter">Profile Not Found</h3>
-        <p className="text-sm text-slate-500 max-w-xs mt-2 font-medium">Your account is authenticated, but no employee record matches your ID. Please contact your system administrator.</p>
+        <p className="text-sm text-slate-500 max-w-xs mt-2 font-medium">Your account is authenticated, but no employee record matches your ID.</p>
       </div>
     );
   }

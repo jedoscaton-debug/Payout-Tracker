@@ -14,7 +14,8 @@ import {
   Shield,
   UserCircle,
   History,
-  ShieldAlert
+  ShieldAlert,
+  Save
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -102,7 +103,7 @@ export default function AppShell() {
   const { data: allAdminsData, isLoading: allAdminsLoading } = useCollection(adminsQuery);
   const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
 
-  // Automated Redirection Logic - Hardened to handle loading states correctly
+  // Automated Redirection Logic
   useEffect(() => {
     if (!isUserLoading && !adminLoading && !profileLoading && !bootstrapLoading && !nodeLoading && user) {
       if (isAdmin) {
@@ -110,7 +111,6 @@ export default function AppShell() {
       } else if (isEmployee) {
         setActiveView("emp-dashboard");
       } else if (!isSystemFresh) {
-        // Fallback for recognized users without linked profiles
         setActiveView("emp-profile");
       }
     }
@@ -147,8 +147,17 @@ export default function AppShell() {
         
       const finalItems = [...syncedItems, ...newEmployeeItems];
       
-      if (JSON.stringify(finalItems.map(i => i.employeeId)) !== JSON.stringify(prevItems.map(i => i.employeeId))) {
-        return finalItems;
+      // Ensure authUid is always synced for security rules
+      const updatedItems = finalItems.map(item => {
+        const emp = employees.find(e => e.id === item.employeeId);
+        if (emp && emp.authUid !== item.authUid) {
+          return { ...item, authUid: emp.authUid || "" };
+        }
+        return item;
+      });
+      
+      if (JSON.stringify(updatedItems) !== JSON.stringify(prevItems)) {
+        return updatedItems;
       }
       return prevItems;
     });
@@ -164,6 +173,23 @@ export default function AppShell() {
       items: payrollItems
     };
   }, [payrollItems]);
+
+  const handleSavePayrollRun = async () => {
+    if (!isAdmin) return;
+    
+    const runRef = doc(db, "payrollRuns", payrollRun.id);
+    setDocumentNonBlocking(runRef, payrollRun, { merge: true });
+    
+    payrollItems.forEach(item => {
+      const itemRef = doc(db, "payrollRuns", payrollRun.id, "payrollItems", item.id);
+      setDocumentNonBlocking(itemRef, item, { merge: true });
+    });
+    
+    toast({ 
+      title: "Payroll Published", 
+      description: "Payroll records have been saved and are now visible to employees." 
+    });
+  };
 
   const handleRegisterAccess = (id: string, username: string) => {
     const docRef = doc(db, "system_users", id);
@@ -184,9 +210,8 @@ export default function AppShell() {
       deleteDocumentNonBlocking(adminRef);
     }
     
-    // Wipe system node but preserve HR employee record (per user request)
     deleteDocumentNonBlocking(userRef);
-    toast({ title: "Access Revoked", description: "System privileges for this node have been terminated. The employee record remains active." });
+    toast({ title: "Access Revoked", description: "System privileges terminated. HR records preserved." });
   };
 
   const handleBootstrapMaster = () => {
@@ -206,41 +231,40 @@ export default function AppShell() {
   const handleAddEmployee = (newEmployee: Employee) => {
     const docRef = doc(db, "employees", newEmployee.id);
     setDocumentNonBlocking(docRef, newEmployee, { merge: true });
-    toast({ title: "Staff Member Registered", description: `${newEmployee.fullName} has been added to the directory.` });
+    toast({ title: "Staff Member Registered", description: `${newEmployee.fullName} added.` });
   };
 
   const handleLinkProfile = (targetSystemUid: string, employee: Employee) => {
     const newDocRef = doc(db, "employees", targetSystemUid);
-    setDocumentNonBlocking(newDocRef, { ...employee, id: targetSystemUid }, { merge: true });
+    setDocumentNonBlocking(newDocRef, { ...employee, id: targetSystemUid, authUid: user?.uid || "" }, { merge: true });
     
     if (employee.id !== targetSystemUid) {
       const oldDocRef = doc(db, "employees", employee.id);
       deleteDocumentNonBlocking(oldDocRef);
     }
     
-    toast({ title: "Profile Linked", description: "Staff record successfully associated with system node." });
+    toast({ title: "Profile Linked", description: "Staff record associated with system node." });
   };
 
   const handleUpdateEmployee = (updatedEmployee: Employee) => {
     const docRef = doc(db, "employees", updatedEmployee.id);
     updateDocumentNonBlocking(docRef, updatedEmployee);
-    toast({ title: "Profile Updated", description: `Changes to ${updatedEmployee.fullName} have been saved.` });
   };
 
   const handleDeleteEmployee = (id: string) => {
     const docRef = doc(db, "employees", id);
     deleteDocumentNonBlocking(docRef);
-    toast({ title: "Staff Member Removed", description: "HR record has been deleted.", variant: "destructive" });
+    toast({ title: "Staff Member Removed", variant: "destructive" });
   };
 
   const handleGrantAdmin = (systemId: string) => {
     const targetNode = systemUsers.find(u => u.id === systemId);
     if (!targetNode?.authUid) {
-      return toast({ title: "Action Deferred", description: "Admin rights will activate after this user's first login.", variant: "default" });
+      return toast({ title: "Action Deferred", description: "Admin rights activate after first login." });
     }
     const docRef = doc(db, "roles_admin", targetNode.authUid);
     setDocumentNonBlocking(docRef, { role: "admin", createdAt: new Date().toISOString() }, { merge: true });
-    toast({ title: "Admin Privileges Granted", description: "Administrative access enabled." });
+    toast({ title: "Admin Privileges Granted" });
   };
 
   const handleRevokeAdmin = (systemId: string) => {
@@ -249,33 +273,27 @@ export default function AppShell() {
     if (!authUid) return;
 
     const targetAdmin = allAdmins.find(a => a.id === authUid);
-    if (targetAdmin?.role === 'master') {
-      return toast({ title: "Forbidden", description: "The Master Admin cannot be demoted.", variant: "destructive" });
-    }
-    if (user?.uid === authUid) {
-      return toast({ title: "Forbidden", description: "You cannot revoke your own access.", variant: "destructive" });
+    if (targetAdmin?.role === 'master' || user?.uid === authUid) {
+      return toast({ title: "Forbidden", variant: "destructive" });
     }
     const docRef = doc(db, "roles_admin", authUid);
     deleteDocumentNonBlocking(docRef);
-    toast({ title: "Admin Privileges Revoked", description: "Access disabled.", variant: "destructive" });
+    toast({ title: "Admin Privileges Revoked", variant: "destructive" });
   };
 
   const handleAddRoute = (newRoute: RouteTrackerRow) => {
     const docRef = doc(db, "routeTrackerRows", newRoute.id);
     setDocumentNonBlocking(docRef, newRoute, { merge: true });
-    toast({ title: "Route Logged", description: `Route ${newRoute.route} added.` });
   };
 
   const handleUpdateRoute = (updatedRoute: RouteTrackerRow) => {
     const docRef = doc(db, "routeTrackerRows", updatedRoute.id);
     updateDocumentNonBlocking(docRef, updatedRoute);
-    toast({ title: "Route Updated", description: `Route ${updatedRoute.route} updated.` });
   };
 
   const handleDeleteRoute = (id: string) => {
     const docRef = doc(db, "routeTrackerRows", id);
     deleteDocumentNonBlocking(docRef);
-    toast({ title: "Log Removed", description: "Route log deleted.", variant: "destructive" });
   };
 
   const exportCsv = () => {
@@ -295,7 +313,8 @@ export default function AppShell() {
 
   const finalizeRun = () => {
     setPayrollRun((current) => ({ ...current, status: "Finalized" }));
-    toast({ title: "Payroll Finalized", description: "Records locked." });
+    handleSavePayrollRun(); // Save when finalizing
+    toast({ title: "Payroll Finalized", description: "Records locked and published." });
   };
 
   const handleSignOut = () => signOut(auth);
@@ -304,7 +323,7 @@ export default function AppShell() {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Syncing Master Node...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Verifying Identity...</p>
       </div>
     );
   }
@@ -319,7 +338,7 @@ export default function AppShell() {
             <Shield className="h-10 w-10" />
           </div>
           <h2 className="text-2xl font-black uppercase tracking-tighter">System Initialization</h2>
-          <p className="text-sm font-medium text-slate-500">No administrators detected in the system. Claim the Master Admin node to begin setup.</p>
+          <p className="text-sm font-medium text-slate-500">Claim the Master Admin node to begin setup.</p>
           <Button onClick={handleBootstrapMaster} className="w-full h-14 rounded-2xl bg-slate-900 font-bold uppercase tracking-widest text-xs">
             Initialize Master Admin
           </Button>
@@ -368,6 +387,7 @@ export default function AppShell() {
         <div className="flex items-center gap-3">
           {isAdmin && (
             <>
+              <Button variant="outline" size="sm" className="rounded-xl h-9 text-[10px] font-bold uppercase" onClick={handleSavePayrollRun}><Save className="mr-2 h-3 w-3" /> Save & Publish</Button>
               <Button variant="outline" size="sm" className="rounded-xl h-9 text-[10px] font-bold uppercase" onClick={exportCsv}><Download className="mr-2 h-3 w-3" /> Export</Button>
               <Button size="sm" className="rounded-xl h-9 bg-accent text-white text-[10px] font-bold uppercase" onClick={finalizeRun} disabled={payrollRun.status === "Finalized"}><Lock className="mr-2 h-3 w-3" /> Finalize</Button>
             </>

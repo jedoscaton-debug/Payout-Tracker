@@ -13,7 +13,7 @@ import {
   Loader2
 } from "lucide-react";
 import { Employee, PayrollItem, RouteTrackerRow } from "@/app/lib/types";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collectionGroup, query, where, collection, limit, orderBy } from "firebase/firestore";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 
@@ -23,13 +23,14 @@ interface EmployeeDashboardProps {
 
 export function EmployeeDashboard({ employee }: EmployeeDashboardProps) {
   const db = useFirestore();
+  const { user } = useUser();
   const employeeId = employee?.id;
   const employeeName = employee?.fullName;
 
-  // Fetch recent payroll items
+  // Fetch recent payroll items using authUid for security rule validation
   const itemsQuery = useMemoFirebase(() => 
-    employeeId ? query(collectionGroup(db, "payrollItems"), where("employeeId", "==", employeeId), limit(10)) : null, 
-    [db, employeeId]
+    user ? query(collectionGroup(db, "payrollItems"), where("authUid", "==", user.uid), limit(10)) : null, 
+    [db, user]
   );
   const { data: paystubs, isLoading: itemsLoading } = useCollection<PayrollItem>(itemsQuery);
 

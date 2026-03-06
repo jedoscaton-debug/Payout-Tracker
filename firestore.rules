@@ -1,34 +1,28 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Check if the current user has an administrative role
+    // Optimized admin check
     function isAdmin() {
       return request.auth != null && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    // Check if the current user is the owner of the system UID
-    // Note: Used only for non-group queries where we can't store authUid directly
-    function isOwner(systemUid) {
-      let userPath = /databases/$(database)/documents/system_users/$(systemUid);
-      return request.auth != null && exists(userPath) && get(userPath).data.authUid == request.auth.uid;
-    }
-
     // GLOBAL RULES FOR COLLECTION GROUP QUERIES
-    // This allows employees to query their payroll items across all runs.
-    // Statically verifiable by using resource.data.authUid directly.
+    // This requires the query to filter by authUid to satisfy query-side validation
     match /{path=**}/payrollItems/{payrollItemId} {
       allow read: if isAdmin() || (request.auth != null && resource.data.authUid == request.auth.uid);
+      allow write: if isAdmin();
     }
 
-    // Allow anyone to check if the system is fresh (uninitialized)
+    // Allow checking system bootstrap state
     match /roles_admin/first_admin_placeholder {
       allow read: if true;
     }
 
-    // Access mapping for System UIDs
+    // Identity Mapping rules
     match /system_users/{userId} {
-      // Allow authenticated lookup for mapping resolution
+      // Allow authenticated lookup for identity resolution via query (list)
       allow read: if request.auth != null;
       
       // Allow Master Admin bootstrap and users to manage their own mapping
@@ -55,7 +49,7 @@ service cloud.firestore {
       allow write: if isAdmin();
       
       match /payrollItems/{payrollItemId} {
-        // Redundant with group rule but kept for standard document-path access
+        // Redundant but safe document-path access
         allow read: if isAdmin() || (request.auth != null && resource.data.authUid == request.auth.uid);
         allow write: if isAdmin();
       }
