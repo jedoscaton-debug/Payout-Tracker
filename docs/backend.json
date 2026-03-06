@@ -10,13 +10,35 @@
         "id": { "type": "string", "description": "Unique Access Key (UID) for the employee." },
         "fullName": { "type": "string" },
         "role": { "type": "string", "enum": ["Driver", "Helper"] },
-        "email": { "type": "string", "format": "email" },
-        "contactNumber": { "type": "string" },
         "defaultDailyRate": { "type": "string" },
         "paymentMethod": { "type": "string" },
-        "authUid": { "type": "string", "description": "Firebase Auth UID, linked after first login." }
+        "authUid": { "type": "string" }
       },
-      "required": ["id", "fullName", "role", "email"]
+      "required": ["id", "fullName", "role"]
+    },
+    "DeductionRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DeductionRecord",
+      "type": "object",
+      "description": "Admin configuration for an employee deduction claim.",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "deductionName": { "type": "string" },
+        "type": { "type": "string", "enum": ["Fixed", "Installment", "One-Time", "Auto System Fee"] },
+        "totalClaimAmount": { "type": "number" },
+        "installmentCount": { "type": "number" },
+        "installmentsPaid": { "type": "number" },
+        "remainingBalance": { "type": "number" },
+        "perPayrollAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Active", "Completed", "Paused", "Cancelled"] },
+        "autoApply": { "type": "boolean" },
+        "isSystemDefault": { "type": "boolean" },
+        "lastAppliedPayDate": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "employeeId", "deductionName", "type", "status"]
     },
     "PayrollItem": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -27,7 +49,6 @@
         "id": { "type": "string" },
         "payrollRunId": { "type": "string" },
         "employeeId": { "type": "string" },
-        "employeeEmailSnapshot": { "type": "string", "description": "Snapshot of employee email for security filtering." },
         "employeeNameSnapshot": { "type": "string" },
         "dailyRateSnapshot": { "type": "string" },
         "notes": { "type": "string" },
@@ -35,7 +56,7 @@
         "otherEarningsLines": { "type": "array", "items": { "type": "string" } },
         "deductionsLines": { "type": "array", "items": { "type": "string" } }
       },
-      "required": ["id", "payrollRunId", "employeeId", "employeeEmailSnapshot"]
+      "required": ["id", "payrollRunId", "employeeId"]
     }
   },
   "auth": {
@@ -48,7 +69,15 @@
         "definition": {
           "entityName": "Employee",
           "schema": { "$ref": "#/backend/entities/Employee" },
-          "description": "Stores HR records and Access Keys."
+          "description": "Stores staff profile data."
+        }
+      },
+      {
+        "path": "/deductions/{deductionId}",
+        "definition": {
+          "entityName": "DeductionRecord",
+          "schema": { "$ref": "#/backend/entities/DeductionRecord" },
+          "description": "Stores admin-managed deduction rules."
         }
       },
       {

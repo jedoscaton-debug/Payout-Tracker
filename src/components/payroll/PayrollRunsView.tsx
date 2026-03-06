@@ -6,15 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Plus, RefreshCw } from "lucide-react";
+import { FileText, Plus, RefreshCw, CheckCircle2, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { useFirestore, updateDocumentNonBlocking } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 import { 
   Employee, 
   RouteTrackerRow, 
   PayrollRun, 
-  PayrollItem 
+  PayrollItem,
+  DeductionRecord
 } from "@/app/lib/types";
 import { 
   computeTotals, 
@@ -32,6 +36,7 @@ interface PayrollRunsViewProps {
   setPayrollItems: React.Dispatch<React.SetStateAction<PayrollItem[]>>;
   employees: Employee[];
   routeTracker: RouteTrackerRow[];
+  deductions: DeductionRecord[];
 }
 
 export function PayrollRunsView({ 
@@ -40,23 +45,53 @@ export function PayrollRunsView({
   payrollItems, 
   setPayrollItems,
   employees,
-  routeTracker
+  routeTracker,
+  deductions
 }: PayrollRunsViewProps) {
   const [previewItem, setPreviewItem] = useState<PayrollItem | null>(null);
+  const { toast } = useToast();
+  const db = useFirestore();
 
   const refreshFromRoutes = () => {
     setPayrollItems((current) =>
       current.map((item) => {
         const employee = employees.find((e) => e.id === item.employeeId);
         if (!employee) return item;
-        const refreshed = createPayrollItem(employee, payrollRun, routeTracker);
+        const refreshed = createPayrollItem(employee, payrollRun, routeTracker, deductions);
         return {
           ...item,
           earningsLines: refreshed.earningsLines,
-          deductionsLines: item.deductionsLines.length ? item.deductionsLines : refreshed.deductionsLines,
+          deductionsLines: refreshed.deductionsLines,
         };
       })
     );
+    toast({ title: "Sync Complete", description: "Routes and auto-deductions updated." });
+  };
+
+  const handleFinalize = () => {
+    // Payroll finalization logic: Update deductions status/balance
+    payrollItems.forEach(item => {
+      item.deductionsLines.forEach(line => {
+        if (line.originalDeductionId) {
+          const original = deductions.find(d => d.id === line.originalDeductionId);
+          if (original) {
+            const newPaid = (original.installmentsPaid || 0) + 1;
+            const newBalance = Math.max(0, original.totalClaimAmount - (newPaid * original.perPayrollAmount));
+            const isCompleted = original.type === "One-Time" || (original.type === "Installment" && newBalance <= 0);
+            
+            updateDocumentNonBlocking(doc(db, "deductions", original.id), {
+              installmentsPaid: newPaid,
+              remainingBalance: newBalance,
+              status: isCompleted ? "Completed" : "Active",
+              lastAppliedPayDate: payrollRun.payDate
+            });
+          }
+        }
+      });
+    });
+
+    setPayrollRun(prev => ({ ...prev, status: "Finalized" }));
+    toast({ title: "Payroll Finalized", description: "Deduction balances updated system-wide." });
   };
 
   const updateItem = (itemId: string, updater: (item: PayrollItem) => PayrollItem) => {
@@ -78,17 +113,10 @@ export function PayrollRunsView({
     "Earning Amount",
     "Other Earning Description",
     "Other Earning Amount",
-    "Deductions 1",
-    "Deduction 1 Amount",
-    "Deductions 2",
-    "Deduction 2 Amount",
-    "Deductions 3",
-    "Deductions 3 Amount",
-    "Deductions 4",
-    "Deductions 4 Amount",
-    "Total Deductions",
-    "Total Earning",
+    "Deductions Breakdown",
+    "Deduction Total",
     "Total Gross",
+    "Net Pay",
     "Pay Period",
     "Pay Date",
     "Actions"
@@ -98,28 +126,35 @@ export function PayrollRunsView({
     <div className="space-y-8 animate-in fade-in duration-500">
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-1 bg-primary rounded-full" />
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Active Run Configuration</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-1 bg-primary rounded-full" />
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Active Run Configuration</CardTitle>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" className="h-10 rounded-xl bg-white border-slate-200 font-bold" onClick={refreshFromRoutes} disabled={payrollRun.status === "Finalized"}>
+                <RefreshCw className="mr-2 h-4 w-4" /> Sync Claims & Routes
+              </Button>
+              <Button className="h-10 rounded-xl bg-slate-900 font-bold" onClick={handleFinalize} disabled={payrollRun.status === "Finalized"}>
+                <CheckCircle2 className="mr-2 h-4 w-4" /> Finalize Payroll
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-8">
-          <div className="grid gap-8 md:grid-cols-4 items-end">
+          <div className="grid gap-8 md:grid-cols-3">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period Start</label>
-              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodStart || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodStart: e.target.value }))} />
+              <Input className="h-12 rounded-2xl bg-slate-50/50" type="date" value={payrollRun.payPeriodStart || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodStart: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period End</label>
-              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodEnd || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodEnd: e.target.value }))} />
+              <Input className="h-12 rounded-2xl bg-slate-50/50" type="date" value={payrollRun.payPeriodEnd || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodEnd: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Pay Date</label>
-              <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payDate || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payDate: e.target.value }))} />
+              <Input className="h-12 rounded-2xl bg-slate-50/50" type="date" value={payrollRun.payDate || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payDate: e.target.value }))} />
             </div>
-            <Button className="h-12 w-full rounded-2xl bg-primary/10 text-primary hover:bg-primary font-bold transition-all border-none" variant="outline" onClick={refreshFromRoutes} disabled={payrollRun.status === "Finalized"}>
-              <RefreshCw className="mr-2 h-4 w-4" /> Sync Route Earnings
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -127,7 +162,7 @@ export function PayrollRunsView({
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardContent className="p-0">
           <ScrollArea className="w-full">
-            <div className="min-w-[2800px] pb-6">
+            <div className="min-w-[2200px] pb-6">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80">
@@ -135,10 +170,7 @@ export function PayrollRunsView({
                       {headers[0]}
                     </th>
                     {headers.slice(1).map((header) => (
-                      <th 
-                        key={header} 
-                        className="border-b border-slate-100 px-4 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap"
-                      >
+                      <th key={header} className="border-b border-slate-100 px-4 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap">
                         {header}
                       </th>
                     ))}
@@ -147,11 +179,6 @@ export function PayrollRunsView({
                 <tbody className="divide-y divide-slate-100">
                   {payrollItems.map((item) => {
                     const totals = computeTotals(item);
-                    const visibleDeductions = [...item.deductionsLines];
-                    while (visibleDeductions.length < 4) {
-                      visibleDeductions.push({ id: `blank-${visibleDeductions.length}`, deductionName: "", amount: 0, type: "Fixed" });
-                    }
-
                     return (
                       <tr key={item.id} className="group hover:bg-slate-50/30 transition-all align-top">
                         <td className="sticky left-0 z-20 bg-white px-8 py-6 font-bold text-slate-900 whitespace-nowrap border-r border-slate-100 shadow-[2px_0_5px_rgba(0,0,0,0.05)] group-hover:bg-slate-50/80">
@@ -170,7 +197,7 @@ export function PayrollRunsView({
                         <td className="px-4 py-6">
                           <div className="space-y-1">
                             {item.earningsLines.map((line, i) => (
-                              <div key={i} className="text-[10px] font-black text-slate-900 bg-slate-50 px-2 py-1 rounded-md border border-slate-100/50">
+                              <div key={i} className="text-[10px] font-black text-slate-900 bg-slate-50 px-2 py-1 rounded-md">
                                 {currency(line.amount)}
                               </div>
                             ))}
@@ -183,7 +210,7 @@ export function PayrollRunsView({
                                 key={line.id}
                                 value={line.description || ""}
                                 placeholder="Earning label..."
-                                className="h-8 text-[11px] rounded-lg border-slate-100 font-medium"
+                                className="h-8 text-[11px] rounded-lg"
                                 onChange={(e) => updateItem(item.id, (c) => ({ ...c, otherEarningsLines: c.otherEarningsLines.map(x => x.id === line.id ? { ...x, description: e.target.value } : x) }))}
                                 disabled={payrollRun.status === "Finalized"}
                               />
@@ -200,41 +227,34 @@ export function PayrollRunsView({
                                 key={line.id}
                                 type="number"
                                 value={line.amount || 0}
-                                className="h-8 w-20 text-[11px] rounded-lg border-slate-100 font-black text-emerald-600"
+                                className="h-8 w-20 text-[11px] font-black text-emerald-600"
                                 onChange={(e) => updateItem(item.id, (c) => ({ ...c, otherEarningsLines: c.otherEarningsLines.map(x => x.id === line.id ? { ...x, amount: Number(e.target.value) } : x) }))}
                                 disabled={payrollRun.status === "Finalized"}
                               />
                             ))}
                           </div>
                         </td>
-                        {visibleDeductions.map((deduction, index) => (
-                          <React.Fragment key={`${item.id}-${index}`}>
-                            <td className="px-4 py-6">
-                              <Input
-                                value={deduction.deductionName || ""}
-                                placeholder={`Deduction ${index + 1}`}
-                                className="h-8 w-32 text-[11px] rounded-lg border-slate-100"
-                                disabled={payrollRun.status === "Finalized" || (item.deductionsLines[index] && deduction.deductionName === "Direct Deposit Fee")}
-                                onChange={(e) => updateItem(item.id, (c) => ({ ...c, deductionsLines: c.deductionsLines.map((x, i) => i === index ? { ...x, deductionName: e.target.value } : x) }))}
-                              />
-                            </td>
-                            <td className="px-4 py-6">
-                              <Input
-                                type="number"
-                                value={deduction.amount || 0}
-                                className="h-8 w-20 text-[11px] rounded-lg border-slate-100 font-black text-rose-500"
-                                disabled={payrollRun.status === "Finalized" || (item.deductionsLines[index] && deduction.deductionName === "Direct Deposit Fee")}
-                                onChange={(e) => updateItem(item.id, (c) => ({ ...c, deductionsLines: c.deductionsLines.map((x, i) => i === index ? { ...x, amount: Number(e.target.value) } : x) }))}
-                              />
-                            </td>
-                          </React.Fragment>
-                        ))}
-                        <td className="px-4 py-6 font-black text-rose-600 text-xs">{currency(totals.totalDeductions)}</td>
-                        <td className="px-4 py-6 font-black text-slate-900 text-xs">{currency(totals.totalEarnings)}</td>
                         <td className="px-4 py-6">
-                          <div className="bg-primary text-white rounded-xl px-4 py-2 font-black text-xs shadow-lg shadow-primary/20">
-                            {currency(totals.grossPay)}
+                          <div className="space-y-1 w-48">
+                            {item.deductionsLines.map((line, i) => (
+                              <div key={i} className="flex items-center justify-between text-[10px] bg-slate-50 px-2 py-1 rounded-md">
+                                <span className="font-bold text-slate-400">{line.deductionName}</span>
+                                <span className="font-black text-rose-500">{currency(line.amount)}</span>
+                              </div>
+                            ))}
                           </div>
+                        </td>
+                        <td className="px-4 py-6 font-black text-rose-600 text-xs">{currency(totals.totalDeductions)}</td>
+                        <td className="px-4 py-6 font-black text-slate-900 text-xs">{currency(totals.grossPay)}</td>
+                        <td className="px-4 py-6">
+                          <div className={cn("rounded-xl px-4 py-2 font-black text-xs shadow-lg", totals.netPay < 0 ? "bg-rose-600 text-white shadow-rose-200" : "bg-primary text-white shadow-primary/20")}>
+                            {currency(totals.netPay)}
+                          </div>
+                          {totals.netPay < 0 && (
+                            <div className="flex items-center gap-1 mt-2 text-rose-500 text-[8px] font-black uppercase">
+                              <ShieldAlert className="h-3 w-3" /> Negative Net Pay
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-6 text-[10px] font-bold text-slate-400 whitespace-nowrap">
                           {shortDate(payrollRun.payPeriodStart)} - {shortDate(payrollRun.payPeriodEnd)}
@@ -260,9 +280,6 @@ export function PayrollRunsView({
 
       <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
         <DialogContent className="max-w-[850px] w-full p-0 border-none shadow-2xl bg-white overflow-y-auto max-h-[95vh] rounded-[2.5rem]">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Paystub Preview Statement</DialogTitle>
-          </DialogHeader>
           {previewItem && (
             <PaystubPreview item={previewItem} run={payrollRun} />
           )}

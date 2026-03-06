@@ -1,6 +1,8 @@
 
 export type RoleType = "Driver" | "Helper" | "Driver&Helper";
 export type PayrollStatus = "Draft" | "Finalized";
+export type DeductionType = "Fixed" | "Installment" | "One-Time" | "Auto System Fee";
+export type DeductionStatus = "Active" | "Completed" | "Paused" | "Cancelled";
 
 export type RouteTrackerRow = {
   id: string;
@@ -37,18 +39,39 @@ export type DeductionLine = {
   id: string;
   deductionName: string;
   amount: number;
-  type: "Fixed" | "Installment";
+  type: "Fixed" | "Installment" | "One-Time" | "Auto System Fee";
+  originalDeductionId?: string; // Linked to the DeductionBoard item
 };
 
 export type Employee = {
   id: string;
   fullName: string;
   role: "Driver" | "Helper";
-  email: string;
-  contactNumber: string;
   defaultDailyRate: string;
   paymentMethod?: string;
-  authUid?: string; // Linked Firebase Auth UID
+  authUid?: string;
+};
+
+export type DeductionRecord = {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  deductionName: string;
+  type: DeductionType;
+  totalClaimAmount: number;
+  installmentCount: number;
+  installmentsPaid: number;
+  remainingBalance: number;
+  perPayrollAmount: number;
+  status: DeductionStatus;
+  autoApply: boolean;
+  isSystemDefault: boolean;
+  lastAppliedPayDate?: string;
+  startDate?: string;
+  startPayrollRunId?: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type PayrollRun = {
@@ -63,7 +86,6 @@ export type PayrollItem = {
   id: string;
   payrollRunId: string;
   employeeId: string;
-  employeeEmailSnapshot: string; // Critical for security rules
   employeeNameSnapshot: string;
   dailyRateSnapshot: string;
   notes: string;

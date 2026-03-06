@@ -2,12 +2,12 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
-import { LayoutDashboard, Users, Receipt, Route, Lock, Download, Loader2, LogOut, Shield } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Route, Lock, Download, Loader2, LogOut, Shield, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-import { Employee, RouteTrackerRow, PayrollRun, PayrollItem } from "@/app/lib/types";
+import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord } from "@/app/lib/types";
 import { createPayrollItem, initialPayrollRun } from "@/app/lib/payroll-data-utils";
 import { computeTotals } from "@/app/lib/payroll-utils";
 
@@ -15,13 +15,14 @@ import { DashboardView } from "@/components/dashboard/DashboardView";
 import { EmployeeManager } from "@/components/employees/EmployeeManager";
 import { PayrollRunsView } from "@/components/payroll/PayrollRunsView";
 import { RouteTrackerView } from "@/components/payroll/RouteTrackerView";
+import { DeductionBoard } from "@/components/deductions/DeductionBoard";
 import { LoginView } from "@/components/auth/LoginView";
 
 import { useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, useAuth, useUser } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 
-type ActiveView = "dashboard" | "employees" | "payroll" | "routes";
+type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "deductions";
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView | null>(null);
@@ -32,59 +33,59 @@ export default function AppShell() {
 
   const userEmail = useMemo(() => user?.email?.toLowerCase().trim(), [user]);
 
-  // 1. Admin Role Check
+  // Admin Role Check
   const adminDocRef = useMemoFirebase(() => user ? doc(db, "roles_admin", user.uid) : null, [db, user]);
   const { data: adminRoleData, isLoading: adminLoading } = useDoc(adminDocRef, { enabled: !!user });
   
   const isMasterByEmail = userEmail === "admin@systemoriented.com" || userEmail === "jedocaton1997@gmail.com" || userEmail === "masteradmin@system.oriented";
   const isAdmin = !!adminRoleData || isMasterByEmail;
 
-  // 2. System Bootstrap Check
+  // System Bootstrap Check
   const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
   const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef, { enabled: !!user });
   const isSystemFresh = !bootstrapLoading && !bootstrapDoc && !isMasterByEmail && !isAdmin && user;
 
-  // 3. Redirection Logic
+  // Redirection Logic
   useEffect(() => {
     if (isUserLoading || adminLoading || bootstrapLoading || !user) return;
 
     if (isAdmin) {
-      if (!activeView) {
-        setActiveView("dashboard");
-      }
+      if (!activeView) setActiveView("dashboard");
     } else if (!isSystemFresh) {
-      // If not an admin and not bootstrapping, sign out (Unauthorized)
       signOut(auth);
       toast({ title: "Access Denied", description: "Only authorized administrators may access this portal.", variant: "destructive" });
     }
   }, [isAdmin, isUserLoading, adminLoading, bootstrapLoading, user, activeView, auth, isSystemFresh, toast]);
   
-  // 4. Admin Data Collections
-  const shouldLoadAdminData = isAdmin && !!user;
+  // Data Collections
+  const shouldLoadData = isAdmin && !!user;
   
-  const employeesQuery = useMemoFirebase(() => shouldLoadAdminData ? collection(db, "employees") : null, [db, shouldLoadAdminData]);
-  const { data: employeesData } = useCollection<Employee>(employeesQuery, { enabled: shouldLoadAdminData });
+  const employeesQuery = useMemoFirebase(() => shouldLoadData ? collection(db, "employees") : null, [db, shouldLoadData]);
+  const { data: employeesData } = useCollection<Employee>(employeesQuery, { enabled: shouldLoadData });
   const employees = useMemo(() => (employeesData || []) as Employee[], [employeesData]);
 
-  const routesQuery = useMemoFirebase(() => shouldLoadAdminData ? collection(db, "routeTrackerRows") : null, [db, shouldLoadAdminData]);
-  const { data: routesData } = useCollection<RouteTrackerRow>(routesQuery, { enabled: shouldLoadAdminData });
+  const routesQuery = useMemoFirebase(() => shouldLoadData ? collection(db, "routeTrackerRows") : null, [db, shouldLoadData]);
+  const { data: routesData } = useCollection<RouteTrackerRow>(routesQuery, { enabled: shouldLoadData });
   const routeTracker = useMemo(() => (routesData || []) as RouteTrackerRow[], [routesData]);
 
-  const adminsQuery = useMemoFirebase(() => shouldLoadAdminData ? collection(db, "roles_admin") : null, [db, shouldLoadAdminData]);
-  const { data: allAdmins } = useCollection(adminsQuery, { enabled: shouldLoadAdminData });
+  const deductionsQuery = useMemoFirebase(() => shouldLoadData ? collection(db, "deductions") : null, [db, shouldLoadData]);
+  const { data: deductionsData } = useCollection<DeductionRecord>(deductionsQuery, { enabled: shouldLoadData });
+  const deductions = useMemo(() => (deductionsData || []) as DeductionRecord[], [deductionsData]);
 
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
 
-  // Sync Payroll Items for Admin
+  // Sync Payroll Items
   useEffect(() => {
     if (!isAdmin || employees.length === 0) return;
     setPayrollItems(prev => {
       const existingIds = new Set(prev.map(i => i.employeeId));
-      const newItems = employees.filter(e => !existingIds.has(e.id)).map(e => createPayrollItem(e, payrollRun, routeTracker));
+      const newItems = employees
+        .filter(e => !existingIds.has(e.id))
+        .map(e => createPayrollItem(e, payrollRun, routeTracker, deductions));
       return [...prev, ...newItems];
     });
-  }, [employees, isAdmin, payrollRun, routeTracker]);
+  }, [employees, isAdmin, payrollRun, routeTracker, deductions]);
 
   const payrollSummary = useMemo(() => {
     const totals = payrollItems.map(computeTotals);
@@ -103,17 +104,6 @@ export default function AppShell() {
     setDocumentNonBlocking(adminRef, { role: "master", createdAt: new Date().toISOString() }, { merge: true });
     setDocumentNonBlocking(doc(db, "roles_admin", "first_admin_placeholder"), { active: true }, { merge: true });
     toast({ title: "System Initialized" });
-  };
-
-  const handleGrantAdmin = (uid: string) => {
-    setDocumentNonBlocking(doc(db, "roles_admin", uid), { role: "admin", createdAt: new Date().toISOString() }, { merge: true });
-    toast({ title: "Admin Privileges Granted" });
-  };
-
-  const handleRevokeAdmin = (uid: string) => {
-    if (uid === user?.uid) return toast({ title: "Forbidden", variant: "destructive" });
-    deleteDocumentNonBlocking(doc(db, "roles_admin", uid));
-    toast({ title: "Admin Privileges Revoked" });
   };
 
   if (isUserLoading || (user && (adminLoading || bootstrapLoading))) {
@@ -140,6 +130,7 @@ export default function AppShell() {
     { id: "employees", label: "Employees", icon: Users },
     { id: "payroll", label: "Payroll Runs", icon: Receipt },
     { id: "routes", label: "Route Tracker", icon: Route },
+    { id: "deductions", label: "Deductions", icon: Wallet },
   ];
 
   return (
@@ -164,10 +155,11 @@ export default function AppShell() {
           <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary/20" /></div>
         ) : (
           <>
-            {activeView === "dashboard" && <DashboardView summary={payrollSummary} />}
-            {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={e => setDocumentNonBlocking(doc(db, "employees", e.id), e, {merge: true})} onUpdateEmployee={e => updateDocumentNonBlocking(doc(db, "employees", e.id), e)} onDeleteEmployee={id => deleteDocumentNonBlocking(doc(db, "employees", id))} allAdmins={allAdmins || []} onGrantAdmin={handleGrantAdmin} onRevokeAdmin={handleRevokeAdmin} isMasterAdmin={isAdmin} />}
-            {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} />}
+            {activeView === "dashboard" && <DashboardView summary={payrollSummary} deductions={deductions} />}
+            {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={e => setDocumentNonBlocking(doc(db, "employees", e.id), e, {merge: true})} onUpdateEmployee={e => updateDocumentNonBlocking(doc(db, "employees", e.id), e)} onDeleteEmployee={id => deleteDocumentNonBlocking(doc(db, "employees", id))} />}
+            {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} deductions={deductions} />}
             {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} />}
+            {activeView === "deductions" && <DeductionBoard employees={employees} deductions={deductions} />}
           </>
         )}
       </main>
