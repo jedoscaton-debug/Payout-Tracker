@@ -29,7 +29,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Employee } from "@/app/lib/types";
-import { Plus, Search, MoreHorizontal, Pencil, Shield, UserMinus, Key, Copy, Check, ShieldAlert, Mail, Phone, Briefcase } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Shield, UserMinus, Key, Copy, Check, ShieldAlert, Mail, Phone, Briefcase, Link as LinkIcon, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -56,8 +56,10 @@ export function EmployeeManager({
 }: EmployeeManagerProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isLinkOpen, setIsLinkOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [linkingUID, setLinkingUID] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const { toast } = useToast();
   
@@ -97,6 +99,7 @@ export function EmployeeManager({
   const handleSubmitAccess = (e: React.FormEvent) => {
     e.preventDefault();
     const generatedId = generateUID();
+    // SystemUser structure: UID as ID, fullName as username (internal placeholder)
     onAddEmployee({
       id: generatedId,
       fullName: newAccess.username,
@@ -110,7 +113,7 @@ export function EmployeeManager({
     setIsAddOpen(false);
     toast({ 
       title: "Access Node Created", 
-      description: `User "${newAccess.username}" registered with UID: ${generatedId}. Provide this UID as their password.`,
+      description: `User "${newAccess.username}" registered with UID: ${generatedId}.`,
     });
   };
 
@@ -131,6 +134,27 @@ export function EmployeeManager({
     setIsAddOpen(false);
   };
 
+  const handleSubmitLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (linkingUID) {
+      onAddEmployee({
+        id: linkingUID,
+        ...newStaff
+      });
+      setNewStaff({ 
+        fullName: "", 
+        role: "Driver", 
+        email: "", 
+        contactNumber: "", 
+        defaultDailyRate: "Varies", 
+        paymentMethod: "Direct Deposit" 
+      });
+      setIsLinkOpen(false);
+      setLinkingUID(null);
+      toast({ title: "Profile Linked", description: "Staff record successfully associated with system node." });
+    }
+  };
+
   const handleSubmitEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingEmployee) {
@@ -141,6 +165,7 @@ export function EmployeeManager({
   };
 
   const getAdminRole = (uid: string) => allAdmins.find(a => a.id === uid)?.role || null;
+  const isProfileLinked = (uid: string) => employees.some(e => e.id === uid && e.fullName && e.email && e.email.includes('@'));
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -151,7 +176,7 @@ export function EmployeeManager({
           </h3>
           <p className="text-sm text-slate-500 font-medium">
             {isRoleManagement 
-              ? "Register access nodes and manage administrative hierarchies." 
+              ? "Register access nodes and connect staff members to usernames." 
               : "Manage detailed staff records and HR configurations."}
           </p>
         </div>
@@ -185,10 +210,9 @@ export function EmployeeManager({
                   <div className="space-y-2">
                     <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Username</Label>
                     <Input required placeholder="e.g. alemer" className="h-12 rounded-xl" value={newAccess.username || ""} onChange={(e) => setNewAccess({username: e.target.value})} />
-                    <p className="text-[10px] font-medium text-slate-400 italic">The System UID (Password) will be generated automatically upon registration.</p>
                   </div>
                   <DialogFooter className="pt-4">
-                    <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold">Authorize Access Node</Button>
+                    <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold uppercase tracking-widest text-xs">Authorize Access Node</Button>
                   </DialogFooter>
                 </form>
               ) : (
@@ -232,7 +256,7 @@ export function EmployeeManager({
                     </div>
                   </div>
                   <DialogFooter className="pt-4">
-                    <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold">Create HR Profile</Button>
+                    <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold uppercase tracking-widest text-xs">Create HR Profile</Button>
                   </DialogFooter>
                 </form>
               )}
@@ -251,7 +275,8 @@ export function EmployeeManager({
                   {isRoleManagement ? (
                     <>
                       <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Tier</th>
-                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">System UID (Password)</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Profile Status</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">System UID</th>
                     </>
                   ) : (
                     <>
@@ -269,6 +294,8 @@ export function EmployeeManager({
                   const role = getAdminRole(emp.id);
                   const isMaster = role === 'master';
                   const isAdmin = role === 'admin';
+                  const linked = isProfileLinked(emp.id);
+
                   return (
                     <tr key={emp.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="px-8 py-5 font-bold text-slate-900">
@@ -295,6 +322,17 @@ export function EmployeeManager({
                               <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 border-slate-200">Standard</Badge>
                             )}
                           </td>
+                          <td className="px-8 py-5">
+                            {linked ? (
+                              <div className="flex items-center gap-2 text-emerald-500 font-bold text-[10px] uppercase">
+                                <LinkIcon className="h-3 w-3" /> Connected
+                              </div>
+                            ) : (
+                              <Button variant="ghost" size="sm" className="h-7 text-primary font-bold text-[10px] uppercase tracking-widest p-0 hover:bg-transparent" onClick={() => {setLinkingUID(emp.id); setIsLinkOpen(true);}}>
+                                <UserPlus className="mr-1.5 h-3 w-3" /> Link Profile
+                              </Button>
+                            )}
+                          </td>
                           <td className="px-8 py-5 font-mono text-[10px] text-slate-400">
                             <div className="flex items-center gap-2">
                               <Key className="h-3 w-3" />
@@ -315,17 +353,17 @@ export function EmployeeManager({
                           <td className="px-8 py-5">
                             <div className="flex items-center gap-2">
                               <Briefcase className="h-3 w-3 text-primary/40" />
-                              <span className="text-xs font-bold text-slate-600 uppercase">{emp.role}</span>
+                              <span className="text-xs font-bold text-slate-600 uppercase">{emp.role || "Driver"}</span>
                             </div>
                           </td>
                           <td className="px-8 py-5">
                             <div className="flex items-center gap-2">
                               <Phone className="h-3 w-3 text-slate-300" />
-                              <span className="text-[10px] font-bold text-slate-500">{emp.contactNumber}</span>
+                              <span className="text-[10px] font-bold text-slate-500">{emp.contactNumber || "N/A"}</span>
                             </div>
                           </td>
-                          <td className="px-8 py-5 text-xs font-bold text-slate-600 uppercase">{emp.defaultDailyRate}</td>
-                          <td className="px-8 py-5 text-xs font-bold text-slate-600 uppercase">{emp.paymentMethod}</td>
+                          <td className="px-8 py-5 text-xs font-bold text-slate-600 uppercase">{emp.defaultDailyRate || "Varies"}</td>
+                          <td className="px-8 py-5 text-xs font-bold text-slate-600 uppercase">{emp.paymentMethod || "Direct Deposit"}</td>
                         </>
                       )}
                       <td className="px-8 py-5 text-right">
@@ -353,10 +391,53 @@ export function EmployeeManager({
         </CardContent>
       </Card>
 
+      {/* Linking Dialog */}
+      <Dialog open={isLinkOpen} onOpenChange={setIsLinkOpen}>
+        <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Connect Staff Record</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmitLink} className="space-y-6 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
+                <Input required className="h-12 rounded-xl" value={newStaff.fullName || ""} onChange={(e) => setNewStaff({...newStaff, fullName: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Role</Label>
+                <Select value={newStaff.role} onValueChange={(v: any) => setNewStaff({...newStaff, role: v})}>
+                  <SelectTrigger className="h-12 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Driver">Driver</SelectItem>
+                    <SelectItem value="Helper">Helper</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email Address</Label>
+                <Input required type="email" className="h-12 rounded-xl" value={newStaff.email || ""} onChange={(e) => setNewStaff({...newStaff, email: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact Number</Label>
+                <Input required className="h-12 rounded-xl" value={newStaff.contactNumber || ""} onChange={(e) => setNewStaff({...newStaff, contactNumber: e.target.value})} />
+              </div>
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold uppercase tracking-widest text-xs">Authorize & Connect Profile</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Edit Record</DialogTitle>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Edit HR Profile</DialogTitle>
           </DialogHeader>
           {editingEmployee && (
             <form onSubmit={handleSubmitEdit} className="space-y-6 mt-4">
@@ -398,7 +479,7 @@ export function EmployeeManager({
                   <Input value={editingEmployee.paymentMethod || ""} onChange={(e) => setEditingEmployee({...editingEmployee, paymentMethod: e.target.value})} />
                 </div>
               </div>
-              <DialogFooter className="pt-4"><Button type="submit" className="w-full rounded-xl h-12 bg-primary font-bold">Update Record</Button></DialogFooter>
+              <DialogFooter className="pt-4"><Button type="submit" className="w-full rounded-xl h-12 bg-primary font-bold uppercase tracking-widest text-xs">Save Changes</Button></DialogFooter>
             </form>
           )}
         </DialogContent>
