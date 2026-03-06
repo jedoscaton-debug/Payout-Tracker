@@ -137,8 +137,8 @@ export default function AppShell() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-slate-50/50">
         <Sidebar collapsible="icon" className="border-r border-slate-200 bg-white z-50">
-          <SidebarHeader className="p-4">
-            <div className="flex items-center gap-3 overflow-hidden">
+          <SidebarHeader className="p-0 border-b border-slate-50">
+            <div className="flex items-center gap-3 h-16 px-4 overflow-hidden group-data-[collapsible=icon]:px-1 group-data-[collapsible=icon]:justify-center">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/20">
                 <Settings2 className="h-5 w-5" />
               </div>
@@ -148,7 +148,7 @@ export default function AppShell() {
               </div>
             </div>
           </SidebarHeader>
-          <SidebarContent className="px-3">
+          <SidebarContent className="px-3 pt-4">
             <SidebarGroup>
               <SidebarGroupLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 px-4 group-data-[collapsible=icon]:hidden">
                 Main Navigation
