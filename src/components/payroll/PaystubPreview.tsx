@@ -23,41 +23,38 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
     <div className="flex flex-col w-full h-full bg-white text-black font-sans">
       <style jsx global>{`
         @media print {
-          /* Hide everything except the paystub */
-          body * {
+          @page {
+            size: A4;
+            margin: 0;
+          }
+          body {
             visibility: hidden !important;
-          }
-          #paystub-document, #paystub-document * {
-            visibility: visible !important;
-          }
-          /* Ensure no blank pages by removing fixed heights/backgrounds on parents */
-          html, body, [role="dialog"], [data-radix-portal] {
             height: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
             overflow: visible !important;
+            background: white !important;
           }
-          /* Hide app UI elements */
-          header, nav, footer, .no-print, [data-radix-collection] {
+          .no-print, [role="dialog"] > button, .radix-overlay {
             display: none !important;
           }
-          /* Absolute positioning to anchor at the top of the page */
           #paystub-document {
-            position: absolute !important;
-            top: 0 !important;
+            visibility: visible !important;
+            position: fixed !important;
             left: 0 !important;
+            top: 0 !important;
             width: 100% !important;
+            height: 100% !important;
             margin: 0 !important;
             padding: 10mm !important;
             box-shadow: none !important;
             border: none !important;
-            min-height: 0 !important;
             background: white !important;
+            display: flex !important;
+            flex-direction: column !important;
           }
-          @page {
-            size: auto;
-            margin: 0;
+          /* Ensure vertical lines print clearly */
+          .print-divider {
+            border-right-width: 2px !important;
+            border-color: #cbd5e1 !important;
           }
         }
       `}</style>
@@ -162,7 +159,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
               {/* Earnings Column Wrapper */}
               <div className="flex-1 border-r-2 border-slate-300 relative">
                 {/* Fixed Continuous Divider */}
-                <div className="absolute top-0 bottom-0 right-[110px] border-r-2 border-slate-300 pointer-events-none opacity-50" />
+                <div className="absolute top-0 bottom-0 right-[110px] border-r-2 border-slate-300 pointer-events-none opacity-50 print-divider" />
                 <div className="flex flex-col text-[11px] font-medium text-slate-600">
                   {item.earningsLines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_110px]">
@@ -182,7 +179,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
               {/* Deductions Column Wrapper */}
               <div className="flex-1 relative">
                 {/* Fixed Continuous Divider */}
-                <div className="absolute top-0 bottom-0 right-[110px] border-r-2 border-slate-300 pointer-events-none opacity-50" />
+                <div className="absolute top-0 bottom-0 right-[110px] border-r-2 border-slate-300 pointer-events-none opacity-50 print-divider" />
                 <div className="flex flex-col text-[11px] font-medium text-slate-600">
                   {item.deductionsLines.map((line) => (
                     <div key={line.id} className="grid grid-cols-[1fr_110px]">
