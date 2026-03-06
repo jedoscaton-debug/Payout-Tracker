@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
-import { LayoutDashboard, Users, Receipt, Route, Lock, Download, Loader2, LogOut, Shield, UserCircle, History, Save } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Route, Lock, Download, Loader2, LogOut, Shield, UserCircle, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -96,16 +96,6 @@ export default function AppShell() {
     };
   }, [payrollItems]);
 
-  const handleSavePayrollRun = async () => {
-    const runRef = doc(db, "payrollRuns", payrollRun.id);
-    setDocumentNonBlocking(runRef, payrollRun, { merge: true });
-    payrollItems.forEach(item => {
-      const itemRef = doc(db, "payrollRuns", payrollRun.id, "payrollItems", item.id);
-      setDocumentNonBlocking(itemRef, item, { merge: true });
-    });
-    toast({ title: "Payroll Published" });
-  };
-
   const handleBootstrapMaster = () => {
     if (!user) return;
     const adminRef = doc(db, "roles_admin", user.uid);
@@ -170,7 +160,6 @@ export default function AppShell() {
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          {isAdmin && <Button size="sm" className="rounded-xl h-9 bg-accent text-white font-bold uppercase" onClick={handleSavePayrollRun}><Save className="mr-2 h-3 w-3" /> Save & Publish</Button>}
           <Button variant="ghost" size="icon" className="rounded-full h-10 w-10" onClick={() => signOut(auth)}><LogOut className="h-5 w-5" /></Button>
         </div>
       </header>
