@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, Plus, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import { 
   Employee, 
@@ -131,8 +132,14 @@ export function PayrollRunsView({
                       "Amt 4",
                       "Net Total",
                       "Actions",
-                    ].map((header) => (
-                      <th key={header} className="border-b border-slate-100 px-4 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap">
+                    ].map((header, idx) => (
+                      <th 
+                        key={header} 
+                        className={cn(
+                          "border-b border-slate-100 px-4 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap",
+                          idx === 0 && "sticky left-0 z-20 bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                        )}
+                      >
                         {header}
                       </th>
                     ))}
@@ -148,7 +155,9 @@ export function PayrollRunsView({
 
                     return (
                       <tr key={item.id} className="group hover:bg-slate-50/30 transition-all align-top">
-                        <td className="px-4 py-6 font-bold text-slate-900 whitespace-nowrap">{item.employeeNameSnapshot}</td>
+                        <td className="sticky left-0 z-10 bg-white px-4 py-6 font-bold text-slate-900 whitespace-nowrap border-r border-slate-100/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50">
+                          {item.employeeNameSnapshot}
+                        </td>
                         <td className="px-4 py-6 text-sm text-slate-500 italic">{item.dailyRateSnapshot}</td>
                         <td className="px-4 py-6">
                           <div className="space-y-1 w-48">
