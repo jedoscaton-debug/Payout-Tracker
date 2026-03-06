@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "SystemUser": {
@@ -32,18 +31,34 @@
           "type": "string",
           "description": "The full name of the employee."
         },
+        "role": {
+          "type": "string",
+          "enum": ["Driver", "Helper"],
+          "description": "The primary role of the employee."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The email address of the employee."
+        },
+        "contactNumber": {
+          "type": "string",
+          "description": "The contact phone number of the employee."
+        },
         "defaultDailyRate": {
           "type": "string",
           "description": "The employee's default daily rate, which can be 'Varies' or a specific value."
         },
         "paymentMethod": {
           "type": "string",
-          "description": "The preferred payment method for the employee, e.g., 'Direct Deposit'."
+          "description": "The preferred payment method for the employee, defaults to 'Direct Deposit'."
         }
       },
       "required": [
         "id",
         "fullName",
+        "role",
+        "email",
         "defaultDailyRate"
       ]
     },

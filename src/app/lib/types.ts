@@ -42,6 +42,9 @@ export type DeductionLine = {
 export type Employee = {
   id: string;
   fullName: string;
+  role: "Driver" | "Helper";
+  email: string;
+  contactNumber: string;
   defaultDailyRate: string;
   paymentMethod?: string;
 };

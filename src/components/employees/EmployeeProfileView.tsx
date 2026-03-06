@@ -11,7 +11,9 @@ import {
   LogOut,
   Mail,
   User,
-  Fingerprint
+  Fingerprint,
+  Phone,
+  Briefcase
 } from "lucide-react";
 import { Employee } from "@/app/lib/types";
 import { useAuth } from "@/firebase";
@@ -46,8 +48,28 @@ export function EmployeeProfileView({ employee }: EmployeeProfileViewProps) {
                   <p className="text-lg font-black text-slate-900 uppercase tracking-tight">{employee.fullName}</p>
                 </div>
                 <div className="space-y-1.5">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">System ID</p>
-                  <p className="text-lg font-mono text-slate-900 tracking-tight">{employee.id.slice(0, 12)}...</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Primary Role</p>
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-primary" />
+                    <p className="text-lg font-black text-slate-900 uppercase tracking-tight">{employee.role}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-1.5">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Email Address</p>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-slate-400" />
+                    <p className="text-sm font-bold text-slate-900">{employee.email}</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Contact Number</p>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-slate-400" />
+                    <p className="text-sm font-bold text-slate-900">{employee.contactNumber}</p>
+                  </div>
                 </div>
               </div>
 
@@ -60,8 +82,8 @@ export function EmployeeProfileView({ employee }: EmployeeProfileViewProps) {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Access Level</p>
-                  <p className="text-sm font-bold text-slate-900 uppercase tracking-widest">Employee Node</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">System ID</p>
+                  <p className="text-lg font-mono text-slate-900 tracking-tight">{employee.id.slice(0, 12)}...</p>
                 </div>
               </div>
             </CardContent>

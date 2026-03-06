@@ -19,10 +19,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Employee } from "@/app/lib/types";
-import { Plus, Search, MoreHorizontal, Pencil, Shield, UserMinus, Key, Copy, Check, ShieldAlert } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Shield, UserMinus, Key, Copy, Check, ShieldAlert, Mail, Phone, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -58,8 +65,11 @@ export function EmployeeManager({
     username: "",
   });
 
-  const [newStaff, setNewStaff] = useState({
+  const [newStaff, setNewStaff] = useState<Omit<Employee, 'id'>>({
     fullName: "",
+    role: "Driver",
+    email: "",
+    contactNumber: "",
     defaultDailyRate: "Varies",
     paymentMethod: "Direct Deposit"
   });
@@ -90,6 +100,9 @@ export function EmployeeManager({
     onAddEmployee({
       id: generatedId,
       fullName: newAccess.username,
+      role: "Driver",
+      email: `${newAccess.username.toLowerCase()}@system.oriented`,
+      contactNumber: "",
       defaultDailyRate: "Varies",
       paymentMethod: "Direct Deposit"
     });
@@ -107,7 +120,14 @@ export function EmployeeManager({
       id: `emp-${Date.now()}`,
       ...newStaff
     });
-    setNewStaff({ fullName: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" });
+    setNewStaff({ 
+      fullName: "", 
+      role: "Driver", 
+      email: "", 
+      contactNumber: "", 
+      defaultDailyRate: "Varies", 
+      paymentMethod: "Direct Deposit" 
+    });
     setIsAddOpen(false);
   };
 
@@ -153,7 +173,7 @@ export function EmployeeManager({
                 <Plus className="mr-2 h-4 w-4" /> {isRoleManagement ? "Register Access" : "Add Staff Member"}
               </Button>
             </DialogTrigger>
-            <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white">
+            <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white max-w-2xl">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter">
                   {isRoleManagement ? "Register Access Node" : "Register Staff Member"}
@@ -173,9 +193,33 @@ export function EmployeeManager({
                 </form>
               ) : (
                 <form onSubmit={handleSubmitStaff} className="space-y-6 mt-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
-                    <Input required className="h-12 rounded-xl" value={newStaff.fullName} onChange={(e) => setNewStaff({...newStaff, fullName: e.target.value})} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
+                      <Input required className="h-12 rounded-xl" value={newStaff.fullName} onChange={(e) => setNewStaff({...newStaff, fullName: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Role</Label>
+                      <Select value={newStaff.role} onValueChange={(v: any) => setNewStaff({...newStaff, role: v})}>
+                        <SelectTrigger className="h-12 rounded-xl">
+                          <SelectValue placeholder="Select Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Driver">Driver</SelectItem>
+                          <SelectItem value="Helper">Helper</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email Address</Label>
+                      <Input required type="email" className="h-12 rounded-xl" value={newStaff.email} onChange={(e) => setNewStaff({...newStaff, email: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact Number</Label>
+                      <Input required className="h-12 rounded-xl" value={newStaff.contactNumber} onChange={(e) => setNewStaff({...newStaff, contactNumber: e.target.value})} />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -199,103 +243,160 @@ export function EmployeeManager({
 
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardContent className="p-0">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-50/80 border-b">
-                <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{isRoleManagement ? "Username" : "Staff Member"}</th>
-                {isRoleManagement ? (
-                  <>
-                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Tier</th>
-                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">System UID (Password)</th>
-                  </>
-                ) : (
-                  <>
-                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Rate</th>
-                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Payment</th>
-                  </>
-                )}
-                <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((emp) => {
-                const role = getAdminRole(emp.id);
-                const isMaster = role === 'master';
-                const isAdmin = role === 'admin';
-                return (
-                  <tr key={emp.id} className="group hover:bg-slate-50/50 transition-colors">
-                    <td className="px-8 py-5 font-bold text-slate-900">{isRoleManagement ? ((emp as any).username || emp.fullName) : emp.fullName}</td>
-                    {isRoleManagement ? (
-                      <>
-                        <td className="px-8 py-5">
-                          {isMaster ? (
-                            <Badge className="rounded-full bg-slate-900 text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest border-none shadow-lg shadow-slate-900/10">
-                              <ShieldAlert className="mr-1.5 h-3 w-3" /> Master
-                            </Badge>
-                          ) : isAdmin ? (
-                            <Badge className="rounded-full bg-primary text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest border-none">
-                              <Shield className="mr-1.5 h-3 w-3" /> Admin
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 border-slate-200">Standard</Badge>
-                          )}
-                        </td>
-                        <td className="px-8 py-5 font-mono text-[10px] text-slate-400">
-                          <div className="flex items-center gap-2">
-                            <Key className="h-3 w-3" />
-                            <span>{emp.id}</span>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6 text-slate-300 hover:text-primary"
-                              onClick={() => handleCopy(emp.id)}
-                            >
-                              {copiedId === emp.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                            </Button>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50/80 border-b">
+                  <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{isRoleManagement ? "Username" : "Staff Member"}</th>
+                  {isRoleManagement ? (
+                    <>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Tier</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">System UID (Password)</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Role</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Rate</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Payment</th>
+                    </>
+                  )}
+                  <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((emp) => {
+                  const role = getAdminRole(emp.id);
+                  const isMaster = role === 'master';
+                  const isAdmin = role === 'admin';
+                  return (
+                    <tr key={emp.id} className="group hover:bg-slate-50/50 transition-colors">
+                      <td className="px-8 py-5 font-bold text-slate-900">
+                        {isRoleManagement ? ((emp as any).username || emp.fullName) : emp.fullName}
+                        {!isRoleManagement && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Mail className="h-3 w-3 text-slate-300" />
+                            <span className="text-[10px] font-medium text-slate-400 lowercase">{emp.email}</span>
                           </div>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="px-8 py-5 text-xs font-bold text-slate-600 uppercase">{emp.defaultDailyRate}</td>
-                        <td className="px-8 py-5 text-xs font-bold text-slate-600 uppercase">{emp.paymentMethod}</td>
-                      </>
-                    )}
-                    <td className="px-8 py-5 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4 text-slate-400" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl p-2 w-56">
-                          {!isRoleManagement && <DropdownMenuItem onClick={() => {setEditingEmployee(emp); setIsEditOpen(true);}}><Pencil className="mr-2 h-3 w-3" /> Edit Profile</DropdownMenuItem>}
-                          {isRoleManagement && !isMaster && (
-                            <DropdownMenuItem onClick={() => isAdmin ? onRevokeAdmin?.(emp.id) : onGrantAdmin?.(emp.id)} className={isAdmin ? "text-rose-600" : "text-primary"}>
-                              <Shield className="mr-2 h-3 w-3" /> {isAdmin ? "Revoke Admin" : "Grant Admin"}
+                        )}
+                      </td>
+                      {isRoleManagement ? (
+                        <>
+                          <td className="px-8 py-5">
+                            {isMaster ? (
+                              <Badge className="rounded-full bg-slate-900 text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest border-none shadow-lg shadow-slate-900/10">
+                                <ShieldAlert className="mr-1.5 h-3 w-3" /> Master
+                              </Badge>
+                            ) : isAdmin ? (
+                              <Badge className="rounded-full bg-primary text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest border-none">
+                                <Shield className="mr-1.5 h-3 w-3" /> Admin
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 border-slate-200">Standard</Badge>
+                            )}
+                          </td>
+                          <td className="px-8 py-5 font-mono text-[10px] text-slate-400">
+                            <div className="flex items-center gap-2">
+                              <Key className="h-3 w-3" />
+                              <span>{emp.id}</span>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-slate-300 hover:text-primary"
+                                onClick={() => handleCopy(emp.id)}
+                              >
+                                {copiedId === emp.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                              </Button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-2">
+                              <Briefcase className="h-3 w-3 text-primary/40" />
+                              <span className="text-xs font-bold text-slate-600 uppercase">{emp.role}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-3 w-3 text-slate-300" />
+                              <span className="text-[10px] font-bold text-slate-500">{emp.contactNumber}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5 text-xs font-bold text-slate-600 uppercase">{emp.defaultDailyRate}</td>
+                          <td className="px-8 py-5 text-xs font-bold text-slate-600 uppercase">{emp.paymentMethod}</td>
+                        </>
+                      )}
+                      <td className="px-8 py-5 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4 text-slate-400" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl p-2 w-56">
+                            {!isRoleManagement && <DropdownMenuItem onClick={() => {setEditingEmployee(emp); setIsEditOpen(true);}}><Pencil className="mr-2 h-3 w-3" /> Edit Profile</DropdownMenuItem>}
+                            {isRoleManagement && !isMaster && (
+                              <DropdownMenuItem onClick={() => isAdmin ? onRevokeAdmin?.(emp.id) : onGrantAdmin?.(emp.id)} className={isAdmin ? "text-rose-600" : "text-primary"}>
+                                <Shield className="mr-2 h-3 w-3" /> {isAdmin ? "Revoke Admin" : "Grant Admin"}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => onDeleteEmployee(emp.id)} className="text-rose-600" disabled={isMaster}>
+                              <UserMinus className="mr-2 h-3 w-3" /> {isRoleManagement ? "Terminate Access" : "Remove Staff"}
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem onClick={() => onDeleteEmployee(emp.id)} className="text-rose-600" disabled={isMaster}>
-                            <UserMinus className="mr-2 h-3 w-3" /> {isRoleManagement ? "Terminate Access" : "Remove Staff"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white">
+        <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl bg-white max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Edit Record</DialogTitle>
           </DialogHeader>
           {editingEmployee && (
             <form onSubmit={handleSubmitEdit} className="space-y-6 mt-4">
-              <div className="space-y-2"><Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label><Input required value={editingEmployee.fullName} onChange={(e) => setEditingEmployee({...editingEmployee, fullName: e.target.value})} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Rate</Label><Input value={editingEmployee.defaultDailyRate} onChange={(e) => setEditingEmployee({...editingEmployee, defaultDailyRate: e.target.value})} /></div>
-                <div className="space-y-2"><Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payment</Label><Input value={editingEmployee.paymentMethod || ""} onChange={(e) => setEditingEmployee({...editingEmployee, paymentMethod: e.target.value})} /></div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
+                  <Input required value={editingEmployee.fullName} onChange={(e) => setEditingEmployee({...editingEmployee, fullName: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Role</Label>
+                  <Select value={editingEmployee.role} onValueChange={(v: any) => setEditingEmployee({...editingEmployee, role: v})}>
+                    <SelectTrigger className="h-12 rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Driver">Driver</SelectItem>
+                      <SelectItem value="Helper">Helper</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email Address</Label>
+                  <Input required type="email" value={editingEmployee.email} onChange={(e) => setEditingEmployee({...editingEmployee, email: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact Number</Label>
+                  <Input required value={editingEmployee.contactNumber} onChange={(e) => setEditingEmployee({...editingEmployee, contactNumber: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Daily Rate</Label>
+                  <Input value={editingEmployee.defaultDailyRate} onChange={(e) => setEditingEmployee({...editingEmployee, defaultDailyRate: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payment Method</Label>
+                  <Input value={editingEmployee.paymentMethod || ""} onChange={(e) => setEditingEmployee({...editingEmployee, paymentMethod: e.target.value})} />
+                </div>
               </div>
               <DialogFooter className="pt-4"><Button type="submit" className="w-full rounded-xl h-12 bg-primary font-bold">Update Record</Button></DialogFooter>
             </form>
