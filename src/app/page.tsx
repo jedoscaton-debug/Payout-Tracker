@@ -12,11 +12,11 @@ import {
   ChevronRight,
   Loader2,
   LogOut,
-  ShieldAlert,
   ShieldCheck,
   Shield,
   UserCircle,
-  History
+  History,
+  ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -84,22 +84,20 @@ export default function AppShell() {
   const employeeDocRef = useMemoFirebase(() => user ? doc(db, "employees", user.uid) : null, [db, user]);
   const { data: employeeProfile, isLoading: profileLoading } = useDoc<Employee>(employeeDocRef);
 
-  const systemUserDocRef = useMemoFirebase(() => user ? doc(db, "system_users", user.uid) : null, [db, user]);
-  const { data: systemUserProfile, isLoading: userLoading } = useDoc(systemUserDocRef);
-
   const isAdmin = !!adminRole;
+  const isMasterAdmin = adminRole?.role === 'master';
   const isEmployee = !!employeeProfile;
 
   // Automated Redirection Logic
   useEffect(() => {
-    if (!isUserLoading && !adminLoading && !profileLoading && !userLoading) {
+    if (!isUserLoading && !adminLoading && !profileLoading) {
       if (isAdmin) {
         setActiveView("dashboard");
       } else {
         setActiveView("emp-dashboard");
       }
     }
-  }, [isAdmin, isUserLoading, adminLoading, profileLoading, userLoading]);
+  }, [isAdmin, isUserLoading, adminLoading, profileLoading]);
   
   // Firestore Subscriptions
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
@@ -149,11 +147,25 @@ export default function AppShell() {
   };
 
   const handleTerminateAccess = (id: string) => {
+    if (allAdmins.find(a => a.id === id)?.role === 'master') {
+      return toast({ title: "Operation Denied", description: "The Master Admin node cannot be terminated.", variant: "destructive" });
+    }
     const userRef = doc(db, "system_users", id);
     const adminRef = doc(db, "roles_admin", id);
     deleteDocumentNonBlocking(userRef);
     deleteDocumentNonBlocking(adminRef);
     toast({ title: "Access Revoked", description: "All system privileges for this node have been terminated.", variant: "destructive" });
+  };
+
+  const handleBootstrapMaster = () => {
+    if (!user) return;
+    const adminRef = doc(db, "roles_admin", user.uid);
+    const placeholderRef = doc(db, "roles_admin", "first_admin_placeholder");
+    
+    setDocumentNonBlocking(adminRef, { role: "master", createdAt: new Date().toISOString() }, { merge: true });
+    setDocumentNonBlocking(placeholderRef, { active: true }, { merge: true });
+    
+    toast({ title: "System Initialized", description: "You are now the Master Admin." });
   };
 
   const handleAddEmployee = (newEmployee: Employee) => {
@@ -181,7 +193,13 @@ export default function AppShell() {
   };
 
   const handleRevokeAdmin = (uid: string) => {
-    if (user?.uid === uid) return toast({ title: "Forbidden", description: "You cannot revoke your own access.", variant: "destructive" });
+    const targetAdmin = allAdmins.find(a => a.id === uid);
+    if (targetAdmin?.role === 'master') {
+      return toast({ title: "Forbidden", description: "The Master Admin cannot be demoted.", variant: "destructive" });
+    }
+    if (user?.uid === uid) {
+      return toast({ title: "Forbidden", description: "You cannot revoke your own access.", variant: "destructive" });
+    }
     const docRef = doc(db, "roles_admin", uid);
     deleteDocumentNonBlocking(docRef);
     toast({ title: "Admin Privileges Revoked", description: "Access disabled.", variant: "destructive" });
@@ -227,16 +245,35 @@ export default function AppShell() {
 
   const handleSignOut = () => signOut(auth);
 
-  if (isUserLoading || adminLoading || profileLoading || userLoading) {
+  if (isUserLoading || adminLoading || profileLoading) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Syncing Node...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Syncing Master Node...</p>
       </div>
     );
   }
 
   if (!user) return <LoginView />;
+
+  // Initial Setup Guard
+  if (!isAdmin && !isEmployee && allAdmins.length === 0) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">
+        <div className="w-full max-w-md text-center space-y-6">
+          <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto text-primary">
+            <Shield className="h-10 w-10" />
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-tighter">System Initialization</h2>
+          <p className="text-sm font-medium text-slate-500">No administrators detected in the system. Claim the Master Admin node to begin setup.</p>
+          <Button onClick={handleBootstrapMaster} className="w-full h-14 rounded-2xl bg-slate-900 font-bold uppercase tracking-widest">
+            Initialize Master Admin
+          </Button>
+          <Button variant="ghost" onClick={handleSignOut} className="text-xs font-bold text-slate-400 uppercase">Sign Out</Button>
+        </div>
+      </div>
+    );
+  }
 
   const navItems = isAdmin ? [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },

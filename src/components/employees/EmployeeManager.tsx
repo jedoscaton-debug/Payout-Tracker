@@ -22,7 +22,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Employee } from "@/app/lib/types";
-import { Plus, Search, MoreHorizontal, Pencil, Shield, UserMinus, Key, Copy, Check } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Shield, UserMinus, Key, Copy, Check, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -89,7 +89,7 @@ export function EmployeeManager({
     const generatedId = generateUID();
     onAddEmployee({
       id: generatedId,
-      fullName: newAccess.username, // Generic handler uses fullName for display
+      fullName: newAccess.username,
       defaultDailyRate: "Varies",
       paymentMethod: "Direct Deposit"
     });
@@ -120,18 +120,18 @@ export function EmployeeManager({
     }
   };
 
-  const isAdmin = (uid: string) => allAdmins.some(a => a.id === uid);
+  const getAdminRole = (uid: string) => allAdmins.find(a => a.id === uid)?.role || null;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
-            {isRoleManagement ? "Admin Access Board" : "Employee Directory"}
+            {isRoleManagement ? "Master Access Board" : "Employee Directory"}
           </h3>
           <p className="text-sm text-slate-500 font-medium">
             {isRoleManagement 
-              ? "Register access nodes and manage administrative privileges." 
+              ? "Register access nodes and manage administrative hierarchies." 
               : "Manage detailed staff records and HR configurations."}
           </p>
         </div>
@@ -219,14 +219,26 @@ export function EmployeeManager({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((emp) => {
-                const isSystemAdmin = isAdmin(emp.id);
+                const role = getAdminRole(emp.id);
+                const isMaster = role === 'master';
+                const isAdmin = role === 'admin';
                 return (
                   <tr key={emp.id} className="group hover:bg-slate-50/50 transition-colors">
                     <td className="px-8 py-5 font-bold text-slate-900">{isRoleManagement ? ((emp as any).username || emp.fullName) : emp.fullName}</td>
                     {isRoleManagement ? (
                       <>
                         <td className="px-8 py-5">
-                          {isSystemAdmin ? <Badge className="rounded-full bg-slate-900 text-white text-[10px] font-black px-3 py-1 uppercase"><Shield className="mr-1 h-3 w-3" /> Admin</Badge> : <Badge variant="outline" className="text-[10px] font-bold uppercase">Standard</Badge>}
+                          {isMaster ? (
+                            <Badge className="rounded-full bg-slate-900 text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest border-none shadow-lg shadow-slate-900/10">
+                              <ShieldAlert className="mr-1.5 h-3 w-3" /> Master
+                            </Badge>
+                          ) : isAdmin ? (
+                            <Badge className="rounded-full bg-primary text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest border-none">
+                              <Shield className="mr-1.5 h-3 w-3" /> Admin
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 border-slate-200">Standard</Badge>
+                          )}
                         </td>
                         <td className="px-8 py-5 font-mono text-[10px] text-slate-400">
                           <div className="flex items-center gap-2">
@@ -254,12 +266,14 @@ export function EmployeeManager({
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4 text-slate-400" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-xl p-2 w-56">
                           {!isRoleManagement && <DropdownMenuItem onClick={() => {setEditingEmployee(emp); setIsEditOpen(true);}}><Pencil className="mr-2 h-3 w-3" /> Edit Profile</DropdownMenuItem>}
-                          {isRoleManagement && (
-                            <DropdownMenuItem onClick={() => isSystemAdmin ? onRevokeAdmin?.(emp.id) : onGrantAdmin?.(emp.id)} className={isSystemAdmin ? "text-rose-600" : "text-primary"}>
-                              <Shield className="mr-2 h-3 w-3" /> {isSystemAdmin ? "Revoke Admin" : "Grant Admin"}
+                          {isRoleManagement && !isMaster && (
+                            <DropdownMenuItem onClick={() => isAdmin ? onRevokeAdmin?.(emp.id) : onGrantAdmin?.(emp.id)} className={isAdmin ? "text-rose-600" : "text-primary"}>
+                              <Shield className="mr-2 h-3 w-3" /> {isAdmin ? "Revoke Admin" : "Grant Admin"}
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={() => onDeleteEmployee(emp.id)} className="text-rose-600"><UserMinus className="mr-2 h-3 w-3" /> {isRoleManagement ? "Terminate Access" : "Remove Staff"}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onDeleteEmployee(emp.id)} className="text-rose-600" disabled={isMaster}>
+                            <UserMinus className="mr-2 h-3 w-3" /> {isRoleManagement ? "Terminate Access" : "Remove Staff"}
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
