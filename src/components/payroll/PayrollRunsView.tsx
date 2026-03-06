@@ -94,7 +94,7 @@ export function PayrollRunsView({
               <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodStart} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodStart: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px) font-bold uppercase tracking-widest text-slate-400 px-1">Period End</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period End</label>
               <Input className="h-12 rounded-2xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" type="date" value={payrollRun.payPeriodEnd} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodEnd: e.target.value }))} />
             </div>
             <div className="space-y-2">
@@ -111,11 +111,11 @@ export function PayrollRunsView({
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto relative">
-            <div className="min-w-[1800px]">
+            <div className="min-w-[1900px]">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80">
-                    <th className="sticky left-0 z-30 bg-slate-100 border-b border-r border-slate-200 px-6 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 whitespace-nowrap shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                    <th className="sticky left-0 z-30 bg-white border-b border-r border-slate-200 px-6 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 whitespace-nowrap shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)]">
                       Employee
                     </th>
                     {[
@@ -154,7 +154,7 @@ export function PayrollRunsView({
 
                     return (
                       <tr key={item.id} className="group hover:bg-slate-50/30 transition-all align-top">
-                        <td className="sticky left-0 z-20 bg-white px-6 py-6 font-bold text-slate-900 whitespace-nowrap border-r border-slate-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] group-hover:bg-slate-50">
+                        <td className="sticky left-0 z-20 bg-white px-6 py-6 font-bold text-slate-900 whitespace-nowrap border-r border-slate-100 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] group-hover:bg-slate-50/80">
                           {item.employeeNameSnapshot}
                         </td>
                         <td className="px-4 py-6 text-sm text-slate-500 italic">{item.dailyRateSnapshot}</td>
