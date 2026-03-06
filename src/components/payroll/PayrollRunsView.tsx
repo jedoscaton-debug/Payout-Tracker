@@ -1,14 +1,12 @@
 
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { FileText, Plus, RefreshCw } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
 
 import { 
   Employee, 
@@ -42,14 +40,6 @@ export function PayrollRunsView({
   routeTracker
 }: PayrollRunsViewProps) {
   const [previewItem, setPreviewItem] = useState<PayrollItem | null>(null);
-  const { setOpen } = useSidebar();
-
-  const handleHorizontalScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    // If user scrolls horizontally more than 20px, collapse the sidebar for more space
-    if (e.currentTarget.scrollLeft > 20) {
-      setOpen(false);
-    }
-  }, [setOpen]);
 
   const refreshFromRoutes = () => {
     setPayrollItems((current) =>
@@ -89,7 +79,7 @@ export function PayrollRunsView({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden">
+      <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
           <div className="flex items-center gap-2">
             <div className="h-6 w-1 bg-primary rounded-full" />
@@ -117,9 +107,9 @@ export function PayrollRunsView({
         </CardContent>
       </Card>
 
-      <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden">
+      <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardContent className="p-0">
-          <div className="w-full overflow-x-auto" onScroll={handleHorizontalScroll}>
+          <div className="w-full overflow-x-auto">
             <div className="min-w-[1800px]">
               <table className="w-full border-collapse">
                 <thead>
