@@ -5,7 +5,6 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { FileText, Plus, RefreshCw } from "lucide-react";
@@ -18,13 +17,11 @@ import {
 } from "@/app/lib/types";
 import { 
   computeTotals, 
-  currency, 
-  DIRECT_DEPOSIT_FEE
+  currency 
 } from "@/app/lib/payroll-utils";
 import { createPayrollItem } from "@/app/lib/payroll-data-utils";
 
 import { PaystubPreview } from "@/components/payroll/PaystubPreview";
-import { NoteSummarizer } from "@/components/payroll/NoteSummarizer";
 
 interface PayrollRunsViewProps {
   payrollRun: PayrollRun;
@@ -114,7 +111,7 @@ export function PayrollRunsView({
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden">
         <CardContent className="p-0">
           <ScrollArea className="w-full">
-            <div className="min-w-[2000px]">
+            <div className="min-w-[1800px]">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80">
@@ -134,7 +131,6 @@ export function PayrollRunsView({
                       "Deduction 4",
                       "Amt 4",
                       "Net Total",
-                      "Notes",
                       "Actions",
                     ].map((header) => (
                       <th key={header} className="border-b border-slate-100 px-4 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 whitespace-nowrap">
@@ -229,22 +225,6 @@ export function PayrollRunsView({
                         <td className="px-4 py-6">
                           <div className="bg-indigo-600 text-white rounded-xl px-4 py-2 font-black text-xs shadow-lg shadow-indigo-200">
                             {currency(totals.netPay)}
-                          </div>
-                        </td>
-                        <td className="px-4 py-6">
-                          <div className="space-y-3">
-                            <Textarea
-                              className="h-20 w-64 rounded-2xl border-slate-100 bg-slate-50/30 text-[11px] font-medium p-3 resize-none focus:bg-white"
-                              value={item.notes}
-                              placeholder="Employee specific instructions..."
-                              onChange={(e) => updateItem(item.id, (c) => ({ ...c, notes: e.target.value }))}
-                              disabled={payrollRun.status === "Finalized"}
-                            />
-                            <NoteSummarizer 
-                              notes={item.notes} 
-                              onSummarized={(s) => updateItem(item.id, c => ({ ...c, notes: `${c.notes}\n\nSUMMARY: ${s}` }))} 
-                              disabled={payrollRun.status === "Finalized"}
-                            />
                           </div>
                         </td>
                         <td className="px-4 py-6">

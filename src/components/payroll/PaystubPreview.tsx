@@ -1,11 +1,11 @@
+
 "use client";
 
 import { PayrollItem, PayrollRun } from "@/app/lib/types";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { FileDown, Printer, Share2, X } from "lucide-react";
+import { FileDown, Printer, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PaystubPreviewProps {
@@ -198,13 +198,6 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] mt-0.5">Confirmed</p>
               </div>
             </div>
-
-            {item.notes && (
-              <div className="mt-8 p-6 rounded-xl border border-slate-100 bg-slate-50/30 text-slate-500 text-[11px] leading-relaxed italic">
-                <span className="font-black uppercase tracking-[0.15em] text-[9px] block mb-2 not-italic text-slate-400">Special Instructions</span>
-                {item.notes}
-              </div>
-            )}
           </div>
         </ScrollArea>
       </div>
