@@ -25,7 +25,7 @@ export function LoginView() {
       toast({
         variant: "destructive",
         title: "Invalid System UID",
-        description: "The System UID must be exactly 12 characters as provided by your administrator.",
+        description: "Your Access Key must be at least 6 characters long.",
       });
       return;
     }
@@ -41,18 +41,16 @@ export function LoginView() {
       try {
         await initiateEmailSignIn(auth, email, password);
         toast({
-          title: "Access Granted",
-          description: "Authenticated successfully. Syncing roles..."
+          title: "Access Authorized",
+          description: "Syncing with your system node..."
         });
       } catch (signInError: any) {
-        // Step 2: If user doesn't exist, attempt automatic background registration
+        // Step 2: If user doesn't exist, attempt automatic initialization
         if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
-          // Note: We don't pre-check existence to satisfy "no sign up" requirement
-          // The AppShell will handle "Access Pending" if the node isn't registered by Admin
           await initiateEmailSignUp(auth, email, password);
           toast({
-            title: "First-Time Initialization",
-            description: "System node created. Syncing with administrator board..."
+            title: "Node Initialized",
+            description: "Your system access has been activated."
           });
         } else {
           throw signInError;
@@ -62,11 +60,9 @@ export function LoginView() {
       let message = "An error occurred during authentication.";
       
       if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        message = "Incorrect System UID. Please verify your access key with an administrator.";
+        message = "Incorrect credentials. Please verify your Username and UID with an admin.";
       } else if (error.code === 'auth/email-already-in-use') {
-        message = "This username is already initialized. Please use the correct System UID.";
-      } else if (error.code === 'auth/network-request-failed') {
-        message = "Network error. Please check your connection.";
+        message = "Username conflict detected. Please use your assigned System UID.";
       }
 
       toast({
@@ -98,10 +94,10 @@ export function LoginView() {
         <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-10 pb-8 text-center">
             <CardTitle className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-              Secure Authentication
+              Identity Verification
             </CardTitle>
             <CardDescription className="text-xs font-medium text-slate-500 mt-2">
-              Enter your professional credentials to manage payroll logs. No registration required.
+              Enter your assigned Username and System UID to access your dashboard.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-10 pt-8">
@@ -113,7 +109,7 @@ export function LoginView() {
                   <Input 
                     required
                     type="text"
-                    placeholder="e.g. alemer"
+                    placeholder="e.g. jdoe"
                     className="h-14 rounded-2xl pl-12 border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -121,44 +117,35 @@ export function LoginView() {
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">System UID (Access Key)</Label>
-                </div>
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">System UID (Access Key)</Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input 
                     required
                     type="password"
-                    placeholder="Enter 12-character key"
+                    placeholder="Enter assigned UID"
                     className="h-14 rounded-2xl pl-12 border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-medium" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
-                {password.length > 0 && password.length < 6 && (
-                  <p className="text-[9px] font-bold text-rose-500 uppercase px-1 mt-1 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> Key invalid (Min 6 chars)
-                  </p>
-                )}
               </div>
               
-              <div className="space-y-4">
-                <Button type="submit" className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-xl shadow-primary/20 hover:-translate-y-0.5 transition-all" disabled={isLoading}>
-                  {isLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <>
-                      <ShieldCheck className="mr-2 h-5 w-5" /> Authenticate Account
-                    </>
-                  )}
-                </Button>
-              </div>
+              <Button type="submit" className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-xl shadow-primary/20 hover:-translate-y-0.5 transition-all" disabled={isLoading}>
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    <ShieldCheck className="mr-2 h-5 w-5" /> Authenticate Account
+                  </>
+                )}
+              </Button>
             </form>
           </CardContent>
         </Card>
         
         <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-          Authorized Personnel Only. Account initialization occurs automatically upon first authenticated login.
+          Authorized Nodes Only. Access requires pre-approval from a system administrator.
         </p>
       </div>
     </div>

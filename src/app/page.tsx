@@ -91,11 +91,16 @@ export default function AppShell() {
   const isEmployee = !!employeeProfile;
   const isAuthorized = !!systemUserProfile || isAdmin || isEmployee;
 
-  // Set initial view based on role
+  // Automated Redirection Logic
   useEffect(() => {
-    if (isAdmin) setActiveView("dashboard");
-    else if (isAuthorized) setActiveView("emp-dashboard");
-  }, [isAdmin, isAuthorized]);
+    if (!isUserLoading && !adminLoading && !profileLoading && !userLoading) {
+      if (isAdmin) {
+        setActiveView("dashboard");
+      } else if (isAuthorized) {
+        setActiveView("emp-dashboard");
+      }
+    }
+  }, [isAdmin, isAuthorized, isUserLoading, adminLoading, profileLoading, userLoading]);
   
   // Firestore Subscriptions
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
@@ -227,7 +232,7 @@ export default function AppShell() {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Authenticating...</p>
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Syncing Node...</p>
       </div>
     );
   }
@@ -239,10 +244,10 @@ export default function AppShell() {
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6 text-center">
         <div className="max-w-md space-y-6">
           <ShieldAlert className="h-16 w-16 mx-auto text-rose-500" />
-          <h1 className="text-2xl font-black uppercase tracking-tighter">Access Pending</h1>
+          <h1 className="text-2xl font-black uppercase tracking-tighter">Access Pending Approval</h1>
           <p className="text-sm text-slate-500 font-medium leading-relaxed">
-            Your node ({user.uid.slice(0, 8)}...) is authenticated but not registered in the system board. 
-            Approval is required by an administrator.
+            Your system node ({user.uid.slice(0, 8)}...) is authenticated but not yet registered in the administrator directory. 
+            Please contact your manager to activate your access key.
           </p>
           <div className="grid gap-3">
             <Button variant="outline" className="rounded-xl h-12 font-bold uppercase tracking-wider" onClick={handleSignOut}>
