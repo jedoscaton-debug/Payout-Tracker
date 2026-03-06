@@ -53,7 +53,7 @@ import {
   useAuth,
   useUser
 } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, query, where } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 
 type ActiveView = 
@@ -74,35 +74,42 @@ export default function AppShell() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
 
-  // Role Checks
+  // 1. Identify the System UID for the currently logged in Firebase User
+  const systemNodeQuery = useMemoFirebase(() => 
+    user ? query(collection(db, "system_users"), where("authUid", "==", user.uid)) : null, 
+    [db, user]
+  );
+  const { data: matchedNodes, isLoading: nodeLoading } = useCollection(systemNodeQuery);
+  const activeSystemNode = matchedNodes?.[0];
+  const systemUid = activeSystemNode?.id;
+
+  // 2. Role and Profile Checks using the mapped IDs
   const adminDocRef = useMemoFirebase(() => user ? doc(db, "roles_admin", user.uid) : null, [db, user]);
   const { data: adminRole, isLoading: adminLoading } = useDoc(adminDocRef);
   
-  const employeeDocRef = useMemoFirebase(() => user ? doc(db, "employees", user.uid) : null, [db, user]);
+  const employeeDocRef = useMemoFirebase(() => systemUid ? doc(db, "employees", systemUid) : null, [db, systemUid]);
   const { data: employeeProfile, isLoading: profileLoading } = useDoc<Employee>(employeeDocRef);
 
   const isAdmin = !!adminRole;
   const isEmployee = !!employeeProfile;
 
   // Query to check if ANY admin exists (used for bootstrapping check)
-  // This query is made accessible in firestore.rules
   const adminsQuery = useMemoFirebase(() => user ? collection(db, "roles_admin") : null, [db, user]);
   const { data: allAdminsData, isLoading: allAdminsLoading } = useCollection(adminsQuery);
   const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
 
   // Automated Redirection Logic
   useEffect(() => {
-    if (!isUserLoading && !adminLoading && !profileLoading && !allAdminsLoading) {
+    if (!isUserLoading && !adminLoading && !profileLoading && !allAdminsLoading && !nodeLoading) {
       if (isAdmin) {
         setActiveView("dashboard");
       } else if (isEmployee) {
         setActiveView("emp-dashboard");
       } else if (allAdmins.length > 0) {
-        // Logged in but not an admin or employee yet
         setActiveView("emp-profile");
       }
     }
-  }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, allAdminsLoading, allAdmins.length]);
+  }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, allAdminsLoading, allAdmins.length, nodeLoading]);
   
   const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
   const { data: employeesData } = useCollection<Employee>(employeesQuery);
@@ -125,11 +132,9 @@ export default function AppShell() {
     if (!isAdmin) return;
     
     setPayrollItems(prevItems => {
-      // 1. Remove rows for employees that no longer exist
       const currentEmployeeIds = new Set(employees.map(e => e.id));
       const syncedItems = prevItems.filter(item => currentEmployeeIds.has(item.employeeId));
       
-      // 2. Add rows for new employees
       const existingItemEmployeeIds = new Set(syncedItems.map(item => item.employeeId));
       const newEmployeeItems = employees
         .filter(e => !existingItemEmployeeIds.has(e.id))
@@ -137,7 +142,6 @@ export default function AppShell() {
         
       const finalItems = [...syncedItems, ...newEmployeeItems];
       
-      // Only update state if there's a structural change to avoid re-render loops
       if (JSON.stringify(finalItems.map(i => i.employeeId)) !== JSON.stringify(prevItems.map(i => i.employeeId))) {
         return finalItems;
       }
@@ -163,30 +167,32 @@ export default function AppShell() {
   };
 
   const handleTerminateAccess = (id: string) => {
-    const targetAdmin = allAdmins.find(a => a.id === id);
-    if (targetAdmin?.role === 'master') {
+    const targetNode = systemUsers.find(u => u.id === id);
+    if (targetNode?.role === 'master' || allAdmins.find(a => a.id === targetNode?.authUid)?.role === 'master') {
       return toast({ title: "Operation Denied", description: "The Master Admin node cannot be terminated.", variant: "destructive" });
     }
     
-    // Revoke system access - deleting these ensures a "Fresh" username can be registered again
-    // We preserve the HR employee record as requested.
     const userRef = doc(db, "system_users", id);
-    const adminRef = doc(db, "roles_admin", id);
+    const authUid = targetNode?.authUid;
+    if (authUid) {
+      const adminRef = doc(db, "roles_admin", authUid);
+      deleteDocumentNonBlocking(adminRef);
+    }
     
     deleteDocumentNonBlocking(userRef);
-    deleteDocumentNonBlocking(adminRef);
-    
     toast({ title: "Access Revoked", description: "System privileges for this node have been terminated. The employee record remains active." });
   };
 
   const handleBootstrapMaster = () => {
     if (!user) return;
     const adminRef = doc(db, "roles_admin", user.uid);
-    const userRef = doc(db, "system_users", user.uid);
+    // For bootstrapping, we use a placeholder System UID to link back to this user
+    const systemUid = `MASTER-${user.uid.slice(-4)}`;
+    const userRef = doc(db, "system_users", systemUid);
     const placeholderRef = doc(db, "roles_admin", "first_admin_placeholder");
     
     setDocumentNonBlocking(adminRef, { role: "master", createdAt: new Date().toISOString() }, { merge: true });
-    setDocumentNonBlocking(userRef, { id: user.uid, username: "MasterAdmin" }, { merge: true });
+    setDocumentNonBlocking(userRef, { id: systemUid, username: "MasterAdmin", authUid: user.uid }, { merge: true });
     setDocumentNonBlocking(placeholderRef, { active: true }, { merge: true });
     
     toast({ title: "System Initialized", description: "You are now the Master Admin." });
@@ -198,13 +204,11 @@ export default function AppShell() {
     toast({ title: "Staff Member Registered", description: `${newEmployee.fullName} has been added to the directory.` });
   };
 
-  const handleLinkProfile = (uid: string, employee: Employee) => {
-    const newDocRef = doc(db, "employees", uid);
-    // Copy the employee data to the new UID path
-    setDocumentNonBlocking(newDocRef, { ...employee, id: uid }, { merge: true });
+  const handleLinkProfile = (targetSystemUid: string, employee: Employee) => {
+    const newDocRef = doc(db, "employees", targetSystemUid);
+    setDocumentNonBlocking(newDocRef, { ...employee, id: targetSystemUid }, { merge: true });
     
-    // Delete the old unlinked path if it's different
-    if (employee.id !== uid) {
+    if (employee.id !== targetSystemUid) {
       const oldDocRef = doc(db, "employees", employee.id);
       deleteDocumentNonBlocking(oldDocRef);
     }
@@ -224,21 +228,29 @@ export default function AppShell() {
     toast({ title: "Staff Member Removed", description: "HR record has been deleted.", variant: "destructive" });
   };
 
-  const handleGrantAdmin = (uid: string) => {
-    const docRef = doc(db, "roles_admin", uid);
+  const handleGrantAdmin = (systemId: string) => {
+    const targetNode = systemUsers.find(u => u.id === systemId);
+    if (!targetNode?.authUid) {
+      return toast({ title: "Action Deferred", description: "Admin rights will activate after this user's first login.", variant: "default" });
+    }
+    const docRef = doc(db, "roles_admin", targetNode.authUid);
     setDocumentNonBlocking(docRef, { role: "admin", createdAt: new Date().toISOString() }, { merge: true });
     toast({ title: "Admin Privileges Granted", description: "Administrative access enabled." });
   };
 
-  const handleRevokeAdmin = (uid: string) => {
-    const targetAdmin = allAdmins.find(a => a.id === uid);
+  const handleRevokeAdmin = (systemId: string) => {
+    const targetNode = systemUsers.find(u => u.id === systemId);
+    const authUid = targetNode?.authUid;
+    if (!authUid) return;
+
+    const targetAdmin = allAdmins.find(a => a.id === authUid);
     if (targetAdmin?.role === 'master') {
       return toast({ title: "Forbidden", description: "The Master Admin cannot be demoted.", variant: "destructive" });
     }
-    if (user?.uid === uid) {
+    if (user?.uid === authUid) {
       return toast({ title: "Forbidden", description: "You cannot revoke your own access.", variant: "destructive" });
     }
-    const docRef = doc(db, "roles_admin", uid);
+    const docRef = doc(db, "roles_admin", authUid);
     deleteDocumentNonBlocking(docRef);
     toast({ title: "Admin Privileges Revoked", description: "Access disabled.", variant: "destructive" });
   };
@@ -283,7 +295,7 @@ export default function AppShell() {
 
   const handleSignOut = () => signOut(auth);
 
-  if (isUserLoading || adminLoading || profileLoading || allAdminsLoading) {
+  if (isUserLoading || adminLoading || profileLoading || allAdminsLoading || nodeLoading) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -294,7 +306,6 @@ export default function AppShell() {
 
   if (!user) return <LoginView />;
 
-  // Special Initialization Check: Only show if NO administrators exist at all in the system
   if (!isAdmin && !isEmployee && allAdmins.length === 0) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">

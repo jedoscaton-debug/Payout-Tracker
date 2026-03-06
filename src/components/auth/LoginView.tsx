@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useAuth, useFirestore } from "@/firebase";
+import { useAuth, useFirestore, updateDocumentNonBlocking } from "@/firebase";
 import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
 import { Loader2, ShieldCheck, User, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -35,34 +35,20 @@ export function LoginView() {
 
     setIsLoading(true);
     
-    // Use the UID as the unique identity prefix to ensure "Fresh" registrations
-    // even if the same username is reused later.
-    const uid = password.trim();
-    const email = `${uid}@system.oriented`;
+    const systemUid = password.trim();
+    const email = `${systemUid.toLowerCase()}@system.oriented`;
     const cleanUsername = username.toLowerCase().trim();
     
     try {
-      // Step 1: Attempt to Sign In
-      try {
-        await initiateEmailSignIn(auth, email, uid);
-      } catch (signInError: any) {
-        // Step 2: Attempt automatic initialization (Sign Up) if node is new
-        if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
-          await initiateEmailSignUp(auth, email, uid);
-        } else {
-          throw signInError;
-        }
-      }
-
-      // Step 3: Verify the Username matches the Admin-registered Username for this UID
-      const userDoc = await getDoc(doc(db, "system_users", uid));
+      // 1. Verify the System UID exists in our registry first
+      const userDocRef = doc(db, "system_users", systemUid);
+      const userDoc = await getDoc(userDocRef);
       
       if (!userDoc.exists()) {
-        await signOut(auth);
         toast({
           variant: "destructive",
-          title: "Node Not Found",
-          description: "This System UID has not been registered by an administrator.",
+          title: "Access Denied",
+          description: "This Access Key (System UID) is not registered in the system.",
         });
         setIsLoading(false);
         return;
@@ -70,14 +56,31 @@ export function LoginView() {
 
       const registeredData = userDoc.data();
       if (registeredData.username.toLowerCase() !== cleanUsername) {
-        await signOut(auth);
         toast({
           variant: "destructive",
           title: "Verification Failed",
-          description: "The Username provided does not match the record for this Access Key.",
+          description: "Username does not match the record for this Access Key.",
         });
         setIsLoading(false);
         return;
+      }
+
+      // 2. Perform Authentication
+      let userCredential;
+      try {
+        userCredential = await initiateEmailSignIn(auth, email, systemUid);
+      } catch (signInError: any) {
+        if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
+          // Automatic registration for the first time
+          userCredential = await initiateEmailSignUp(auth, email, systemUid);
+        } else {
+          throw signInError;
+        }
+      }
+
+      // 3. Update the mapping between System UID and Firebase UID
+      if (userCredential?.user) {
+        updateDocumentNonBlocking(userDocRef, { authUid: userCredential.user.uid });
       }
 
       toast({
@@ -86,10 +89,11 @@ export function LoginView() {
       });
 
     } catch (error: any) {
+      console.error(error);
       toast({
         variant: "destructive",
         title: "Authentication Failed",
-        description: "Invalid credentials. Please verify your Access Key with an admin.",
+        description: "An error occurred during authentication. Please try again.",
       });
     } finally {
       setIsLoading(false);
