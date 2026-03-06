@@ -1,4 +1,3 @@
-
 "use client";
 
 import { PayrollItem, PayrollRun } from "@/app/lib/types";
@@ -23,8 +22,6 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
   };
 
   const handleDownloadPDF = () => {
-    // In most modern browsers, the print dialog is the standard way to "Save as PDF"
-    // We provide a toast to guide the user.
     toast({
       title: "Generating PDF...",
       description: "Please select 'Save as PDF' in the destination dropdown of the print dialog.",
@@ -41,19 +38,23 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
       url: window.location.href,
     };
 
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch (err) {
-        console.error("Error sharing:", err);
-      }
-    } else {
-      // Fallback for browsers that don't support Web Share API
+    const copyToClipboard = () => {
       navigator.clipboard.writeText(`${shareData.text}\nView at: ${shareData.url}`);
       toast({
         title: "Link Copied!",
         description: "Paystub details and link copied to clipboard.",
       });
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // Fallback if the user cancels or if permission is denied (NotAllowedError)
+        copyToClipboard();
+      }
+    } else {
+      copyToClipboard();
     }
   };
 
