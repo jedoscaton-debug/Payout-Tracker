@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { 
   LayoutDashboard, 
   Users, 
@@ -9,10 +9,8 @@ import {
   Route, 
   Lock,
   Download,
-  ChevronRight,
   Loader2,
   LogOut,
-  ShieldCheck,
   Shield,
   UserCircle,
   History,
@@ -84,10 +82,10 @@ export default function AppShell() {
   const { data: employeeProfile, isLoading: profileLoading } = useDoc<Employee>(employeeDocRef);
 
   const isAdmin = !!adminRole;
-  const isMasterAdmin = adminRole?.role === 'master';
   const isEmployee = !!employeeProfile;
 
-  // Firestore Subscriptions
+  // Query to check if ANY admin exists (used for bootstrapping check)
+  // This query is made accessible in firestore.rules
   const adminsQuery = useMemoFirebase(() => user ? collection(db, "roles_admin") : null, [db, user]);
   const { data: allAdminsData, isLoading: allAdminsLoading } = useCollection(adminsQuery);
   const allAdmins = useMemo(() => (allAdminsData || []), [allAdminsData]);
@@ -100,6 +98,7 @@ export default function AppShell() {
       } else if (isEmployee) {
         setActiveView("emp-dashboard");
       } else if (allAdmins.length > 0) {
+        // Logged in but not an admin or employee yet
         setActiveView("emp-profile");
       }
     }
@@ -121,12 +120,16 @@ export default function AppShell() {
   const systemUsers = useMemo(() => (systemUsersData || []), [systemUsersData]);
   const routeTracker = useMemo(() => (routesData || []) as RouteTrackerRow[], [routesData]);
 
+  // Sync Payroll Items with Active Employee Directory
   useEffect(() => {
     if (!isAdmin) return;
     
     setPayrollItems(prevItems => {
+      // 1. Remove rows for employees that no longer exist
       const currentEmployeeIds = new Set(employees.map(e => e.id));
       const syncedItems = prevItems.filter(item => currentEmployeeIds.has(item.employeeId));
+      
+      // 2. Add rows for new employees
       const existingItemEmployeeIds = new Set(syncedItems.map(item => item.employeeId));
       const newEmployeeItems = employees
         .filter(e => !existingItemEmployeeIds.has(e.id))
@@ -134,6 +137,7 @@ export default function AppShell() {
         
       const finalItems = [...syncedItems, ...newEmployeeItems];
       
+      // Only update state if there's a structural change to avoid re-render loops
       if (JSON.stringify(finalItems.map(i => i.employeeId)) !== JSON.stringify(prevItems.map(i => i.employeeId))) {
         return finalItems;
       }
@@ -164,7 +168,8 @@ export default function AppShell() {
       return toast({ title: "Operation Denied", description: "The Master Admin node cannot be terminated.", variant: "destructive" });
     }
     
-    // Revoke system access but preserve HR record as requested
+    // Revoke system access - deleting these ensures a "Fresh" username can be registered again
+    // We preserve the HR employee record as requested.
     const userRef = doc(db, "system_users", id);
     const adminRef = doc(db, "roles_admin", id);
     
@@ -195,8 +200,10 @@ export default function AppShell() {
 
   const handleLinkProfile = (uid: string, employee: Employee) => {
     const newDocRef = doc(db, "employees", uid);
+    // Copy the employee data to the new UID path
     setDocumentNonBlocking(newDocRef, { ...employee, id: uid }, { merge: true });
     
+    // Delete the old unlinked path if it's different
     if (employee.id !== uid) {
       const oldDocRef = doc(db, "employees", employee.id);
       deleteDocumentNonBlocking(oldDocRef);
@@ -287,6 +294,7 @@ export default function AppShell() {
 
   if (!user) return <LoginView />;
 
+  // Special Initialization Check: Only show if NO administrators exist at all in the system
   if (!isAdmin && !isEmployee && allAdmins.length === 0) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">
@@ -296,7 +304,7 @@ export default function AppShell() {
           </div>
           <h2 className="text-2xl font-black uppercase tracking-tighter">System Initialization</h2>
           <p className="text-sm font-medium text-slate-500">No administrators detected in the system. Claim the Master Admin node to begin setup.</p>
-          <Button onClick={handleBootstrapMaster} className="w-full h-14 rounded-2xl bg-slate-900 font-bold uppercase tracking-widest">
+          <Button onClick={handleBootstrapMaster} className="w-full h-14 rounded-2xl bg-slate-900 font-bold uppercase tracking-widest text-xs">
             Initialize Master Admin
           </Button>
           <Button variant="ghost" onClick={handleSignOut} className="text-xs font-bold text-slate-400 uppercase">Sign Out</Button>

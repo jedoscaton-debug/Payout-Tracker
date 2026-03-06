@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
-import { Loader2, ShieldCheck, User, Lock, AlertCircle } from "lucide-react";
+import { Loader2, ShieldCheck, User, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { doc, getDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 
 export function LoginView() {
   const [username, setUsername] = useState("");
@@ -17,6 +19,7 @@ export function LoginView() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const auth = useAuth();
+  const db = useFirestore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,66 +27,69 @@ export function LoginView() {
     if (password.length < 6) {
       toast({
         variant: "destructive",
-        title: "Invalid System UID",
-        description: "Your Access Key must be at least 6 characters long.",
+        title: "Invalid Access Key",
+        description: "Your System UID must be at least 6 characters long.",
       });
       return;
     }
 
     setIsLoading(true);
     
-    // Internal mapping to allow username-style login with Firebase Auth
-    const email = `${username.toLowerCase().trim()}@system.oriented`;
+    // Use the UID as the unique identity prefix to ensure "Fresh" registrations
+    // even if the same username is reused later.
+    const uid = password.trim();
+    const email = `${uid}@system.oriented`;
+    const cleanUsername = username.toLowerCase().trim();
     
     try {
-      // Automatic Login & Registration Flow
       // Step 1: Attempt to Sign In
       try {
-        await initiateEmailSignIn(auth, email, password);
-        toast({
-          title: "Access Authorized",
-          description: "Syncing with your system node..."
-        });
+        await initiateEmailSignIn(auth, email, uid);
       } catch (signInError: any) {
-        // Step 2: If user doesn't exist OR if authentication failed but email is in use,
-        // we might be in a re-registration scenario.
+        // Step 2: Attempt automatic initialization (Sign Up) if node is new
         if (signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/user-not-found') {
-          // Attempt automatic initialization (Sign Up)
-          try {
-            await initiateEmailSignUp(auth, email, password);
-            toast({
-              title: "Node Initialized",
-              description: "Your system access has been activated."
-            });
-          } catch (signUpError: any) {
-            // Handle specific case where Auth account exists but Firestore was deleted
-            if (signUpError.code === 'auth/email-already-in-use') {
-              toast({
-                variant: "destructive",
-                title: "Credential Conflict",
-                description: "This username exists but the UID is different. Please use the UID assigned by your admin.",
-              });
-            } else {
-              throw signUpError;
-            }
-          }
+          await initiateEmailSignUp(auth, email, uid);
         } else {
           throw signInError;
         }
       }
-    } catch (error: any) {
-      let message = "An error occurred during authentication.";
+
+      // Step 3: Verify the Username matches the Admin-registered Username for this UID
+      const userDoc = await getDoc(doc(db, "system_users", uid));
       
-      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        message = "Incorrect credentials. Please verify your Username and UID with an admin.";
-      } else if (error.code === 'auth/email-already-in-use') {
-        message = "Username conflict detected. Please use your assigned System UID.";
+      if (!userDoc.exists()) {
+        await signOut(auth);
+        toast({
+          variant: "destructive",
+          title: "Node Not Found",
+          description: "This System UID has not been registered by an administrator.",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const registeredData = userDoc.data();
+      if (registeredData.username.toLowerCase() !== cleanUsername) {
+        await signOut(auth);
+        toast({
+          variant: "destructive",
+          title: "Verification Failed",
+          description: "The Username provided does not match the record for this Access Key.",
+        });
+        setIsLoading(false);
+        return;
       }
 
       toast({
+        title: "Access Authorized",
+        description: `Authenticated as ${registeredData.username}.`
+      });
+
+    } catch (error: any) {
+      toast({
         variant: "destructive",
         title: "Authentication Failed",
-        description: message,
+        description: "Invalid credentials. Please verify your Access Key with an admin.",
       });
     } finally {
       setIsLoading(false);
