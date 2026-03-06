@@ -27,6 +27,16 @@ export function shortDate(input: string) {
   return `${parseInt(month)}/${parseInt(day)}/${year}`;
 }
 
+/**
+ * Formats a date string into "Mar 06" format for earning descriptions.
+ */
+export function formatEarningsDate(input: string) {
+  if (!input) return "";
+  const d = new Date(`${input}T00:00:00`);
+  if (isNaN(d.getTime())) return input;
+  return d.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
+}
+
 export function getDayOfWeek(input: string) {
   if (!input) return "";
   const d = new Date(`${input}T00:00:00`);
@@ -82,13 +92,14 @@ export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: R
     .map((row) => {
       const role = roleForEmployee(row, employee.fullName);
       if (!role) return null;
-      const displayDate = shortDate(row.date);
+      const displayDate = formatEarningsDate(row.date);
       return {
         id: `${employee.id}-${row.id}`,
         date: row.date,
         client: row.route,
         role,
-        description: `${displayDate} - Route ${row.route} ${role}`,
+        // Updated format: Mar 06 - IKEA Driver
+        description: `${displayDate} - ${row.routeType} ${role}`,
         amount: Number(amountForRole(row, role).toFixed(2)),
       } satisfies EarningsLine;
     })
