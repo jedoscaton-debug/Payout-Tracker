@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useAuth, useFirestore, updateDocumentNonBlocking, useMemoFirebase, useDoc } from "@/firebase";
+import { useAuth, useFirestore, updateDocumentNonBlocking } from "@/firebase";
 import { initiateEmailSignIn, initiateEmailSignUp } from "@/firebase/non-blocking-login";
 import { Loader2, ShieldCheck, Mail, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +47,8 @@ export function LoginView() {
       // 1. Verify Email exists in Employee Registry
       const employeesRef = collection(db, "employees");
       const q = query(employeesRef, where("email", "==", cleanEmail));
+      
+      // Attempt query. This will succeed because list is allowed in rules.
       const snapshot = await getDocs(q);
       
       if (snapshot.empty) {
@@ -63,7 +64,7 @@ export function LoginView() {
       const employeeDoc = snapshot.docs[0];
       const employeeData = employeeDoc.data();
       
-      // Verify the Access Key matches the ID
+      // Verify the Access Key matches the ID assigned in management
       if (employeeDoc.id !== accessKey) {
         toast({
           variant: "destructive",
@@ -75,8 +76,10 @@ export function LoginView() {
       }
 
       // 2. Perform Authentication
+      // We use the Access Key as the password for Firebase Auth
       const userCredential = await initiateEmailSignIn(auth, cleanEmail, accessKey).catch(async (error) => {
         if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+          // If the Auth user doesn't exist yet, create it using the Access Key as the password
           return await initiateEmailSignUp(auth, cleanEmail, accessKey);
         }
         throw error;

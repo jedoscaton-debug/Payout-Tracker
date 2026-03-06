@@ -63,17 +63,19 @@ export default function AppShell() {
     }
   }, [isAdmin, isEmployee, isUserLoading, adminLoading, profileLoading, bootstrapLoading, user]);
   
-  // Guarded Admin Collections - Only query if confirmed admin
-  const employeesQuery = useMemoFirebase(() => isAdmin ? collection(db, "employees") : null, [db, isAdmin]);
-  const { data: employeesData } = useCollection<Employee>(employeesQuery, { enabled: isAdmin });
+  // Guarded Admin Collections - Only query if confirmed admin AND data is fully verified
+  const shouldLoadAdminData = isAdmin && !adminLoading;
+  
+  const employeesQuery = useMemoFirebase(() => shouldLoadAdminData ? collection(db, "employees") : null, [db, shouldLoadAdminData]);
+  const { data: employeesData } = useCollection<Employee>(employeesQuery, { enabled: shouldLoadAdminData });
   const employees = useMemo(() => (employeesData || []) as Employee[], [employeesData]);
 
-  const routesQuery = useMemoFirebase(() => isAdmin ? collection(db, "routeTrackerRows") : null, [db, isAdmin]);
-  const { data: routesData } = useCollection<RouteTrackerRow>(routesQuery, { enabled: isAdmin });
+  const routesQuery = useMemoFirebase(() => shouldLoadAdminData ? collection(db, "routeTrackerRows") : null, [db, shouldLoadAdminData]);
+  const { data: routesData } = useCollection<RouteTrackerRow>(routesQuery, { enabled: shouldLoadAdminData });
   const routeTracker = useMemo(() => (routesData || []) as RouteTrackerRow[], [routesData]);
 
-  const adminsQuery = useMemoFirebase(() => isAdmin ? collection(db, "roles_admin") : null, [db, isAdmin]);
-  const { data: allAdmins } = useCollection(adminsQuery, { enabled: isAdmin });
+  const adminsQuery = useMemoFirebase(() => shouldLoadAdminData ? collection(db, "roles_admin") : null, [db, shouldLoadAdminData]);
+  const { data: allAdmins } = useCollection(adminsQuery, { enabled: shouldLoadAdminData });
 
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
