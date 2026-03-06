@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -55,7 +54,6 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
         pagebreak: { mode: 'avoid-all' }
       };
 
-      // Add a slight delay to ensure images render
       setTimeout(async () => {
         await html2pdf().from(element).set(opt).save();
         setIsDownloading(false);
@@ -172,7 +170,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
           </div>
 
           {/* Info Section */}
-          <div className="grid grid-cols-[1.3fr_1fr] gap-6 items-start">
+          <div className="grid grid-cols-[1.3fr_1fr] gap-6 items-start mt-4">
             <div className="grid grid-cols-[110px_1fr] gap-x-4 gap-y-2 text-sm">
               <span className="font-bold text-slate-400 text-[9px] uppercase tracking-widest">Employee</span>
               <span className="font-black text-slate-900 uppercase tracking-tight">{item.employeeNameSnapshot}</span>
@@ -207,10 +205,10 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
           </div>
 
           {/* Breakdown Ledger */}
-          <div className="flex flex-col">
+          <div className="flex flex-col mt-4">
             <h2 className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 mb-2">Payslip Breakdown</h2>
             
-            <div className="border-2 border-slate-900 rounded-xl overflow-hidden flex flex-col bg-white shadow-sm min-h-[350px] relative">
+            <div className="border-2 border-slate-900 rounded-xl overflow-hidden flex flex-col bg-white shadow-sm min-h-[400px] relative">
               {/* Vertical Divider Lines (Continuous) */}
               <div className="absolute top-0 bottom-0 left-[calc(50%-90px)] w-0.5 bg-slate-900 z-20" />
               <div className="absolute top-0 bottom-0 left-[50%] w-0.5 bg-slate-900 z-20" />
@@ -279,8 +277,8 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             </div>
           </div>
 
-          {/* Statement Footer Summary - Compact Branding Only */}
-          <div className="flex flex-col gap-3 mt-auto">
+          {/* Footer Branding Only */}
+          <div className="flex flex-col gap-3 mt-auto pt-6">
             <div className="flex items-center justify-between border-t border-slate-100 pt-6">
               <div className="flex items-center gap-2">
                 <div className="h-4 w-4 rounded bg-slate-900" />

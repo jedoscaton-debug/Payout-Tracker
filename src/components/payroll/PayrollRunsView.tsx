@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -17,7 +16,8 @@ import {
 } from "@/app/lib/types";
 import { 
   computeTotals, 
-  currency 
+  currency,
+  shortDate 
 } from "@/app/lib/payroll-utils";
 import { createPayrollItem } from "@/app/lib/payroll-data-utils";
 
@@ -69,16 +69,6 @@ export function PayrollRunsView({
     }));
   };
 
-  const addDeduction = (itemId: string) => {
-    updateItem(itemId, (item) => {
-      if (item.deductionsLines.length >= 4) return item;
-      return {
-        ...item,
-        deductionsLines: [...item.deductionsLines, { id: Math.random().toString(36).substr(2, 9), deductionName: "", amount: 0, type: "Fixed" }],
-      };
-    });
-  };
-
   const headers = [
     "Employee Name",
     "Daily Rate",
@@ -87,13 +77,13 @@ export function PayrollRunsView({
     "Other Earning Description",
     "Other Earning Amount",
     "Deductions 1",
-    "Amt 1",
+    "Deduction 1 Amount",
     "Deductions 2",
-    "Amt 2",
+    "Deductions 2 Amount",
     "Deductions 3",
-    "Amt 3",
+    "Deductions 3 Amount",
     "Deductions 4",
-    "Amt 4",
+    "Deductions 4 Amount",
     "Total Deductions",
     "Total Earning",
     "Total Gross",
@@ -135,7 +125,7 @@ export function PayrollRunsView({
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto relative">
-            <div className="min-w-[2400px]">
+            <div className="min-w-[2800px]">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-50/80">
@@ -165,7 +155,7 @@ export function PayrollRunsView({
                         <td className="sticky left-0 z-20 bg-white px-8 py-6 font-bold text-slate-900 whitespace-nowrap border-r border-slate-100 shadow-[2px_0_5px_rgba(0,0,0,0.05)] group-hover:bg-slate-50/80">
                           {item.employeeNameSnapshot}
                         </td>
-                        <td className="px-4 py-6 text-sm text-slate-500 italic">{item.dailyRateSnapshot}</td>
+                        <td className="px-4 py-6 text-sm text-slate-500 italic whitespace-nowrap">{item.dailyRateSnapshot}</td>
                         <td className="px-4 py-6">
                           <div className="space-y-1 w-48">
                             {item.earningsLines.map((line, i) => (
@@ -222,7 +212,7 @@ export function PayrollRunsView({
                                 value={deduction.deductionName}
                                 placeholder={`Deduction ${index + 1}`}
                                 className="h-8 w-32 text-[11px] rounded-lg border-slate-100"
-                                disabled={payrollRun.status === "Finalized" || !item.deductionsLines[index] || deduction.deductionName === "Direct Deposit Fee"}
+                                disabled={payrollRun.status === "Finalized" || (item.deductionsLines[index] && deduction.deductionName === "Direct Deposit Fee")}
                                 onChange={(e) => updateItem(item.id, (c) => ({ ...c, deductionsLines: c.deductionsLines.map((x, i) => i === index ? { ...x, deductionName: e.target.value } : x) }))}
                               />
                             </td>
@@ -231,7 +221,7 @@ export function PayrollRunsView({
                                 type="number"
                                 value={deduction.amount}
                                 className="h-8 w-20 text-[11px] rounded-lg border-slate-100 font-black text-rose-500"
-                                disabled={payrollRun.status === "Finalized" || !item.deductionsLines[index] || deduction.deductionName === "Direct Deposit Fee"}
+                                disabled={payrollRun.status === "Finalized" || (item.deductionsLines[index] && deduction.deductionName === "Direct Deposit Fee")}
                                 onChange={(e) => updateItem(item.id, (c) => ({ ...c, deductionsLines: c.deductionsLines.map((x, i) => i === index ? { ...x, amount: Number(e.target.value) } : x) }))}
                               />
                             </td>
@@ -251,14 +241,9 @@ export function PayrollRunsView({
                           {payrollRun.payDate}
                         </td>
                         <td className="px-4 py-6">
-                          <div className="flex flex-col gap-2">
-                            <Button size="sm" variant="outline" className="rounded-xl h-10 border-slate-200 font-bold text-[10px] uppercase tracking-wider hover:bg-slate-50 text-slate-600" onClick={() => setPreviewItem(item)}>
-                              <FileText className="mr-2 h-3 w-3" /> Preview
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-8 rounded-xl font-bold text-[9px] uppercase tracking-wider text-slate-400 hover:text-primary" onClick={() => addDeduction(item.id)} disabled={payrollRun.status === "Finalized" || item.deductionsLines.length >= 4}>
-                              <Plus className="mr-1 h-3 w-3" /> Add Deduction
-                            </Button>
-                          </div>
+                          <Button size="sm" variant="outline" className="rounded-xl h-10 border-slate-200 font-bold text-[10px] uppercase tracking-wider hover:bg-slate-50 text-slate-600" onClick={() => setPreviewItem(item)}>
+                            <FileText className="mr-2 h-3 w-3" /> Preview
+                          </Button>
                         </td>
                       </tr>
                     );
