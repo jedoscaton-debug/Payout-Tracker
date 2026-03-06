@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 import { 
   Employee, 
@@ -48,6 +49,7 @@ type ActiveView = "dashboard" | "employees" | "payroll" | "routes";
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
+  const { toast } = useToast();
   
   // App State
   const [employees, setEmployees] = useState<Employee[]>(employeesSeed);
@@ -73,6 +75,27 @@ export default function AppShell() {
 
   const handleAddEmployee = (newEmployee: Employee) => {
     setEmployees(prev => [...prev, newEmployee]);
+    toast({
+      title: "Employee Added",
+      description: `${newEmployee.fullName} has been added to the system.`
+    });
+  };
+
+  const handleUpdateEmployee = (updatedEmployee: Employee) => {
+    setEmployees(prev => prev.map(e => e.id === updatedEmployee.id ? updatedEmployee : e));
+    toast({
+      title: "Profile Updated",
+      description: `Changes to ${updatedEmployee.fullName} have been saved.`
+    });
+  };
+
+  const handleDeleteEmployee = (id: string) => {
+    setEmployees(prev => prev.filter(e => e.id !== id));
+    toast({
+      title: "Record Deleted",
+      description: "Employee record has been removed from the directory.",
+      variant: "destructive"
+    });
   };
 
   const exportCsv = () => {
@@ -102,6 +125,10 @@ export default function AppShell() {
 
   const finalizeRun = () => {
     setPayrollRun((current) => ({ ...current, status: "Finalized" }));
+    toast({
+      title: "Payroll Finalized",
+      description: "All records have been locked for this period."
+    });
   };
 
   return (
@@ -193,7 +220,12 @@ export default function AppShell() {
               <DashboardView summary={payrollSummary} />
             )}
             {activeView === "employees" && (
-              <EmployeeManager employees={employees} onAddEmployee={handleAddEmployee} />
+              <EmployeeManager 
+                employees={employees} 
+                onAddEmployee={handleAddEmployee}
+                onUpdateEmployee={handleUpdateEmployee}
+                onDeleteEmployee={handleDeleteEmployee}
+              />
             )}
             {activeView === "payroll" && (
               <PayrollRunsView 

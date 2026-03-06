@@ -13,19 +13,34 @@ import {
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Employee } from "@/app/lib/types";
-import { Plus, Users, Search, MoreHorizontal } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 interface EmployeeManagerProps {
   employees: Employee[];
   onAddEmployee: (employee: Employee) => void;
+  onUpdateEmployee: (employee: Employee) => void;
+  onDeleteEmployee: (id: string) => void;
 }
 
-export function EmployeeManager({ employees, onAddEmployee }: EmployeeManagerProps) {
+export function EmployeeManager({ 
+  employees, 
+  onAddEmployee, 
+  onUpdateEmployee, 
+  onDeleteEmployee 
+}: EmployeeManagerProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [newEmp, setNewEmp] = useState({
     fullName: "",
     defaultDailyRate: "Varies",
@@ -36,7 +51,7 @@ export function EmployeeManager({ employees, onAddEmployee }: EmployeeManagerPro
     e.fullName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmitAdd = (e: React.FormEvent) => {
     e.preventDefault();
     onAddEmployee({
       id: `emp-${Date.now()}`,
@@ -44,6 +59,20 @@ export function EmployeeManager({ employees, onAddEmployee }: EmployeeManagerPro
     });
     setNewEmp({ fullName: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" });
     setIsAddOpen(false);
+  };
+
+  const handleSubmitEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingEmployee) {
+      onUpdateEmployee(editingEmployee);
+      setIsEditOpen(false);
+      setEditingEmployee(null);
+    }
+  };
+
+  const handleStartEdit = (emp: Employee) => {
+    setEditingEmployee(emp);
+    setIsEditOpen(true);
   };
 
   return (
@@ -64,6 +93,7 @@ export function EmployeeManager({ employees, onAddEmployee }: EmployeeManagerPro
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-xl h-11 bg-primary px-6 font-bold shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5">
@@ -74,7 +104,7 @@ export function EmployeeManager({ employees, onAddEmployee }: EmployeeManagerPro
               <DialogHeader>
                 <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Register Employee</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+              <form onSubmit={handleSubmitAdd} className="space-y-6 mt-4">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
                   <Input 
@@ -137,9 +167,27 @@ export function EmployeeManager({ employees, onAddEmployee }: EmployeeManagerPro
                   <td className="px-8 py-5 text-sm font-medium text-slate-500">{emp.paymentMethod}</td>
                   <td className="px-8 py-5 text-[10px] font-mono text-slate-400">{emp.id}</td>
                   <td className="px-8 py-5 text-right">
-                    <Button variant="ghost" size="icon" className="rounded-full hover:bg-white hover:shadow-sm">
-                      <MoreHorizontal className="h-4 w-4 text-slate-400" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-white hover:shadow-sm">
+                          <MoreHorizontal className="h-4 w-4 text-slate-400" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-xl p-2">
+                        <DropdownMenuItem 
+                          className="rounded-lg font-bold text-xs uppercase tracking-wider text-slate-600 gap-2 cursor-pointer"
+                          onClick={() => handleStartEdit(emp)}
+                        >
+                          <Pencil className="h-3 w-3" /> Edit Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="rounded-lg font-bold text-xs uppercase tracking-wider text-rose-600 gap-2 cursor-pointer focus:bg-rose-50 focus:text-rose-600"
+                          onClick={() => onDeleteEmployee(emp.id)}
+                        >
+                          <Trash2 className="h-3 w-3" /> Terminate Record
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
@@ -147,6 +195,51 @@ export function EmployeeManager({ employees, onAddEmployee }: EmployeeManagerPro
           </table>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Edit Employee</DialogTitle>
+          </DialogHeader>
+          {editingEmployee && (
+            <form onSubmit={handleSubmitEdit} className="space-y-6 mt-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Full Name</Label>
+                <Input 
+                  required
+                  className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white" 
+                  value={editingEmployee.fullName}
+                  onChange={(e) => setEditingEmployee({...editingEmployee, fullName: e.target.value})}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Daily Rate</Label>
+                  <Input 
+                    className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white" 
+                    value={editingEmployee.defaultDailyRate}
+                    onChange={(e) => setEditingEmployee({...editingEmployee, defaultDailyRate: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Payment Method</Label>
+                  <Input 
+                    className="h-12 rounded-xl border-slate-100 bg-slate-50 focus:bg-white" 
+                    value={editingEmployee.paymentMethod || ""}
+                    onChange={(e) => setEditingEmployee({...editingEmployee, paymentMethod: e.target.value})}
+                  />
+                </div>
+              </div>
+              <DialogFooter className="pt-4">
+                <Button type="submit" className="w-full rounded-xl h-12 bg-primary font-bold shadow-lg shadow-primary/20">
+                  Update System Record
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
