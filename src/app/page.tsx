@@ -8,7 +8,8 @@ import {
   Route, 
   Lock,
   Download,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -22,8 +23,6 @@ import {
 } from "@/app/lib/types";
 import { 
   createPayrollItem,
-  employeesSeed,
-  routeTrackerSeed,
   initialPayrollRun
 } from "@/app/lib/payroll-data-utils";
 import { computeTotals } from "@/app/lib/payroll-utils";
@@ -33,19 +32,40 @@ import { EmployeeManager } from "@/components/employees/EmployeeManager";
 import { PayrollRunsView } from "@/components/payroll/PayrollRunsView";
 import { RouteTrackerView } from "@/components/payroll/RouteTrackerView";
 
+import { 
+  useFirestore, 
+  useCollection, 
+  useMemoFirebase,
+  updateDocumentNonBlocking,
+  setDocumentNonBlocking,
+  deleteDocumentNonBlocking
+} from "@/firebase";
+import { collection, doc } from "firebase/firestore";
+
 type ActiveView = "dashboard" | "employees" | "payroll" | "routes";
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView>("dashboard");
   const { toast } = useToast();
+  const db = useFirestore();
   
-  const [employees, setEmployees] = useState<Employee[]>(employeesSeed);
-  const [routeTracker, setRouteTracker] = useState<RouteTrackerRow[]>(routeTrackerSeed);
+  // Firestore Subscriptions
+  const employeesQuery = useMemoFirebase(() => collection(db, "employees"), [db]);
+  const { data: employeesData, isLoading: empsLoading } = useCollection<Employee>(employeesQuery);
+  
+  const routesQuery = useMemoFirebase(() => collection(db, "routeTrackerRows"), [db]);
+  const { data: routesData, isLoading: routesLoading } = useCollection<RouteTrackerRow>(routesQuery);
+
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
 
+  const employees = (employeesData || []) as Employee[];
+  const routeTracker = (routesData || []) as RouteTrackerRow[];
+
   useEffect(() => {
-    setPayrollItems(employees.map(e => createPayrollItem(e, payrollRun, routeTracker)));
+    if (employees.length > 0) {
+      setPayrollItems(employees.map(e => createPayrollItem(e, payrollRun, routeTracker)));
+    }
   }, [employees, payrollRun, routeTracker]);
 
   const payrollSummary = useMemo(() => {
@@ -60,7 +80,8 @@ export default function AppShell() {
   }, [payrollItems]);
 
   const handleAddEmployee = (newEmployee: Employee) => {
-    setEmployees(prev => [...prev, newEmployee]);
+    const docRef = doc(db, "employees", newEmployee.id);
+    setDocumentNonBlocking(docRef, newEmployee, { merge: true });
     toast({
       title: "Employee Added",
       description: `${newEmployee.fullName} has been added to the system.`
@@ -68,7 +89,8 @@ export default function AppShell() {
   };
 
   const handleUpdateEmployee = (updatedEmployee: Employee) => {
-    setEmployees(prev => prev.map(e => e.id === updatedEmployee.id ? updatedEmployee : e));
+    const docRef = doc(db, "employees", updatedEmployee.id);
+    updateDocumentNonBlocking(docRef, updatedEmployee);
     toast({
       title: "Profile Updated",
       description: `Changes to ${updatedEmployee.fullName} have been saved.`
@@ -76,7 +98,8 @@ export default function AppShell() {
   };
 
   const handleDeleteEmployee = (id: string) => {
-    setEmployees(prev => prev.filter(e => e.id !== id));
+    const docRef = doc(db, "employees", id);
+    deleteDocumentNonBlocking(docRef);
     toast({
       title: "Record Deleted",
       description: "Employee record has been removed from the directory.",
@@ -85,7 +108,8 @@ export default function AppShell() {
   };
 
   const handleAddRoute = (newRoute: RouteTrackerRow) => {
-    setRouteTracker(prev => [...prev, newRoute]);
+    const docRef = doc(db, "routeTrackerRows", newRoute.id);
+    setDocumentNonBlocking(docRef, newRoute, { merge: true });
     toast({
       title: "Route Logged",
       description: `Route ${newRoute.route} for ${newRoute.date} has been added.`
@@ -93,7 +117,8 @@ export default function AppShell() {
   };
 
   const handleUpdateRoute = (updatedRoute: RouteTrackerRow) => {
-    setRouteTracker(prev => prev.map(r => r.id === updatedRoute.id ? updatedRoute : r));
+    const docRef = doc(db, "routeTrackerRows", updatedRoute.id);
+    updateDocumentNonBlocking(docRef, updatedRoute);
     toast({
       title: "Route Updated",
       description: `Log for Route ${updatedRoute.route} has been updated.`
@@ -101,7 +126,8 @@ export default function AppShell() {
   };
 
   const handleDeleteRoute = (id: string) => {
-    setRouteTracker(prev => prev.filter(r => r.id !== id));
+    const docRef = doc(db, "routeTrackerRows", id);
+    deleteDocumentNonBlocking(docRef);
     toast({
       title: "Log Removed",
       description: "Route log has been deleted from the audit.",
@@ -148,6 +174,15 @@ export default function AppShell() {
     { id: "payroll", label: "Payroll Runs", icon: Receipt },
     { id: "routes", label: "Route Tracker", icon: Route },
   ];
+
+  if (empsLoading || routesLoading) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Synchronizing System Data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-slate-50/50 flex flex-col">
