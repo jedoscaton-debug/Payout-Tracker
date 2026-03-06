@@ -86,14 +86,15 @@ export default function AppShell() {
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
 
-  const employees = (employeesData || []) as Employee[];
-  const routeTracker = (routesData || []) as RouteTrackerRow[];
+  const employees = useMemo(() => (employeesData || []) as Employee[], [employeesData]);
+  const routeTracker = useMemo(() => (routesData || []) as RouteTrackerRow[], [routesData]);
 
+  // Guard initialization to prevent infinite update loop
   useEffect(() => {
-    if (isAdmin && employees.length > 0) {
+    if (isAdmin && employees.length > 0 && payrollItems.length === 0) {
       setPayrollItems(employees.map(e => createPayrollItem(e, payrollRun, routeTracker)));
     }
-  }, [employees, payrollRun, routeTracker, isAdmin]);
+  }, [employees, payrollRun, routeTracker, isAdmin, payrollItems.length]);
 
   const payrollSummary = useMemo(() => {
     const totals = payrollItems.map(computeTotals);
