@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,6 @@ import {
   RefreshCw, 
   ArrowRightLeft, 
   MoreHorizontal, 
-  Plus,
   CheckCircle2,
   AlertCircle,
   Calendar,
@@ -40,10 +38,56 @@ interface RouteAuditTableProps {
 }
 
 export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearch, onRecalculate, onAddInternalRoute, settings }: RouteAuditTableProps) {
-  const filtered = routeDetails.filter(r => 
-    r.routeId.toLowerCase().includes(search.toLowerCase()) ||
-    r.market.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filter and sort by date ascending (Sun to Sat / A-Z)
+  const sortedAndFiltered = useMemo(() => {
+    return routeDetails
+      .filter(r => 
+        r.routeId.toLowerCase().includes(search.toLowerCase()) ||
+        r.market.toLowerCase().includes(search.toLowerCase())
+      )
+      .sort((a, b) => a.routeDate.localeCompare(b.routeDate));
+  }, [routeDetails, search]);
+
+  const handleExport = () => {
+    const headers = [
+      "RXO Route ID", "Route Date", "Market", "Internal Route", 
+      "RXO Miles", "Internal Miles", "RXO Stops", "Internal Stops", 
+      "Internal Est Pay", "RXO Settlement Pay", "Delta"
+    ];
+    
+    const rows = sortedAndFiltered.map(row => {
+      const matchedInternal = internalRoutes.find(ir => ir.id === row.internalRouteId);
+      const liveInternalEst = matchedInternal 
+        ? (matchedInternal.estimatedPay && matchedInternal.estimatedPay > 0 
+            ? matchedInternal.estimatedPay 
+            : estimatePay(matchedInternal.stops, matchedInternal.miles, matchedInternal.route, matchedInternal.vehicleNumber, settings, matchedInternal.routeType))
+        : row.systemEstimatedPay;
+      
+      const liveDelta = Number((row.rxoSettlementPay - liveInternalEst).toFixed(2));
+
+      return [
+        row.routeId,
+        row.routeDate,
+        row.market,
+        matchedInternal?.route || "N/A",
+        row.routeMiles,
+        matchedInternal?.miles || 0,
+        row.stopCount,
+        matchedInternal?.stops || 0,
+        liveInternalEst,
+        row.rxoSettlementPay,
+        liveDelta
+      ];
+    });
+
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `RXO_Audit_Export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
 
   return (
     <div className="space-y-6">
@@ -56,7 +100,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
           <Button variant="outline" className="h-11 rounded-xl bg-white font-bold" onClick={onRecalculate}>
             <RefreshCw className="mr-2 h-4 w-4" /> Re-sync Tracker
           </Button>
-          <Button variant="outline" className="h-11 rounded-xl bg-white font-bold">
+          <Button variant="outline" className="h-11 rounded-xl bg-white font-bold" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" /> Export Report
           </Button>
         </div>
@@ -89,19 +133,18 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.length === 0 ? (
+                  {sortedAndFiltered.length === 0 ? (
                     <tr>
                       <td colSpan={13} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-[10px]">No matches found for the selected review week.</td>
                     </tr>
-                  ) : filtered.map(row => {
+                  ) : sortedAndFiltered.map(row => {
                     const matchedInternal = internalRoutes.find(ir => ir.id === row.internalRouteId);
                     
-                    // GET LIVE ESTIMATED PAY FROM TRACKER
                     const liveInternalEst = matchedInternal 
                       ? (matchedInternal.estimatedPay && matchedInternal.estimatedPay > 0 
                           ? matchedInternal.estimatedPay 
                           : estimatePay(matchedInternal.stops, matchedInternal.miles, matchedInternal.route, matchedInternal.vehicleNumber, settings, matchedInternal.routeType))
-                      : row.systemEstimatedPay; // Fallback to snapshot if internal route was deleted
+                      : row.systemEstimatedPay;
 
                     const liveDelta = Number((row.rxoSettlementPay - liveInternalEst).toFixed(2));
                     const isRed = liveDelta < -50;
