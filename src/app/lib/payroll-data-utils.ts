@@ -38,7 +38,9 @@ export function createPayrollItem(
       deductionName: d.deductionName,
       amount: d.perPayrollAmount,
       type: d.type,
-      originalDeductionId: d.id
+      originalDeductionId: d.id,
+      installmentCount: d.installmentCount,
+      installmentsPaid: (d.installmentsPaid || 0) + 1 // This is the installment currently being paid
     }));
 
   // Ensure system default "Direct Deposit Fee" exists if not already present

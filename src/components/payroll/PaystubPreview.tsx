@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
-import { PayrollItem, PayrollRun } from "@/app/lib/types";
+import { PayrollItem, PayrollRun, DeductionLine } from "@/app/lib/types";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,16 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
       console.error("PDF generation failed:", error);
       setIsDownloading(false);
     }
+  };
+
+  const formatDeductionDescription = (line: DeductionLine) => {
+    if (line.type === "Installment" && line.installmentCount) {
+      const current = String(line.installmentsPaid || 0).padStart(2, '0');
+      const total = String(line.installmentCount).padStart(2, '0');
+      const formattedAmount = currency(line.amount);
+      return `${line.deductionName} (${formattedAmount}): ${current} out of ${total}`;
+    }
+    return line.deductionName;
   };
 
   return (
@@ -180,7 +191,9 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                   <div className="flex flex-col text-[10px] font-bold text-slate-700 py-1">
                     {item.deductionsLines.map((line) => (
                       <div key={line.id} className="grid grid-cols-[1fr_90px] items-start">
-                        <span className="px-6 py-1.5 whitespace-normal break-words">{line.deductionName}</span>
+                        <span className="px-6 py-1.5 whitespace-normal break-words">
+                          {formatDeductionDescription(line)}
+                        </span>
                         <span className="px-4 py-1.5 text-right font-black text-rose-600">{currency(line.amount)}</span>
                       </div>
                     ))}

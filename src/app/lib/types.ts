@@ -41,6 +41,8 @@ export type DeductionLine = {
   amount: number;
   type: "Fixed" | "Installment" | "One-Time" | "Auto System Fee";
   originalDeductionId?: string; // Linked to the DeductionBoard item
+  installmentCount?: number;
+  installmentsPaid?: number; // Represents the count after this payment is applied
 };
 
 export type Employee = {
