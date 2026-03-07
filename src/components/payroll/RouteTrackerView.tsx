@@ -528,7 +528,7 @@ export function RouteTrackerView({
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200 italic text-slate-400">Included</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(fuel)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(totalExp)}</td>
-                        <td className={cn("px-4 py-2 text-[10px] font-black text-center border-r border-slate-200", netProfit < 0 ? "text-rose-600" : "text-slate-900")}>
+                        <td className={cn("px-4 py-2 text-[10px] font-black text-center border-r border-slate-200", netProfit < 0 ? "text-rose-600" : "text-emerald-600")}>
                           {currency(netProfit)}
                         </td>
                         <td className="px-4 py-2 text-center">
@@ -572,7 +572,7 @@ export function RouteTrackerView({
                     <td colSpan={2} className="border-r border-slate-800"></td>
                     <td className="px-3 py-2 text-center border-r border-slate-800">{currency(totals.fuel)}</td>
                     <td className="px-3 py-2 text-center border-r border-slate-800 font-mono">{currency(totals.totalExp)}</td>
-                    <td className={cn("px-4 py-2 text-center bg-slate-800 font-black text-lg border-r border-slate-800", totals.netProfit < 0 ? "text-rose-400" : "text-primary")}>
+                    <td className={cn("px-4 py-2 text-center bg-slate-800 font-black text-lg border-r border-slate-800", totals.netProfit < 0 ? "text-rose-400" : "text-emerald-400")}>
                       {currency(totals.netProfit)}
                     </td>
                     <td className="bg-slate-900"></td>
