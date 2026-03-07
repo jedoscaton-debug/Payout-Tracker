@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, FileText, CheckCircle2, Loader2, Info, Calendar, Sparkles, Image as ImageIcon } from "lucide-react";
+import { Upload, FileText, CheckCircle2, Loader2, Info, Calendar, Sparkles, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { RouteTrackerRow, FormulaSettings } from "@/app/lib/types";
 import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeRXOSettlement } from "@/ai/flows/process-rxo-settlement-flow";
+import { cn } from "@/lib/utils";
 
 interface ImportSettlementModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
   const [isImporting, setIsImporting] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -42,8 +44,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
   const db = useFirestore();
   const { toast } = useToast();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] || null;
+  const handleFile = (f: File) => {
     setFile(f);
     if (f && f.type.startsWith('image/')) {
       const reader = new FileReader();
@@ -51,6 +52,31 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       reader.readAsDataURL(f);
     } else {
       setPreviewUrl(null);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] || null;
+    if (f) handleFile(f);
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setIsDragging(true);
+    } else if (e.type === "dragleave") {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -107,9 +133,8 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           }
 
           // Rule 2: LMH Pattern (Extract Suffix)
-          // Pattern: LMH_BWI_MMDDYYYY_A01_EV -> A01_EV
           const parts = rxoId.split('_');
-          const suffix = parts.slice(4).join('_'); // Get everything after date part
+          const suffix = parts.slice(4).join('_'); 
           if (rxoId.endsWith(`_${internalRoute}`) || suffix === internalRoute) {
             return true;
           }
@@ -214,8 +239,15 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           </div>
 
           <div 
-            className="p-12 border-2 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center gap-4 bg-slate-50/50 hover:bg-slate-50 transition-all cursor-pointer group"
+            className={cn(
+              "p-12 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all cursor-pointer group",
+              isDragging ? "border-primary bg-primary/5 scale-[1.02]" : "border-slate-100 bg-slate-50/50 hover:bg-slate-50"
+            )}
             onClick={() => fileInputRef.current?.click()}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
           >
             {previewUrl ? (
               <div className="relative h-20 w-32 rounded-xl overflow-hidden shadow-lg">
@@ -225,13 +257,20 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
                 </div>
               </div>
             ) : (
-              <div className="h-16 w-16 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
+              <div className={cn(
+                "h-16 w-16 rounded-2xl bg-white shadow-sm flex items-center justify-center transition-colors",
+                isDragging ? "text-primary" : "text-slate-400 group-hover:text-primary"
+              )}>
                 <ImageIcon className="h-8 w-8" />
               </div>
             )}
             <div className="text-center">
-              <p className="text-sm font-bold text-slate-900">Upload RXO File or Screenshot</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Supports PNG, JPG, JPEG, Excel, and CSV</p>
+              <p className="text-sm font-bold text-slate-900">
+                {isDragging ? "Drop to upload" : "Upload RXO File or Screenshot"}
+              </p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                Supports PNG, JPG, JPEG, Excel, and CSV
+              </p>
             </div>
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*,.csv,.xlsx,.xls" onChange={handleFileChange} />
           </div>
@@ -252,7 +291,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             <Info className="h-4 w-4" />
             <AlertTitle className="text-[10px] font-black uppercase tracking-widest">AI Audit Integrity</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              Gemini AI will extract Route IDs and validate dates against internal tracker records. Discrepancies exceeding {"-$50.00"} will be flagged in RED.
+              Gemini AI will extract Route IDs and validate dates against internal tracker records. Discrepancies exceeding -$50.00 will be flagged in RED.
             </AlertDescription>
           </Alert>
         </div>
