@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,12 +63,12 @@ export function RXOSettlementView({ routes, settings }: RXOSettlementViewProps) 
   const { data: reports } = useCollection<RXOSettlementReport>(reportsQuery);
 
   // Set default selected report if none selected or if selected was deleted
-  useMemo(() => {
+  useEffect(() => {
     if (reports && reports.length > 0) {
       if (!selectedReportId || !reports.some(r => r.id === selectedReportId)) {
         setSelectedReportId(reports[0].id);
       }
-    } else if (reports?.length === 0) {
+    } else if (reports && reports.length === 0) {
       setSelectedReportId(null);
     }
   }, [reports, selectedReportId]);
@@ -101,7 +101,10 @@ export function RXOSettlementView({ routes, settings }: RXOSettlementViewProps) 
 
   const handleDeleteReport = (id: string) => {
     deleteDocumentNonBlocking(doc(db, "rxoSettlementReports", id));
-    toast({ title: "Report Removed", description: "The settlement record has been deleted." });
+    toast({ title: "Report Removed", description: "The settlement record has been deleted from the system." });
+    if (selectedReportId === id) {
+      setSelectedReportId(null);
+    }
   };
 
   return (
@@ -127,6 +130,28 @@ export function RXOSettlementView({ routes, settings }: RXOSettlementViewProps) 
                   ))}
                 </SelectContent>
               </Select>
+              
+              {selectedReportId && (
+                <div className="h-4 w-px bg-slate-200 mx-2" />
+              )}
+              
+              {selectedReportId && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="h-6 w-6 flex items-center justify-center rounded-md hover:bg-slate-50 text-slate-400">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="rounded-xl w-48">
+                    <DropdownMenuItem 
+                      className="text-rose-600 font-bold uppercase text-[10px]" 
+                      onClick={() => handleDeleteReport(selectedReportId)}
+                    >
+                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Report
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           )}
           <Button variant="outline" className="rounded-xl h-11 bg-white font-bold" onClick={() => setActiveTab("history")}>
