@@ -52,7 +52,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       
       const reportRef = doc(db, "rxoSettlementReports", reportId);
 
-      // Simulation Data matching exact totals for a consistent audit
+      // Simulation Data based on provided image patterns
       const demoReport = {
         id: reportId,
         payee: "SYSTEM ORIENTED LLC",
@@ -73,21 +73,30 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         notes: `Imported for period ${startDate} to ${endDate}.`
       };
 
-      // Generate simulated routes that sum up exactly to the report totals
+      // Generate demo routes following the exact string patterns requested
       const demoRoutes = Array.from({ length: 16 }).map((_, i) => {
-        const routeCode = `A${String(i + 1).padStart(2, '0')}`;
+        let routeId = "";
+        const dateStr = startDate.replace(/-/g, '');
         
-        // Distribute stops: 10 routes with 17 stops, 6 routes with 16 stops = 266 total
+        if (i < 4) {
+          // DMPEV pattern for EV/EV nodes
+          routeId = `DMPEV___1589092-4_${String(100 + i).padStart(3, '0')}`;
+        } else if (i === 4) {
+          // DMPGAS pattern
+          routeId = `DMPGAS__1585466-6_281`;
+        } else {
+          // LMH pattern
+          const code = `A${String(i - 4).padStart(2, '0')}`;
+          const suffix = i % 2 === 0 ? "_EV" : "";
+          routeId = `LMH__BWI_${dateStr}_${code}${suffix}`;
+        }
+        
         const stops = i < 10 ? 17 : 16;
-        
-        // Distribute miles: 15 routes with 110.2, 1 route with 111.1 = 1764.1 total
         const miles = i < 15 ? 110.2 : 111.1;
-        
-        // Distribute pay: 15 routes with 440.21, 1 route with 440.26 = 7043.41 total
         const rxoPay = i < 15 ? 440.21 : 440.26;
 
         return {
-          routeId: `LMH__BWI_02152026_${routeCode}`, 
+          routeId, 
           rxoPay,
           stops,
           miles,
@@ -97,21 +106,40 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       });
 
       let totalInternalEst = 0;
+      const usedInternalIds = new Set<string>();
 
       demoRoutes.forEach((demo, idx) => {
-        // MATCHING LOGIC: Extract the route ID (e.g., A01) from RXO string
-        const matchedInternal = routes.find(r => 
-          r.date === demo.date && (demo.routeId.endsWith(r.route) || demo.routeId.includes(`_${r.route}`))
-        );
+        // ENHANCED MATCHING LOGIC
+        const matchedInternal = routes.find(r => {
+          if (usedInternalIds.has(r.id)) return false;
+          const sameDate = r.date === demo.date;
+          if (!sameDate) return false;
 
-        // Use internal estimate if matched, otherwise fallback to standard node calculation
+          const rxoId = demo.routeId.toUpperCase();
+          const internalRoute = r.route.toUpperCase();
+          const internalVehicle = r.vehicleNumber.toUpperCase();
+
+          // Rule 1: DMPEV pattern for EV/EV nodes
+          if (rxoId.startsWith('DMPEV') && internalRoute === 'EV' && internalVehicle === 'EV') {
+            return true;
+          }
+
+          // Rule 2: LMH pattern for standard routes (Suffix match)
+          // Look for _A01_EV or _A01 etc.
+          if (rxoId.includes(`_${internalRoute}`)) {
+            return true;
+          }
+
+          return false;
+        });
+
+        if (matchedInternal) usedInternalIds.add(matchedInternal.id);
+
         const internalEst = matchedInternal?.estimatedPay || (demo.stops * 27);
         totalInternalEst += internalEst;
 
         const delta = demo.rxoPay - internalEst;
         const detailId = `rd-${Date.now()}-${idx}`;
-
-        // Audit Status logic: RED if < -50, GREEN otherwise
         const deltaStatus = delta < -50 ? 'RED' : 'GREEN';
 
         setDocumentNonBlocking(doc(db, "rxoSettlementRouteDetails", detailId), {
@@ -217,7 +245,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             <Info className="h-4 w-4" />
             <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Logic: Side-by-Side Verification</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              The system compares RXO Route ID, Miles, and Stops against your internal tracker. Delta Status flags discrepancies &lt; -50.00 in RED.
+              The system compares RXO Route ID, Miles, and Stops against your internal tracker. Delta Status flags discrepancies {"<"} -50.00 in RED.
             </AlertDescription>
           </Alert>
         </div>

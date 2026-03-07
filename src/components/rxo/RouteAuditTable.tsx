@@ -115,7 +115,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild><AlertCircle className="h-3 w-3 cursor-help" /></TooltipTrigger>
-                                  <TooltipContent><p className="text-[10px] font-bold">No internal log found for this RXO ID on this date.</p></TooltipContent>
+                                  <TooltipContent><p className="text-[10px] font-bold">No internal log found for this RXO ID pattern on this date.</p></TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             </div>
@@ -124,12 +124,12 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                         <td className="px-4 py-5 text-[10px] font-bold text-slate-500 uppercase">{row.market}</td>
                         
                         <td className="px-4 py-5 text-center font-bold text-slate-900 bg-slate-50/30">{row.routeMiles}</td>
-                        <td className={cn("px-4 py-5 text-center font-bold bg-slate-50/50", milesMatch ? "text-slate-400" : "text-rose-500 underline decoration-dotted decoration-2 underline-offset-4")}>
+                        <td className={cn("px-4 py-5 text-center font-bold bg-slate-50/50", matchedInternal && !milesMatch ? "text-rose-500 underline decoration-dotted decoration-2 underline-offset-4" : "text-slate-400")}>
                           {matchedInternal?.miles ?? "—"}
                         </td>
                         
                         <td className="px-4 py-5 text-center font-bold text-slate-900 bg-slate-50/30">{row.stopCount}</td>
-                        <td className={cn("px-4 py-5 text-center font-bold bg-slate-50/50", stopsMatch ? "text-slate-400" : "text-rose-500 underline decoration-dotted decoration-2 underline-offset-4")}>
+                        <td className={cn("px-4 py-5 text-center font-bold bg-slate-50/50", matchedInternal && !stopsMatch ? "text-rose-500 underline decoration-dotted decoration-2 underline-offset-4" : "text-slate-400")}>
                           {matchedInternal?.stops ?? "—"}
                         </td>
                         
