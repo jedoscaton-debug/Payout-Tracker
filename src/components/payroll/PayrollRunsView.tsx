@@ -17,7 +17,8 @@ import {
   RouteTrackerRow, 
   PayrollRun, 
   PayrollItem,
-  DeductionRecord
+  DeductionRecord,
+  FormulaSettings
 } from "@/app/lib/types";
 import { 
   computeTotals, 
@@ -36,6 +37,7 @@ interface PayrollRunsViewProps {
   employees: Employee[];
   routeTracker: RouteTrackerRow[];
   deductions: DeductionRecord[];
+  settings?: FormulaSettings;
 }
 
 export function PayrollRunsView({ 
@@ -45,7 +47,8 @@ export function PayrollRunsView({
   setPayrollItems,
   employees,
   routeTracker,
-  deductions
+  deductions,
+  settings
 }: PayrollRunsViewProps) {
   const [previewItem, setPreviewItem] = useState<PayrollItem | null>(null);
   const { toast } = useToast();
@@ -56,7 +59,7 @@ export function PayrollRunsView({
       current.map((item) => {
         const employee = employees.find((e) => e.id === item.employeeId);
         if (!employee) return item;
-        const refreshed = createPayrollItem(employee, payrollRun, routeTracker, deductions);
+        const refreshed = createPayrollItem(employee, payrollRun, routeTracker, deductions, settings);
         return {
           ...item,
           earningsLines: refreshed.earningsLines,
@@ -119,7 +122,7 @@ export function PayrollRunsView({
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period End</label>
-              <Input className="h-12 rounded-2xl bg-slate-50/50" type="date" value={payrollRun.payPeriodStart || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodEnd: e.target.value }))} />
+              <Input className="h-12 rounded-2xl bg-slate-50/50" type="date" value={payrollRun.payPeriodEnd || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodEnd: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Pay Date</label>

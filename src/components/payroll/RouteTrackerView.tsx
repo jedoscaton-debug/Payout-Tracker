@@ -27,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RouteTrackerRow, Employee } from "@/app/lib/types";
+import { RouteTrackerRow, Employee, FormulaSettings } from "@/app/lib/types";
 import { 
   currency, 
   shortDate, 
@@ -36,13 +36,14 @@ import {
   estimateFuel, 
   driverPay, 
   helperPay,
-  truckRentalMileageCost,
-  TRUCK_RENTAL_FIXED
+  truckRentalMileageCost
 } from "@/app/lib/payroll-utils";
 import { cn } from "@/lib/utils";
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Calendar as CalendarIcon, Download, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+
+const TRUCK_RENTAL_FIXED = 52;
 
 interface RouteTrackerViewProps {
   routeTracker: RouteTrackerRow[];
@@ -50,6 +51,7 @@ interface RouteTrackerViewProps {
   onUpdateRoute?: (route: RouteTrackerRow) => void;
   onDeleteRoute?: (id: string) => void;
   employees?: Employee[];
+  settings?: FormulaSettings;
 }
 
 export function RouteTrackerView({ 
@@ -57,7 +59,8 @@ export function RouteTrackerView({
   onAddRoute, 
   onUpdateRoute,
   onDeleteRoute,
-  employees = [] 
+  employees = [],
+  settings
 }: RouteTrackerViewProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -84,15 +87,15 @@ export function RouteTrackerView({
   
   const estPayValue = currentRoute?.estimatedPay && currentRoute.estimatedPay > 0 
     ? currentRoute.estimatedPay 
-    : estimatePay(currentRoute?.stops || 0);
+    : estimatePay(currentRoute?.stops || 0, settings);
 
-  const dPayValue = driverPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber, currentRoute?.estimatedPay);
+  const dPayValue = driverPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber, currentRoute?.estimatedPay, settings);
   const hPayValue = currentRoute?.helper && currentRoute?.helper !== "No Helper" 
-    ? helperPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber, currentRoute?.estimatedPay) 
+    ? helperPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber, currentRoute?.estimatedPay, settings) 
     : 0;
     
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
-  const fuelValue = estimateFuel(currentRoute?.miles || 0);
+  const fuelValue = estimateFuel(currentRoute?.miles || 0, settings);
   const totalExpensesValue = (currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue;
   const netProfitValue = estPayValue - (totalExpensesValue + dPayValue + hPayValue);
 
@@ -130,10 +133,10 @@ export function RouteTrackerView({
 
   const totals = useMemo(() => {
     return filtered.reduce((acc, row) => {
-      const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops);
-      const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay);
-      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay) : 0;
-      const fuel = estimateFuel(row.miles);
+      const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, settings);
+      const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings) : 0;
+      const fuel = estimateFuel(row.miles, settings);
       const mileageCost = truckRentalMileageCost(row.miles);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
 
@@ -151,7 +154,7 @@ export function RouteTrackerView({
     }, {
       miles: 0, stops: 0, estPay: 0, driverPay: 0, helperPay: 0, truckRental: 0, fuel: 0, totalExp: 0, netProfit: 0
     });
-  }, [filtered]);
+  }, [filtered, settings]);
 
   const handleExportAudit = () => {
     const csvHeaders = [
@@ -162,11 +165,11 @@ export function RouteTrackerView({
     ];
 
     const rows = filtered.map(row => {
-      const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops);
-      const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay);
-      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay) : 0;
+      const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, settings);
+      const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings) : 0;
       const mileageCost = truckRentalMileageCost(row.miles);
-      const fuel = estimateFuel(row.miles);
+      const fuel = estimateFuel(row.miles, settings);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
       const netProfit = estRev - totalExp - dPay - hPay;
 
@@ -360,7 +363,7 @@ export function RouteTrackerView({
                     <Input 
                       type="number" 
                       className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
-                      placeholder={estimatePay(newRoute.stops || 0).toString()}
+                      placeholder={estimatePay(newRoute.stops || 0, settings).toString()}
                       value={newRoute.estimatedPay === 0 ? "" : newRoute.estimatedPay} 
                       onChange={(e) => setNewRoute({...newRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} 
                     />
@@ -465,11 +468,11 @@ export function RouteTrackerView({
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {filtered.map((row) => {
-                    const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops);
-                    const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay);
-                    const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay) : 0;
+                    const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, settings);
+                    const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings);
+                    const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings) : 0;
                     const mileageCost = truckRentalMileageCost(row.miles);
-                    const fuel = estimateFuel(row.miles);
+                    const fuel = estimateFuel(row.miles, settings);
                     const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
                     const netProfit = estRev - totalExp - dPay - hPay;
                     
@@ -619,7 +622,7 @@ export function RouteTrackerView({
                   <Input 
                     type="number" 
                     className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
-                    placeholder={estimatePay(editingRoute.stops || 0).toString()}
+                    placeholder={estimatePay(editingRoute.stops || 0, settings).toString()}
                     value={editingRoute.estimatedPay === 0 ? "" : editingRoute.estimatedPay} 
                     onChange={(e) => setEditingRoute({...editingRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} 
                   />

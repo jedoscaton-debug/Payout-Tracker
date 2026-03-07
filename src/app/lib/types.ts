@@ -101,11 +101,38 @@ export type ComputedTotals = {
   netPay: number;
 };
 
-export type FleetWeeklySettings = {
+export type FormulaSettings = {
   id: string;
-  weeklyInsurance: number;
-  reserveRate: number;
+  estimatedPayFormula: string;
+  estimatedFuelFormula: string;
+  driverPayFormula: string;
+  helperPayFormula: string;
+  combinedPayMode: 'sum' | 'custom';
+  customCombinedFormula: string;
+  revenueSource: 'actualPayAudit' | 'estimatedPay' | 'manualOverride';
+  deltaFormula: string;
   redThreshold: number;
   yellowThreshold: number;
+  reserveRate: number;
+  estimatedWeeklyInsurance: number;
+  trueNetProfitFormula: string;
+  directDepositFee: number;
+  autoApplyDirectDepositFee: boolean;
+  directDepositFeeEditable: 'superAdminOnly' | 'adminEditable' | 'locked';
+  installmentCompletionRule: string;
+  currencyFormat: string;
+  decimalPlaces: number;
+  earningsDescriptionFormat: string;
   updatedAt: string;
+  updatedBy?: string;
+};
+
+export type FormulaAuditLog = {
+  id: string;
+  settingName: string;
+  oldValue: string;
+  newValue: string;
+  changedBy: string;
+  changedAt: string;
+  notes?: string;
 };

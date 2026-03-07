@@ -2,12 +2,12 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { LayoutDashboard, Users, Receipt, Route, Lock, Download, Loader2, LogOut, Shield, Wallet, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Route, LogOut, Loader2, Shield, Wallet, BarChart3, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord } from "@/app/lib/types";
+import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord, FormulaSettings, FormulaAuditLog } from "@/app/lib/types";
 import { createPayrollItem, initialPayrollRun } from "@/app/lib/payroll-data-utils";
 import { computeTotals } from "@/app/lib/payroll-utils";
 
@@ -18,12 +18,13 @@ import { RouteTrackerView } from "@/components/payroll/RouteTrackerView";
 import { DeductionBoard } from "@/components/deductions/DeductionBoard";
 import { FleetProfitabilityView } from "@/components/fleet/FleetProfitabilityView";
 import { LoginView } from "@/components/auth/LoginView";
+import { FormulaSettingsView } from "@/components/settings/FormulaSettingsView";
 
 import { useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, useAuth, useUser } from "@/firebase";
-import { collection, doc, query, where } from "firebase/firestore";
+import { collection, doc, query, orderBy, limit } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 
-type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "deductions" | "fleet";
+type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "deductions" | "fleet" | "settings";
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView | null>(null);
@@ -45,6 +46,13 @@ export default function AppShell() {
   const bootstrapDocRef = useMemoFirebase(() => doc(db, "roles_admin", "first_admin_placeholder"), [db]);
   const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef, { enabled: !!user });
   const isSystemFresh = !bootstrapLoading && !bootstrapDoc && !isMasterByEmail && !isAdmin && user;
+
+  // Formula Settings
+  const settingsDocRef = useMemoFirebase(() => doc(db, "payrollFormulaSettings", "global-payroll-settings"), [db]);
+  const { data: formulaSettings } = useDoc<FormulaSettings>(settingsDocRef, { enabled: isAdmin });
+
+  const auditLogsQuery = useMemoFirebase(() => isAdmin ? query(collection(db, "payrollFormulaAuditLog"), orderBy("changedAt", "desc"), limit(20)) : null, [db, isAdmin]);
+  const { data: auditLogs } = useCollection<FormulaAuditLog>(auditLogsQuery, { enabled: isAdmin });
 
   // Redirection Logic
   useEffect(() => {
@@ -83,10 +91,10 @@ export default function AppShell() {
       const existingIds = new Set(prev.map(i => i.employeeId));
       const newItems = employees
         .filter(e => !existingIds.has(e.id))
-        .map(e => createPayrollItem(e, payrollRun, routeTracker, deductions));
+        .map(e => createPayrollItem(e, payrollRun, routeTracker, deductions, formulaSettings || undefined));
       return [...prev, ...newItems];
     });
-  }, [employees, isAdmin, payrollRun, routeTracker, deductions]);
+  }, [employees, isAdmin, payrollRun, routeTracker, deductions, formulaSettings]);
 
   const payrollSummary = useMemo(() => {
     const totals = payrollItems.map(computeTotals);
@@ -133,6 +141,7 @@ export default function AppShell() {
     { id: "routes", label: "Route Tracker", icon: Route },
     { id: "deductions", label: "Deductions", icon: Wallet },
     { id: "fleet", label: "Fleet Profitability", icon: BarChart3 },
+    { id: "settings", label: "Formula Settings", icon: Settings },
   ];
 
   return (
@@ -140,7 +149,7 @@ export default function AppShell() {
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-md px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-black text-xl shadow-lg">S</div>
-          <nav className="flex items-center gap-1">
+          <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
             {navItems.map((item) => (
               <button key={item.id} onClick={() => setActiveView(item.id as ActiveView)} className={cn("flex items-center gap-2 px-4 h-10 rounded-xl font-bold text-[10px] uppercase whitespace-nowrap", activeView === item.id ? "bg-slate-100 text-primary" : "text-slate-500")}>
                 <item.icon className="h-4 w-4" /><span>{item.label}</span>
@@ -159,10 +168,11 @@ export default function AppShell() {
           <>
             {activeView === "dashboard" && <DashboardView summary={payrollSummary} deductions={deductions} />}
             {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={e => setDocumentNonBlocking(doc(db, "employees", e.id), e, {merge: true})} onUpdateEmployee={e => updateDocumentNonBlocking(doc(db, "employees", e.id), e)} onDeleteEmployee={id => deleteDocumentNonBlocking(doc(db, "employees", id))} />}
-            {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} deductions={deductions} />}
-            {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} />}
+            {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} deductions={deductions} settings={formulaSettings || undefined} />}
+            {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} settings={formulaSettings || undefined} />}
             {activeView === "deductions" && <DeductionBoard employees={employees} deductions={deductions} />}
-            {activeView === "fleet" && <FleetProfitabilityView routeTracker={routeTracker} />}
+            {activeView === "fleet" && <FleetProfitabilityView routeTracker={routeTracker} settings={formulaSettings || undefined} />}
+            {activeView === "settings" && <FormulaSettingsView settings={formulaSettings || null} auditLogs={auditLogs || []} />}
           </>
         )}
       </main>

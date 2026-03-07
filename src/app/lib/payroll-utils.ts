@@ -1,9 +1,6 @@
 
-import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollItem, ComputedTotals } from './types';
-
-export const DIRECT_DEPOSIT_FEE = 4;
-export const TRUCK_RENTAL_FIXED = 52;
-export const TRUCK_MILEAGE_RATE = 0; // Set to 0 as requested for default $0.00 cost
+import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollItem, ComputedTotals, FormulaSettings } from './types';
+import { evaluateFormula, DEFAULT_FORMULA_SETTINGS } from './formula-evaluator';
 
 export function currency(value: number) {
   return new Intl.NumberFormat("en-US", { 
@@ -14,22 +11,14 @@ export function currency(value: number) {
   }).format(value || 0);
 }
 
-/**
- * Robust date formatter that avoids RangeError by using manual parsing.
- * Returns date in M/D/YYYY format.
- */
 export function shortDate(input: string) {
   if (!input) return "";
   const parts = input.split("-");
   if (parts.length !== 3) return input;
   const [year, month, day] = parts;
-  // Ensure we remove leading zeros for a cleaner professional look
   return `${parseInt(month)}/${parseInt(day)}/${year}`;
 }
 
-/**
- * Formats a date string into "Mar 06" format for earning descriptions.
- */
 export function formatEarningsDate(input: string) {
   if (!input) return "";
   const d = new Date(`${input}T00:00:00`);
@@ -44,31 +33,48 @@ export function getDayOfWeek(input: string) {
   return d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
 }
 
-export function estimatePay(stops: number) {
-  return 27 * (stops || 0);
+/**
+ * Dynamic Estimate Pay based on settings
+ */
+export function estimatePay(stops: number, settings?: FormulaSettings) {
+  const formula = settings?.estimatedPayFormula || DEFAULT_FORMULA_SETTINGS.estimatedPayFormula;
+  return evaluateFormula(formula, { stops });
 }
 
-export function estimateFuel(miles: number) {
-  // Formula: (3.76 / 8) * MILES
-  return (3.76 / 8) * (miles || 0);
+/**
+ * Dynamic Estimate Fuel based on settings
+ */
+export function estimateFuel(miles: number, settings?: FormulaSettings) {
+  const formula = settings?.estimatedFuelFormula || DEFAULT_FORMULA_SETTINGS.estimatedFuelFormula;
+  return evaluateFormula(formula, { miles });
 }
 
-export function driverPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number) {
-  const basePay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops);
-  // Special Rule: EV Route + EV Vehicle = 33% Driver Rate
-  const rate = (route === "EV" && vehicle === "EV") ? 0.33 : 0.27;
-  return Number((basePay * rate).toFixed(2));
+export function driverPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
+  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, settings);
+  const formula = settings?.driverPayFormula || DEFAULT_FORMULA_SETTINGS.driverPayFormula;
+  
+  // Special Rule: EV Route + EV Vehicle = 33% Driver Rate (Hardcoded safety override)
+  if (route === "EV" && vehicle === "EV") {
+    return Number((estPay * 0.33).toFixed(2));
+  }
+  
+  return Number(evaluateFormula(formula, { estimatedPay: estPay }).toFixed(2));
 }
 
-export function helperPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number) {
-  const basePay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops);
-  // Special Rule: EV Route + EV Vehicle = 27% Helper Rate
-  const rate = (route === "EV" && vehicle === "EV") ? 0.27 : 0.23;
-  return Number((basePay * rate).toFixed(2));
+export function helperPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
+  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, settings);
+  const formula = settings?.helperPayFormula || DEFAULT_FORMULA_SETTINGS.helperPayFormula;
+  
+  // Special Rule: EV Route + EV Vehicle = 27% Helper Rate (Hardcoded safety override)
+  if (route === "EV" && vehicle === "EV") {
+    return Number((estPay * 0.27).toFixed(2));
+  }
+  
+  return Number(evaluateFormula(formula, { estimatedPay: estPay }).toFixed(2));
 }
 
 export function truckRentalMileageCost(miles: number) {
-  return Number(((miles || 0) * TRUCK_MILEAGE_RATE).toFixed(2));
+  return 0; // Default $0.00 as requested
 }
 
 function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType | null {
@@ -80,14 +86,17 @@ function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType |
   return null;
 }
 
-function amountForRole(row: RouteTrackerRow, role: RoleType) {
-  const estPay = row.estimatedPay || estimatePay(row.stops);
-  if (role === "Driver") return driverPay(row.stops, row.route, row.vehicleNumber, estPay);
-  if (role === "Helper") return helperPay(row.stops, row.route, row.vehicleNumber, estPay);
-  return driverPay(row.stops, row.route, row.vehicleNumber, estPay) + helperPay(row.stops, row.route, row.vehicleNumber, estPay);
+function amountForRole(row: RouteTrackerRow, role: RoleType, settings?: FormulaSettings) {
+  const estPay = row.estimatedPay || estimatePay(row.stops, settings);
+  if (role === "Driver") return driverPay(row.stops, row.route, row.vehicleNumber, estPay, settings);
+  if (role === "Helper") return helperPay(row.stops, row.route, row.vehicleNumber, estPay, settings);
+  
+  const dPay = driverPay(row.stops, row.route, row.vehicleNumber, estPay, settings);
+  const hPay = helperPay(row.stops, row.route, row.vehicleNumber, estPay, settings);
+  return dPay + hPay;
 }
 
-export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: RouteTrackerRow[]): EarningsLine[] {
+export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: RouteTrackerRow[], settings?: FormulaSettings): EarningsLine[] {
   return routes
     .filter((row) => row.date >= run.payPeriodStart && row.date <= run.payPeriodEnd)
     .map((row) => {
@@ -99,9 +108,8 @@ export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: R
         date: row.date,
         client: row.route,
         role,
-        // Updated format: Mar 06 - IKEA Driver
         description: `${displayDate} - ${row.routeType} ${role}`,
-        amount: Number(amountForRole(row, role).toFixed(2)),
+        amount: Number(amountForRole(row, role, settings).toFixed(2)),
       } satisfies EarningsLine;
     })
     .filter(Boolean) as EarningsLine[];

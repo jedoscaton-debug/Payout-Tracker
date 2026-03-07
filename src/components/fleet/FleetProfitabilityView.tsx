@@ -23,7 +23,8 @@ import {
   Zap
 } from "lucide-react";
 import { 
-  RouteTrackerRow, 
+  RouteTrackerRow,
+  FormulaSettings 
 } from "@/app/lib/types";
 import { 
   currency, 
@@ -37,12 +38,14 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { evaluateFormula } from "@/app/lib/formula-evaluator";
 
 interface FleetProfitabilityViewProps {
   routeTracker: RouteTrackerRow[];
+  settings?: FormulaSettings;
 }
 
-export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewProps) {
+export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitabilityViewProps) {
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - d.getDay()); // Start of this week
@@ -54,8 +57,6 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
     return d.toISOString().split('T')[0];
   });
   
-  const [weeklyInsurance, setWeeklyInsurance] = useState(600);
-  const [reserveRate, setReserveRate] = useState(0.15);
   const [isLogicOpen, setIsLogicOpen] = useState(false);
   const { toast } = useToast();
 
@@ -97,19 +98,19 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
       g.miles += (r.miles || 0);
       g.stops += (r.stops || 0);
       
-      // Revenue Logic: Use Actual Pay Audit if > 0, else Estimated
+      // Revenue Logic: Use settings rule
       const hasActualAudit = r.actualPayAudit && r.actualPayAudit > 0;
-      const rev = hasActualAudit ? r.actualPayAudit : (r.estimatedPay && r.estimatedPay > 0 ? r.estimatedPay : estimatePay(r.stops));
+      const rev = hasActualAudit ? r.actualPayAudit : (r.estimatedPay && r.estimatedPay > 0 ? r.estimatedPay : estimatePay(r.stops, settings));
       
       if (hasActualAudit) g.revenueSource = "Actual Audit";
       
       // Labor Cost Logic (Driver + Helper)
-      const dPay = driverPay(r.stops, r.route, r.vehicleNumber, r.estimatedPay);
-      const hPay = r.helper && r.helper !== "No Helper" ? helperPay(r.stops, r.route, r.vehicleNumber, r.estimatedPay) : 0;
+      const dPay = driverPay(r.stops, r.route, r.vehicleNumber, r.estimatedPay, settings);
+      const hPay = r.helper && r.helper !== "No Helper" ? helperPay(r.stops, r.route, r.vehicleNumber, r.estimatedPay, settings) : 0;
       
       // Van & Fuel Cost Logic
-      const fuel = estimateFuel(r.miles);
-      const vanFixed = r.truckRental || 52; // Default to 52 if not logged
+      const fuel = estimateFuel(r.miles, settings);
+      const vanFixed = r.truckRental || 52; 
       
       g.revenue += rev;
       g.labor += (dPay + hPay);
@@ -122,13 +123,16 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
       const totalCosts = g.labor + vanFuelCosts;
       const netProfit = g.revenue - totalCosts;
       
+      const redLimit = settings?.redThreshold ?? 100;
+      const yellowLimit = settings?.yellowThreshold ?? 300;
+
       let status: "RED" | "YELLOW" | "GREEN" = "RED";
       let actionItem = "CRITICAL. Return van or fix pay structure immediately.";
       
-      if (netProfit >= 300) {
+      if (netProfit >= yellowLimit) {
         status = "GREEN";
         actionItem = "Healthy. Continue current structure.";
-      } else if (netProfit >= 100) {
+      } else if (netProfit >= redLimit) {
         status = "YELLOW";
         actionItem = "Watch. Low utilization. Park if routes drop.";
       }
@@ -143,7 +147,7 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
         daysActive: g.dates.size
       };
     }).sort((a, b) => b.netProfit - a.netProfit);
-  }, [filteredRoutes]);
+  }, [filteredRoutes, settings]);
 
   const totals = useMemo(() => {
     return vanStats.reduce((acc, v) => ({
@@ -168,13 +172,22 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
   }, [vanStats]);
 
   const realityCheck = useMemo(() => {
+    const reserveRate = settings?.reserveRate ?? 0.15;
+    const insurance = settings?.estimatedWeeklyInsurance ?? 600;
+    
     const rxoReserve = totals.revenue * reserveRate;
-    const trueNetProfit = totals.netProfit - weeklyInsurance - rxoReserve;
-    return { rxoReserve, trueNetProfit };
-  }, [totals, weeklyInsurance, reserveRate]);
+    const trueNetProfit = evaluateFormula(settings?.trueNetProfitFormula || "fleetNetProfit - estimatedWeeklyInsurance - (fleetRevenue * reserveRate)", {
+      fleetNetProfit: totals.netProfit,
+      estimatedWeeklyInsurance: insurance,
+      fleetRevenue: totals.revenue,
+      reserveRate: reserveRate
+    });
+
+    return { rxoReserve, trueNetProfit, insurance, reserveRate };
+  }, [totals, settings]);
 
   const handleRecalculate = () => {
-    toast({ title: "Board Refreshed", description: "All calculations updated based on latest Route Tracker logs." });
+    toast({ title: "Board Refreshed", description: "All calculations updated based on latest formula settings." });
   };
 
   return (
@@ -201,7 +214,7 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
           <button className="w-full flex items-center justify-between p-4 hover:bg-slate-100 transition-colors">
             <div className="flex items-center gap-3">
               <Info className="h-4 w-4 text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Calculation Logic & Methodology</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Active Calculation Engine & Settings</span>
             </div>
             {isLogicOpen ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
           </button>
@@ -209,20 +222,20 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
         <CollapsibleContent className="p-6 border-t border-slate-200 space-y-4">
           <div className="grid gap-6 md:grid-cols-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase">Revenue Source</p>
-              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">Priority: 1. Actual Pay Audit, 2. Manual Est. Pay Override, 3. Auto-calc (27 × Stops)</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase">Revenue Formula</p>
+              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.estimatedPayFormula || "27 * stops"}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase">Labor Costs</p>
-              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">Driver: 27% of Est. Pay<br/>Helper: 23% of Est. Pay</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase">Labor Ratio</p>
+              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">D: {settings?.driverPayFormula || "27%"}<br/>H: {settings?.helperPayFormula || "23%"}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase">Van & Fuel</p>
-              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">Van: $52.00 (Fixed/Logged)<br/>Fuel: (3.76 / 8) × Miles</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase">Fuel Ratio</p>
+              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.estimatedFuelFormula || "(3.76/8)*miles"}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase">True Net Profit</p>
-              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">Net Profit — Weekly Insurance ($600) — 15% RXO Risk Reserve</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase">Reserves</p>
+              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">Ins: {currency(realityCheck.insurance)}<br/>RXO: {(realityCheck.reserveRate * 100).toFixed(0)}%</p>
             </div>
           </div>
         </CollapsibleContent>
@@ -240,15 +253,15 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                <span className="text-[10px] font-black text-slate-400 uppercase">HEALTHY (&gt; $300)</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase">HEALTHY (&gt; ${settings?.yellowThreshold ?? 300})</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-amber-500" />
-                <span className="text-[10px] font-black text-slate-400 uppercase">WEAK (&gt; $100)</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase">WEAK (&gt; ${settings?.redThreshold ?? 100})</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-rose-500" />
-                <span className="text-[10px] font-black text-slate-400 uppercase">CRITICAL (&lt; $100)</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase">CRITICAL (&lt; ${settings?.redThreshold ?? 100})</span>
               </div>
             </div>
           </div>
@@ -314,7 +327,7 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
                     <td className="px-4 py-6 text-right font-black text-primary text-xl">{currency(totals.netProfit)}</td>
                     <td colSpan={2} className="px-6 py-6">
                       <div className="flex items-center gap-3">
-                        <StatusPill status={totals.netProfit < 300 ? (totals.netProfit < 0 ? "RED" : "YELLOW") : "GREEN"} />
+                        <StatusPill status={totals.netProfit < (settings?.yellowThreshold ?? 300) ? (totals.netProfit < (settings?.redThreshold ?? 100) ? "RED" : "YELLOW") : "GREEN"} />
                         <span className="text-[10px] font-black uppercase text-slate-400">Overall Portfolio Performance</span>
                       </div>
                     </td>
@@ -334,28 +347,10 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
               <CardTitle className="text-[10px] font-black uppercase tracking-[0.4em] text-white/50">Reality Check Audit</CardTitle>
               <div className="flex items-center gap-6">
                 <div className="flex flex-col items-end gap-1">
-                  <span className="text-[8px] font-black text-white/30 uppercase">Weekly Insurance</span>
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-3.5 w-3.5 text-white/30" />
-                    <Input 
-                      type="number" 
-                      value={weeklyInsurance} 
-                      onChange={(e) => setWeeklyInsurance(Number(e.target.value))}
-                      className="w-20 h-7 bg-white/10 border-none text-[10px] font-black text-white p-2"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-[8px] font-black text-white/30 uppercase">RXO Reserve %</span>
-                  <div className="flex items-center gap-2">
-                    <Settings2 className="h-3.5 w-3.5 text-white/30" />
-                    <Input 
-                      type="number" 
-                      step="0.01"
-                      value={reserveRate} 
-                      onChange={(e) => setReserveRate(Number(e.target.value))}
-                      className="w-20 h-7 bg-white/10 border-none text-[10px] font-black text-white p-2"
-                    />
+                  <span className="text-[8px] font-black text-white/30 uppercase">Reserve Rate</span>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg">
+                    <Settings2 className="h-3 w-3 text-primary" />
+                    <span className="text-[10px] font-black">{(realityCheck.reserveRate * 100).toFixed(0)}%</span>
                   </div>
                 </div>
               </div>
@@ -369,10 +364,10 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
               </div>
               <div className="flex items-center justify-between border-b border-white/5 pb-4">
                 <span className="text-xs font-bold text-white/60 uppercase">Weekly Insurance (Fixed Cost)</span>
-                <span className="text-lg font-black text-rose-400">({currency(weeklyInsurance)})</span>
+                <span className="text-lg font-black text-rose-400">({currency(realityCheck.insurance)})</span>
               </div>
               <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                <span className="text-xs font-bold text-white/60 uppercase">RXO “Risk Reserve ({ (reserveRate * 100).toFixed(0) }%)”</span>
+                <span className="text-xs font-bold text-white/60 uppercase">RXO “Risk Reserve ({ (realityCheck.reserveRate * 100).toFixed(0) }%)”</span>
                 <span className="text-lg font-black text-rose-400">({currency(realityCheck.rxoReserve)})</span>
               </div>
             </div>
@@ -383,7 +378,7 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
             )}>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">True Net Profit</p>
-                <p className="text-sm font-bold text-white/50 italic mt-1">Business cash flow after all calculated costs.</p>
+                <p className="text-sm font-bold text-white/50 italic mt-1">Calculated via dynamic formula settings.</p>
               </div>
               <p className="text-4xl font-black tracking-tighter">{currency(realityCheck.trueNetProfit)}</p>
             </div>
@@ -392,7 +387,7 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
               <div className="p-6 bg-rose-500/20 border border-rose-500/30 rounded-2xl flex items-center gap-4 animate-pulse">
                 <AlertCircle className="h-8 w-8 text-rose-500 shrink-0" />
                 <p className="text-xs font-black uppercase tracking-wide leading-relaxed">
-                  CRITICAL ALERT: Business is bleeding cash. Return a van immediately to save weekly cost and flip to profit.
+                  CRITICAL ALERT: Business is bleeding cash. Review route logs and formula settings immediately.
                 </p>
               </div>
             )}
@@ -435,15 +430,15 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500">Total Fleet Mileage</span>
-                <span className="text-lg font-black text-slate-900">{totals.miles.toLocaleString()} Mi</span>
+                <span className="text-lg font-black text-slate-900">{totals.miles?.toLocaleString() || 0} Mi</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500">Total Route Stops</span>
-                <span className="text-lg font-black text-slate-900">{totals.stops.toLocaleString()}</span>
+                <span className="text-lg font-black text-slate-900">{totals.stops?.toLocaleString() || 0}</span>
               </div>
               <div className="pt-4 border-t border-slate-50">
                 <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">
-                  "Profitability is calculated based on route logs. Ensure all Route Tracker entries for this week are finalized to guarantee audit accuracy."
+                  "Calculations are real-time and use active formula settings. Final audit requires all route tracker rows to be finalized."
                 </p>
               </div>
             </div>

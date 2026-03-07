@@ -1,10 +1,6 @@
 
-import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord, DeductionLine } from "./types";
+import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord, DeductionLine, FormulaSettings } from "./types";
 import { autoBuildEarnings } from "./payroll-utils";
-
-export const employeesSeed: Employee[] = [
-  { id: "emp-1", fullName: "Jose Nolasco", role: "Driver", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" },
-];
 
 /**
  * Default state for a new payroll run.
@@ -24,9 +20,10 @@ export function createPayrollItem(
   employee: Employee, 
   payrollRun: PayrollRun, 
   routes: RouteTrackerRow[],
-  allDeductions: DeductionRecord[]
+  allDeductions: DeductionRecord[],
+  settings?: FormulaSettings
 ): PayrollItem {
-  const earningsLines = autoBuildEarnings(employee, payrollRun, routes);
+  const earningsLines = autoBuildEarnings(employee, payrollRun, routes, settings);
   
   // Logic to fetch active, auto-apply deductions for this employee
   const deductionsLines: DeductionLine[] = allDeductions
@@ -50,7 +47,7 @@ export function createPayrollItem(
     deductionsLines.push({
       id: `${employee.id}-default-dd-${payrollRun.id}`,
       deductionName: "Direct Deposit Fee",
-      amount: 4.00,
+      amount: settings?.directDepositFee || 4.00,
       type: "Auto System Fee"
     });
   }
