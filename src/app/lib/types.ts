@@ -43,6 +43,7 @@ export type DeductionLine = {
   originalDeductionId?: string; // Linked to the DeductionBoard item
   installmentCount?: number;
   installmentsPaid?: number; // Represents the count after this payment is applied
+  totalClaimAmount?: number; // The total amount of the claim
 };
 
 export type Employee = {

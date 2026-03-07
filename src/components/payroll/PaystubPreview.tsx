@@ -61,8 +61,8 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
     if (line.type === "Installment" && line.installmentCount) {
       const current = String(line.installmentsPaid || 0).padStart(2, '0');
       const total = String(line.installmentCount).padStart(2, '0');
-      const formattedAmount = currency(line.amount);
-      return `${line.deductionName} (${formattedAmount}): ${current} out of ${total}`;
+      const formattedTotal = currency(line.totalClaimAmount || 0);
+      return `${line.deductionName} (${formattedTotal}): ${current} out of ${total}`;
     }
     return line.deductionName;
   };
