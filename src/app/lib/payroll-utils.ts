@@ -35,7 +35,7 @@ export function getDayOfWeek(input: string) {
 
 /**
  * Standard Mileage Cost for Truck Rental.
- * Defaulting to $0.00 as per user requirement.
+ * Fixed at $0.00 as per latest requirements.
  */
 export function truckRentalMileageCost(miles: number): number {
   return 0;

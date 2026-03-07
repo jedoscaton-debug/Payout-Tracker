@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -99,6 +98,7 @@ export function RouteTrackerView({
     
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
   const fuelValue = estimateFuel(currentRoute?.miles || 0, settings);
+  
   // Total Expenses logic: include labor
   const totalExpensesValue = Number(((currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue + dPayValue + hPayValue).toFixed(2));
   const netProfitValue = Number((estPayValue - totalExpensesValue).toFixed(2));
@@ -145,6 +145,7 @@ export function RouteTrackerView({
       const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, hObj) : 0;
       const fuel = estimateFuel(row.miles, settings);
       const mileageCost = truckRentalMileageCost(row.miles);
+      
       // Row total expenses include labor
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel + dPay + hPay;
 
@@ -449,7 +450,7 @@ export function RouteTrackerView({
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Profit Calculation</p>
                     <p className="text-[9px] font-bold text-slate-500 italic">
-                      EST.PAY - TOTAL EXPENSES (Incl. Labor)
+                      EST. PAY - TOTAL EXPENSES (Incl. Labor)
                     </p>
                   </div>
                   <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-rose-400" : "text-emerald-400")}>
@@ -499,7 +500,8 @@ export function RouteTrackerView({
                     const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, hObj) : 0;
                     const mileageCost = truckRentalMileageCost(row.miles);
                     const fuel = estimateFuel(row.miles, settings);
-                    // Row total expenses include labor
+                    
+                    // Total Expenses strictly includes labor for this view
                     const totalExp = Number(((row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel + dPay + hPay).toFixed(2));
                     const netProfit = Number((estRev - totalExp).toFixed(2));
                     
@@ -525,7 +527,7 @@ export function RouteTrackerView({
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{hPay > 0 ? currency(hPay) : ""}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(row.truckRental)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(mileageCost)}</td>
-                        <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200 italic text-slate-400">Included</td>
+                        <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200 text-slate-400">{currency(row.insurance || 0)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(fuel)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(totalExp)}</td>
                         <td className={cn("px-4 py-2 text-[10px] font-black text-center border-r border-slate-200", netProfit < 0 ? "text-rose-600" : "text-emerald-600")}>
@@ -714,7 +716,7 @@ export function RouteTrackerView({
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Profit Calculation</p>
                   <p className="text-[9px] font-bold text-slate-500 italic">
-                    EST.PAY - TOTAL EXPENSES (Incl. Labor)
+                    EST. PAY - TOTAL EXPENSES (Incl. Labor)
                   </p>
                 </div>
                 <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-rose-400" : "text-emerald-400")}>
