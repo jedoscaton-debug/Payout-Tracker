@@ -88,6 +88,9 @@ export function MyPaystubsView({ employee }: MyPaystubsViewProps) {
 
       <Dialog open={!!previewItem} onOpenChange={(o) => !o && setPreviewItem(null)}>
         <DialogContent className="max-w-[850px] w-full p-0 border-none shadow-2xl bg-white rounded-[2.5rem] overflow-y-auto max-h-[95vh]">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Paystub Preview</DialogTitle>
+          </DialogHeader>
           {previewItem && selectedRun && <PaystubPreview item={previewItem} run={selectedRun} />}
         </DialogContent>
       </Dialog>
