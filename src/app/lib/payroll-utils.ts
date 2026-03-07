@@ -34,11 +34,19 @@ export function getDayOfWeek(input: string) {
 }
 
 /**
- * Dynamic Estimate Pay based on settings
+ * Dynamic Estimate Pay based on settings and route type (EV vs GAS)
  */
-export function estimatePay(stops: number, settings?: FormulaSettings) {
-  const formula = settings?.estimatedPayFormula || DEFAULT_FORMULA_SETTINGS.estimatedPayFormula;
-  return evaluateFormula(formula, { stops });
+export function estimatePay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", settings?: FormulaSettings) {
+  const isEV = route === "EV" && vehicle === "EV";
+  
+  if (isEV) {
+    const formula = settings?.estimatedPayFormula || DEFAULT_FORMULA_SETTINGS.estimatedPayFormula;
+    return evaluateFormula(formula, { stops, miles });
+  } else {
+    // Non-EV/GAS routes
+    const formula = settings?.gasEstimatedPayFormula || DEFAULT_FORMULA_SETTINGS.gasEstimatedPayFormula;
+    return evaluateFormula(formula, { stops, miles });
+  }
 }
 
 /**
@@ -49,30 +57,30 @@ export function estimateFuel(miles: number, settings?: FormulaSettings) {
   return evaluateFormula(formula, { miles });
 }
 
-export function driverPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
-  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, settings);
+export function driverPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
+  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings);
   
   // Special Rule for EV
   if (route === "EV" && vehicle === "EV") {
     const formula = settings?.evDriverPayFormula || DEFAULT_FORMULA_SETTINGS.evDriverPayFormula;
-    return Number(evaluateFormula(formula, { estimatedPay: estPay, stops }).toFixed(2));
+    return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
   }
   
   const formula = settings?.driverPayFormula || DEFAULT_FORMULA_SETTINGS.driverPayFormula;
-  return Number(evaluateFormula(formula, { estimatedPay: estPay, stops }).toFixed(2));
+  return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
 }
 
-export function helperPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
-  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, settings);
+export function helperPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
+  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings);
   
   // Special Rule for EV
   if (route === "EV" && vehicle === "EV") {
     const formula = settings?.evHelperPayFormula || DEFAULT_FORMULA_SETTINGS.evHelperPayFormula;
-    return Number(evaluateFormula(formula, { estimatedPay: estPay, stops }).toFixed(2));
+    return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
   }
   
   const formula = settings?.helperPayFormula || DEFAULT_FORMULA_SETTINGS.helperPayFormula;
-  return Number(evaluateFormula(formula, { estimatedPay: estPay, stops }).toFixed(2));
+  return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
 }
 
 export function truckRentalMileageCost(miles: number) {
@@ -89,12 +97,12 @@ function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType |
 }
 
 function amountForRole(row: RouteTrackerRow, role: RoleType, settings?: FormulaSettings) {
-  const estPay = row.estimatedPay || estimatePay(row.stops, settings);
-  if (role === "Driver") return driverPay(row.stops, row.route, row.vehicleNumber, estPay, settings);
-  if (role === "Helper") return helperPay(row.stops, row.route, row.vehicleNumber, estPay, settings);
+  const estPay = row.estimatedPay || estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings);
+  if (role === "Driver") return driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings);
+  if (role === "Helper") return helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings);
   
-  const dPay = driverPay(row.stops, row.route, row.vehicleNumber, estPay, settings);
-  const hPay = helperPay(row.stops, row.route, row.vehicleNumber, estPay, settings);
+  const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings);
+  const hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings);
   return dPay + hPay;
 }
 

@@ -50,16 +50,22 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
   const { toast } = useToast();
 
   const testOutputs = useMemo(() => {
-    const estPay = evaluateFormula(formData.estimatedPayFormula || "", { stops: testInputs.stops });
-    const estFuel = evaluateFormula(formData.estimatedFuelFormula || "", { miles: testInputs.miles });
+    const scope = { stops: testInputs.stops, miles: testInputs.miles };
+    
+    // Choose formula based on EV toggle
+    const estPay = testInputs.isEV
+      ? evaluateFormula(formData.estimatedPayFormula || "", scope)
+      : evaluateFormula(formData.gasEstimatedPayFormula || "", scope);
+      
+    const estFuel = evaluateFormula(formData.estimatedFuelFormula || "", scope);
     
     const driverPay = testInputs.isEV
-      ? evaluateFormula(formData.evDriverPayFormula || "", { estimatedPay: estPay, stops: testInputs.stops })
-      : evaluateFormula(formData.driverPayFormula || "", { estimatedPay: estPay, stops: testInputs.stops });
+      ? evaluateFormula(formData.evDriverPayFormula || "", { estimatedPay: estPay, ...scope })
+      : evaluateFormula(formData.driverPayFormula || "", { estimatedPay: estPay, ...scope });
       
     const helperPay = testInputs.isEV
-      ? evaluateFormula(formData.evHelperPayFormula || "", { estimatedPay: estPay, stops: testInputs.stops })
-      : evaluateFormula(formData.helperPayFormula || "", { estimatedPay: estPay, stops: testInputs.stops });
+      ? evaluateFormula(formData.evHelperPayFormula || "", { estimatedPay: estPay, ...scope })
+      : evaluateFormula(formData.helperPayFormula || "", { estimatedPay: estPay, ...scope });
       
     const delta = evaluateFormula(formData.deltaFormula || "", { actualPayAudit: testInputs.actualPayAudit, estimatedPay: estPay });
     const trueNet = evaluateFormula(formData.trueNetProfitFormula || "", { 
@@ -119,8 +125,8 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
       </div>
 
       <div className="grid gap-4 md:grid-cols-5">
-        <SummaryCard label="Active Formulas" value="14" icon={Terminal} color="text-blue-500" />
-        <SummaryCard label="Route Formulas" value="4" icon={Calculator} color="text-indigo-500" />
+        <SummaryCard label="Active Formulas" value="15" icon={Terminal} color="text-blue-500" />
+        <SummaryCard label="Route Formulas" value="5" icon={Calculator} color="text-indigo-500" />
         <SummaryCard label="Profitability Rules" value="6" icon={Settings2} color="text-emerald-500" />
         <SummaryCard label="Deduction Rules" value="2" icon={ShieldCheck} color="text-rose-500" />
         <SummaryCard label="Last Updated" value={settings?.updatedAt ? new Date(settings.updatedAt).toLocaleDateString() : "Just Now"} icon={History} color="text-amber-500" />
@@ -143,10 +149,16 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
                 </CardHeader>
                 <CardContent className="p-8 space-y-8">
                   <FormulaField 
-                    label="EST. PAY Formula" 
+                    label="EST. PAY Formula (EV Routes)" 
                     value={formData.estimatedPayFormula || ""} 
                     onChange={v => setFormData({...formData, estimatedPayFormula: v})}
-                    hint="Variables: stops"
+                    hint="Variables: stops, miles"
+                  />
+                  <FormulaField 
+                    label="GAS PAY Formula (Non-EV Routes)" 
+                    value={formData.gasEstimatedPayFormula || ""} 
+                    onChange={v => setFormData({...formData, gasEstimatedPayFormula: v})}
+                    hint="Variables: stops, miles"
                   />
                   <FormulaField 
                     label="EST. FUEL Formula" 
@@ -182,13 +194,13 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
                       label="Driver Pay Formula" 
                       value={formData.driverPayFormula || ""} 
                       onChange={v => setFormData({...formData, driverPayFormula: v})}
-                      hint="Variables: estimatedPay, stops"
+                      hint="Variables: estimatedPay, stops, miles"
                     />
                     <FormulaField 
                       label="Helper Pay Formula" 
                       value={formData.helperPayFormula || ""} 
                       onChange={v => setFormData({...formData, helperPayFormula: v})}
-                      hint="Variables: estimatedPay, stops"
+                      hint="Variables: estimatedPay, stops, miles"
                     />
                   </CardContent>
                 </Card>
@@ -205,13 +217,13 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
                       label="EV Driver Pay Formula" 
                       value={formData.evDriverPayFormula || ""} 
                       onChange={v => setFormData({...formData, evDriverPayFormula: v})}
-                      hint="Variables: estimatedPay, stops"
+                      hint="Variables: estimatedPay, stops, miles"
                     />
                     <FormulaField 
                       label="EV Helper Pay Formula" 
                       value={formData.evHelperPayFormula || ""} 
                       onChange={v => setFormData({...formData, evHelperPayFormula: v})}
-                      hint="Variables: estimatedPay, stops"
+                      hint="Variables: estimatedPay, stops, miles"
                     />
                   </CardContent>
                 </Card>
@@ -317,7 +329,7 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
               <div className="p-6 bg-primary/10 border border-primary/20 rounded-2xl flex items-start gap-3">
                 <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-[10px] font-medium text-slate-400 leading-relaxed italic">
-                  "Calculations update instantly as you type formulas. Formulas use pure arithmetic and defined variables only."
+                  "Calculations update instantly as you type formulas. Use ROUND(x, 0) for rounding. Variables: stops, miles, estimatedPay."
                 </p>
               </div>
             </CardContent>

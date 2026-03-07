@@ -100,17 +100,17 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
       
       // Revenue Logic: Use settings rule
       const hasActualAudit = r.actualPayAudit && r.actualPayAudit > 0;
-      const rev = hasActualAudit ? r.actualPayAudit : (r.estimatedPay && r.estimatedPay > 0 ? r.estimatedPay : estimatePay(r.stops, settings));
+      const rev = hasActualAudit ? r.actualPayAudit : (r.estimatedPay && r.estimatedPay > 0 ? r.estimatedPay : estimatePay(r.stops, r.miles, r.route, r.vehicleNumber, settings));
       
       if (hasActualAudit) g.revenueSource = "Actual Audit";
       
       // Labor Cost Logic (Driver + Helper)
-      const dPay = driverPay(r.stops, r.route, r.vehicleNumber, r.estimatedPay, settings);
-      const hPay = r.helper && r.helper !== "No Helper" ? helperPay(r.stops, r.route, r.vehicleNumber, r.estimatedPay, settings) : 0;
+      const dPay = driverPay(r.stops, r.miles, r.route, r.vehicleNumber, r.estimatedPay, settings);
+      const hPay = r.helper && r.helper !== "No Helper" ? helperPay(r.stops, r.miles, r.route, r.vehicleNumber, r.estimatedPay, settings) : 0;
       
       // Van & Fuel Cost Logic
       const fuel = estimateFuel(r.miles, settings);
-      const vanFixed = r.truckRental || 52; 
+      const vanFixed = r.truckRental || TRUCK_RENTAL_FIXED; 
       
       g.revenue += rev;
       g.labor += (dPay + hPay);
@@ -148,6 +148,8 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
       };
     }).sort((a, b) => b.netProfit - a.netProfit);
   }, [filteredRoutes, settings]);
+
+  const TRUCK_RENTAL_FIXED = 52;
 
   const totals = useMemo(() => {
     return vanStats.reduce((acc, v) => ({
@@ -222,12 +224,12 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
         <CollapsibleContent className="p-6 border-t border-slate-200 space-y-4">
           <div className="grid gap-6 md:grid-cols-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase">Revenue Formula</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase">Revenue Formula (EV)</p>
               <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.estimatedPayFormula || "27 * stops"}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase">Labor Ratio</p>
-              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">D: {settings?.driverPayFormula || "27%"}<br/>H: {settings?.helperPayFormula || "23%"}</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase">Revenue Formula (GAS)</p>
+              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.gasEstimatedPayFormula || "100 + (1.37 * MILE) + (12.5 * STOPS)"}</p>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-black text-slate-400 uppercase">Fuel Ratio</p>

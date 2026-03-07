@@ -87,11 +87,11 @@ export function RouteTrackerView({
   
   const estPayValue = currentRoute?.estimatedPay && currentRoute.estimatedPay > 0 
     ? currentRoute.estimatedPay 
-    : estimatePay(currentRoute?.stops || 0, settings);
+    : estimatePay(currentRoute?.stops || 0, currentRoute?.miles || 0, currentRoute?.route || "", currentRoute?.vehicleNumber || "", settings);
 
-  const dPayValue = driverPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber, currentRoute?.estimatedPay, settings);
+  const dPayValue = driverPay(currentRoute?.stops || 0, currentRoute?.miles || 0, currentRoute?.route || "", currentRoute?.vehicleNumber || "", currentRoute?.estimatedPay, settings);
   const hPayValue = currentRoute?.helper && currentRoute?.helper !== "No Helper" 
-    ? helperPay(currentRoute?.stops || 0, currentRoute?.route, currentRoute?.vehicleNumber, currentRoute?.estimatedPay, settings) 
+    ? helperPay(currentRoute?.stops || 0, currentRoute?.miles || 0, currentRoute?.route || "", currentRoute?.vehicleNumber || "", currentRoute?.estimatedPay, settings) 
     : 0;
     
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
@@ -133,9 +133,9 @@ export function RouteTrackerView({
 
   const totals = useMemo(() => {
     return filtered.reduce((acc, row) => {
-      const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, settings);
-      const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings);
-      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings) : 0;
+      const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings);
+      const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings) : 0;
       const fuel = estimateFuel(row.miles, settings);
       const mileageCost = truckRentalMileageCost(row.miles);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -165,9 +165,9 @@ export function RouteTrackerView({
     ];
 
     const rows = filtered.map(row => {
-      const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, settings);
-      const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings);
-      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings) : 0;
+      const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings);
+      const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings) : 0;
       const mileageCost = truckRentalMileageCost(row.miles);
       const fuel = estimateFuel(row.miles, settings);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -363,7 +363,7 @@ export function RouteTrackerView({
                     <Input 
                       type="number" 
                       className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
-                      placeholder={estimatePay(newRoute.stops || 0, settings).toString()}
+                      placeholder={estimatePay(newRoute.stops || 0, newRoute.miles || 0, newRoute.route || "", newRoute.vehicleNumber || "", settings).toString()}
                       value={newRoute.estimatedPay === 0 ? "" : newRoute.estimatedPay} 
                       onChange={(e) => setNewRoute({...newRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} 
                     />
@@ -468,9 +468,9 @@ export function RouteTrackerView({
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {filtered.map((row) => {
-                    const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, settings);
-                    const dPay = driverPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings);
-                    const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.route, row.vehicleNumber, row.estimatedPay, settings) : 0;
+                    const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings);
+                    const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings);
+                    const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings) : 0;
                     const mileageCost = truckRentalMileageCost(row.miles);
                     const fuel = estimateFuel(row.miles, settings);
                     const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -622,7 +622,7 @@ export function RouteTrackerView({
                   <Input 
                     type="number" 
                     className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
-                    placeholder={estimatePay(editingRoute.stops || 0, settings).toString()}
+                    placeholder={estimatePay(editingRoute.stops || 0, editingRoute.miles || 0, editingRoute.route || "", editingRoute.vehicleNumber || "", settings).toString()}
                     value={editingRoute.estimatedPay === 0 ? "" : editingRoute.estimatedPay} 
                     onChange={(e) => setEditingRoute({...editingRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} 
                   />

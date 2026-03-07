@@ -107,6 +107,7 @@ export type ComputedTotals = {
 export type FormulaSettings = {
   id: string;
   estimatedPayFormula: string;
+  gasEstimatedPayFormula: string;
   estimatedFuelFormula: string;
   driverPayFormula: string;
   helperPayFormula: string;
