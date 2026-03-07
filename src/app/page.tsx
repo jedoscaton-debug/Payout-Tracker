@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
-import { LayoutDashboard, Users, Receipt, Route, Lock, Download, Loader2, LogOut, Shield, Wallet } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { LayoutDashboard, Users, Receipt, Route, Lock, Download, Loader2, LogOut, Shield, Wallet, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -16,13 +16,14 @@ import { EmployeeManager } from "@/components/employees/EmployeeManager";
 import { PayrollRunsView } from "@/components/payroll/PayrollRunsView";
 import { RouteTrackerView } from "@/components/payroll/RouteTrackerView";
 import { DeductionBoard } from "@/components/deductions/DeductionBoard";
+import { FleetProfitabilityView } from "@/components/fleet/FleetProfitabilityView";
 import { LoginView } from "@/components/auth/LoginView";
 
 import { useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, useAuth, useUser } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 
-type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "deductions";
+type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "deductions" | "fleet";
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView | null>(null);
@@ -131,6 +132,7 @@ export default function AppShell() {
     { id: "payroll", label: "Payroll Runs", icon: Receipt },
     { id: "routes", label: "Route Tracker", icon: Route },
     { id: "deductions", label: "Deductions", icon: Wallet },
+    { id: "fleet", label: "Fleet Profitability", icon: BarChart3 },
   ];
 
   return (
@@ -140,7 +142,7 @@ export default function AppShell() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-black text-xl shadow-lg">S</div>
           <nav className="flex items-center gap-1">
             {navItems.map((item) => (
-              <button key={item.id} onClick={() => setActiveView(item.id as ActiveView)} className={cn("flex items-center gap-2 px-4 h-10 rounded-xl font-bold text-[10px] uppercase", activeView === item.id ? "bg-slate-100 text-primary" : "text-slate-500")}>
+              <button key={item.id} onClick={() => setActiveView(item.id as ActiveView)} className={cn("flex items-center gap-2 px-4 h-10 rounded-xl font-bold text-[10px] uppercase whitespace-nowrap", activeView === item.id ? "bg-slate-100 text-primary" : "text-slate-500")}>
                 <item.icon className="h-4 w-4" /><span>{item.label}</span>
               </button>
             ))}
@@ -160,6 +162,7 @@ export default function AppShell() {
             {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} deductions={deductions} />}
             {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} />}
             {activeView === "deductions" && <DeductionBoard employees={employees} deductions={deductions} />}
+            {activeView === "fleet" && <FleetProfitabilityView routeTracker={routeTracker} />}
           </>
         )}
       </main>

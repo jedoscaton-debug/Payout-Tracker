@@ -100,3 +100,12 @@ export type ComputedTotals = {
   grossPay: number;
   netPay: number;
 };
+
+export type FleetWeeklySettings = {
+  id: string;
+  weeklyInsurance: number;
+  reserveRate: number;
+  redThreshold: number;
+  yellowThreshold: number;
+  updatedAt: string;
+};
