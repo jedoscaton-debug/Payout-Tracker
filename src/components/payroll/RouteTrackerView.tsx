@@ -157,7 +157,7 @@ export function RouteTrackerView({
 
     // Round everything at the end to prevent precision noise in UI
     return {
-      miles: raw.miles,
+      miles: Number(raw.miles.toFixed(2)),
       stops: raw.stops,
       estPay: Number(raw.estPay.toFixed(2)),
       driverPay: Number(raw.driverPay.toFixed(2)),
@@ -569,7 +569,7 @@ export function RouteTrackerView({
         </CardContent>
       </Card>
 
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+      <Dialog open={!!editingRoute} onOpenChange={(open) => !open && setEditingRoute(null)}>
         <DialogContent className="max-w-[1000px] p-0 border-none shadow-2xl rounded-[2rem] overflow-hidden bg-white">
           <DialogHeader className="sr-only">
             <DialogTitle>Edit Route Entry</DialogTitle>

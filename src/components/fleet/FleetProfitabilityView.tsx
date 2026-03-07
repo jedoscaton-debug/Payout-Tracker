@@ -152,7 +152,7 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
   const TRUCK_RENTAL_FIXED = 52;
 
   const totals = useMemo(() => {
-    return vanStats.reduce((acc, v) => ({
+    const raw = vanStats.reduce((acc, v) => ({
       daysActive: acc.daysActive + v.daysActive,
       revenue: acc.revenue + v.revenue,
       laborCosts: acc.laborCosts + v.labor,
@@ -171,6 +171,18 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
       miles: 0,
       stops: 0
     });
+
+    // Round everything to prevent precision noise
+    return {
+      daysActive: raw.daysActive,
+      revenue: Number(raw.revenue.toFixed(2)),
+      laborCosts: Number(raw.laborCosts.toFixed(2)),
+      vanFuelCosts: Number(raw.vanFuelCosts.toFixed(2)),
+      totalCosts: Number(raw.totalCosts.toFixed(2)),
+      netProfit: Number(raw.netProfit.toFixed(2)),
+      miles: Number(raw.miles.toFixed(2)),
+      stops: raw.stops
+    };
   }, [vanStats]);
 
   const realityCheck = useMemo(() => {
@@ -185,7 +197,12 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
       reserveRate: reserveRate
     });
 
-    return { rxoReserve, trueNetProfit, insurance, reserveRate };
+    return { 
+      rxoReserve: Number(rxoReserve.toFixed(2)), 
+      trueNetProfit: Number(trueNetProfit.toFixed(2)), 
+      insurance, 
+      reserveRate 
+    };
   }, [totals, settings]);
 
   const handleRecalculate = () => {
