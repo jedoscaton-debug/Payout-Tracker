@@ -1,4 +1,3 @@
-
 import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollItem, ComputedTotals, FormulaSettings } from './types';
 import { evaluateFormula, DEFAULT_FORMULA_SETTINGS } from './formula-evaluator';
 
@@ -35,17 +34,37 @@ export function getDayOfWeek(input: string) {
 }
 
 /**
+ * Helper to determine if a route is EV based on rules:
+ * 1. Route ID contains "_EV" (e.g. A01_EV)
+ * 2. Route ID is "EV" and Vehicle # is "EV"
+ */
+function isEVRoute(route: string, vehicle: string): boolean {
+  const r = (route || "").toUpperCase();
+  const v = (vehicle || "").toUpperCase();
+  
+  // Condition 1: Route ID contains _EV (covers A01_EV with any vehicle type)
+  const isEVSuffix = r.includes("_EV");
+  
+  // Condition 2: Pure EV route and vehicle
+  const isPureEV = r === "EV" && v === "EV";
+  
+  return isEVSuffix || isPureEV;
+}
+
+/**
  * Dynamic Estimate Pay based on settings and route type (EV vs GAS)
  */
 export function estimatePay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", settings?: FormulaSettings) {
-  const isEV = (route === "EV" && vehicle === "EV") || (route.toUpperCase().includes("EV") && vehicle.toUpperCase().includes("EV"));
+  const isEV = isEVRoute(route, vehicle);
   let result = 0;
 
   if (isEV) {
+    // EV Formula: Default 27 * stops
     const formula = settings?.estimatedPayFormula || DEFAULT_FORMULA_SETTINGS.estimatedPayFormula;
     result = evaluateFormula(formula, { stops, miles });
   } else {
-    // Non-EV/GAS routes
+    // GAS Formula: Used for routes like A01 (no _EV) or GAS/GAS
+    // Default: 100 + (1.37 * ROUND(miles, 0)) + (12.5 * ROUND(stops, 0))
     const formula = settings?.gasEstimatedPayFormula || DEFAULT_FORMULA_SETTINGS.gasEstimatedPayFormula;
     result = evaluateFormula(formula, { stops, miles });
   }
@@ -64,9 +83,8 @@ export function estimateFuel(miles: number, settings?: FormulaSettings) {
 
 export function driverPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
   const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings);
-  const isEV = (route === "EV" && vehicle === "EV") || (route.toUpperCase().includes("EV") && vehicle.toUpperCase().includes("EV"));
+  const isEV = isEVRoute(route, vehicle);
   
-  // Special Rule for EV
   if (isEV) {
     const formula = settings?.evDriverPayFormula || DEFAULT_FORMULA_SETTINGS.evDriverPayFormula;
     return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
@@ -78,9 +96,8 @@ export function driverPay(stops: number, miles: number = 0, route: string = "", 
 
 export function helperPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
   const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings);
-  const isEV = (route === "EV" && vehicle === "EV") || (route.toUpperCase().includes("EV") && vehicle.toUpperCase().includes("EV"));
+  const isEV = isEVRoute(route, vehicle);
   
-  // Special Rule for EV
   if (isEV) {
     const formula = settings?.evHelperPayFormula || DEFAULT_FORMULA_SETTINGS.evHelperPayFormula;
     return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
@@ -133,9 +150,9 @@ export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: R
 }
 
 export function computeTotals(item: PayrollItem): ComputedTotals {
-  const totalEarnings = 
-    item.earningsLines.reduce((sum, line) => sum + (line.amount || 0), 0) + 
-    item.otherEarningsLines.reduce((sum, line) => sum + (line.amount || 0), 0);
+  const earningsSum = item.earningsLines.reduce((sum, line) => sum + (line.amount || 0), 0);
+  const otherEarningsSum = item.otherEarningsLines.reduce((sum, line) => sum + (line.amount || 0), 0);
+  const totalEarnings = earningsSum + otherEarningsSum;
     
   const totalDeductions = item.deductionsLines.reduce((sum, line) => sum + (line.amount || 0), 0);
   const grossPay = totalEarnings;
