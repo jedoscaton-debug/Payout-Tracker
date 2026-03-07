@@ -47,7 +47,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
 
       const reportRef = doc(db, "rxoSettlementReports", reportId);
 
-      // Simulation Data Construction
+      // Simulation Data Construction matching sample screenshot
       const demoReport = {
         id: reportId,
         payee: "SYSTEM ORIENTED LLC",
@@ -56,12 +56,12 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         settlementPeriodEnd: date3,
         anticipatedIssueDate: today,
         marketCount: 1,
-        routeCount: 3,
-        totalMiles: 420,
-        totalStops: 82,
-        rxoTotalPay: 2154.50,
-        internalEstimatedTotalPay: 2214.00,
-        totalDelta: -59.50,
+        routeCount: 4,
+        totalMiles: 452.7,
+        totalStops: 70,
+        rxoTotalPay: 1998.21,
+        internalEstimatedTotalPay: 1890.00,
+        totalDelta: 108.21,
         fileName: file?.name || `RXO_Settlement_${today}.xlsx`,
         importedAt: now,
         importedBy: "Master Admin",
@@ -69,9 +69,10 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       };
 
       const demoRoutes = [
-        { routeId: "DMPEV_A01", rxoPay: 729.00, stops: 27, miles: 68, market: "LMH Beltsville", date: date1 },
-        { routeId: "DMPGAS_A02", rxoPay: 680.50, stops: 30, miles: 142, market: "LMH Beltsville", date: date2 },
-        { routeId: "A03_IKEA", rxoPay: 745.00, stops: 25, miles: 210, market: "LMH Beltsville", date: date3 }
+        { routeId: "DMPEV__1589092-4_121", rxoPay: 804.75, stops: 29, miles: 152.8, market: "LMH Beltsville", date: date1 },
+        { routeId: "DMPGAS__1585466-6_281", rxoPay: 293.59, stops: 6, miles: 88.1, market: "LMH Beltsville", date: date2 },
+        { routeId: "LMH__BWI_02152026_A01_EV", rxoPay: 596.62, stops: 22, miles: 80.5, market: "LMH Beltsville", date: date1 },
+        { routeId: "LMH__BWI_02172026_A07", rxoPay: 305.25, stops: 13, miles: 132.1, market: "LMH Beltsville", date: date3 }
       ];
 
       // Save Report Header
@@ -82,10 +83,10 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         reportId,
         companyName: "SYSTEM ORIENTED LLC",
         market: "LMH Beltsville",
-        routeCount: 3,
-        totalMiles: 420,
-        totalStops: 82,
-        totalPay: 2154.50,
+        routeCount: 4,
+        totalMiles: 452.7,
+        totalStops: 70,
+        totalPay: 1998.21,
         createdAt: now
       });
 
@@ -105,6 +106,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           const internalRouteClean = r.route.toUpperCase();
           const internalVehicleClean = r.vehicleNumber?.toUpperCase() || "";
 
+          // Handle specific prefixes
           if (rxoIdClean.startsWith("DMPEV")) {
             return internalRouteClean === "EV" && internalVehicleClean === "EV";
           }
@@ -112,6 +114,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             return internalRouteClean === "GAS" && internalVehicleClean === "GAS";
           }
           
+          // Pattern match for LMH routes
           return internalRouteClean === rxoIdClean || rxoIdClean.includes(internalRouteClean);
         });
 
@@ -133,9 +136,9 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           createdAt: now
         }, { merge: true });
 
-        // Add dummy Order Details for the first route
-        if (demo.routeId === "DMPEV_A01") {
-          for(let i=1; i<=3; i++) {
+        // Add dummy Order Details for specific routes
+        if (demo.routeId.includes("A01_EV")) {
+          for(let i=1; i<=2; i++) {
             addDocumentNonBlocking(collection(db, "rxoSettlementOrderDetails"), {
               reportId,
               routeId: demo.routeId,
@@ -144,7 +147,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
               service: i === 1 ? "Standard Delivery" : "Threshold Delivery",
               completion: "Completed",
               completedOn: demo.date,
-              rate: 243.00,
+              rate: 298.31,
               mileage: 0,
               supplement: 0,
               createdAt: now

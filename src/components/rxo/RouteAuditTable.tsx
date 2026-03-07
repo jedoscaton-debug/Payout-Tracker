@@ -57,27 +57,39 @@ export function RouteAuditTable({ routeDetails, orderDetails, search, setSearch,
     let routeId = row.routeId;
     let vehicleNum = "Varies";
 
+    // Handle DMPEV/DMPGAS patterns from sample
     if (row.routeId.startsWith("DMPEV")) {
       routeId = "EV";
       vehicleNum = "EV";
     } else if (row.routeId.startsWith("DMPGAS")) {
       routeId = "GAS";
       vehicleNum = "GAS";
+    } else if (row.routeId.startsWith("LMH__BWI_")) {
+      // Extract the part after the date string if possible
+      // Example: LMH__BWI_02152026_A01_EV -> A01_EV
+      const parts = row.routeId.split('_');
+      if (parts.length >= 4) {
+        // Find the index that looks like a date (8 digits) or just skip the prefix
+        routeId = parts.slice(3).join('_');
+        if (routeId.endsWith("_EV") || routeId === "EV") {
+          vehicleNum = "EV";
+        }
+      }
     }
 
     const newRoute: RouteTrackerRow = {
       id: `rt-rxo-${Date.now()}`,
       route: routeId,
-      routeType: "IKEA", // Default fallback
+      routeType: row.routeId.includes("IKEA") ? "IKEA" : (row.routeId.includes("GAS") ? "GAS" : "IKEA"),
       vehicleNumber: vehicleNum,
       date: row.routeDate,
       miles: row.routeMiles,
       stops: row.stopCount,
-      estimatedPay: row.rxoSettlementPay, // Use settlement as reference
+      estimatedPay: row.rxoSettlementPay, 
       actualPayAudit: row.rxoSettlementPay,
-      truckRental: 52, // Default
+      truckRental: 52, 
       insurance: 0,
-      driver: "Unassigned", // Admin will need to fix this in tracker
+      driver: "Unassigned", 
       helper: "No Helper"
     };
 
