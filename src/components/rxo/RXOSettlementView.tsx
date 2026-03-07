@@ -148,6 +148,7 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
             <TabsContent value="audit">
               <RouteAuditTable 
                 routeDetails={routeDetails || []} 
+                internalRoutes={routes}
                 search={search} 
                 setSearch={setSearch} 
                 onRecalculate={handleRecalculate}
