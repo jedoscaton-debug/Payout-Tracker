@@ -97,7 +97,7 @@ export function RouteTrackerView({
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
   const fuelValue = estimateFuel(currentRoute?.miles || 0, settings);
   const totalExpensesValue = (currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue;
-  const netProfitValue = estPayValue - (totalExpensesValue + dPayValue + hPayValue);
+  const netProfitValue = Number((estPayValue - (totalExpensesValue + dPayValue + hPayValue)).toFixed(2));
 
   const headers = [
     "Route",
@@ -132,7 +132,7 @@ export function RouteTrackerView({
   });
 
   const totals = useMemo(() => {
-    return filtered.reduce((acc, row) => {
+    const raw = filtered.reduce((acc, row) => {
       const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings);
       const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings);
       const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings) : 0;
@@ -154,6 +154,19 @@ export function RouteTrackerView({
     }, {
       miles: 0, stops: 0, estPay: 0, driverPay: 0, helperPay: 0, truckRental: 0, fuel: 0, totalExp: 0, netProfit: 0
     });
+
+    // Round everything at the end to prevent precision noise in UI
+    return {
+      miles: raw.miles,
+      stops: raw.stops,
+      estPay: Number(raw.estPay.toFixed(2)),
+      driverPay: Number(raw.driverPay.toFixed(2)),
+      helperPay: Number(raw.helperPay.toFixed(2)),
+      truckRental: Number(raw.truckRental.toFixed(2)),
+      fuel: Number(raw.fuel.toFixed(2)),
+      totalExp: Number(raw.totalExp.toFixed(2)),
+      netProfit: Number(raw.netProfit.toFixed(2))
+    };
   }, [filtered, settings]);
 
   const handleExportAudit = () => {
@@ -171,7 +184,7 @@ export function RouteTrackerView({
       const mileageCost = truckRentalMileageCost(row.miles);
       const fuel = estimateFuel(row.miles, settings);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
-      const netProfit = estRev - totalExp - dPay - hPay;
+      const netProfit = Number((estRev - totalExp - dPay - hPay).toFixed(2));
 
       return [
         `"${row.route}"`,
@@ -474,7 +487,7 @@ export function RouteTrackerView({
                     const mileageCost = truckRentalMileageCost(row.miles);
                     const fuel = estimateFuel(row.miles, settings);
                     const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
-                    const netProfit = estRev - totalExp - dPay - hPay;
+                    const netProfit = Number((estRev - totalExp - dPay - hPay).toFixed(2));
                     
                     return (
                       <tr key={row.id} className="transition-colors group align-middle h-14 bg-white hover:bg-slate-50/50">

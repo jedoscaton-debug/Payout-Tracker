@@ -3,12 +3,13 @@ import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollI
 import { evaluateFormula, DEFAULT_FORMULA_SETTINGS } from './formula-evaluator';
 
 export function currency(value: number) {
+  const rounded = Math.round((value || 0) * 100) / 100;
   return new Intl.NumberFormat("en-US", { 
     style: "currency", 
     currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  }).format(value || 0);
+  }).format(rounded);
 }
 
 export function shortDate(input: string) {
@@ -37,16 +38,19 @@ export function getDayOfWeek(input: string) {
  * Dynamic Estimate Pay based on settings and route type (EV vs GAS)
  */
 export function estimatePay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", settings?: FormulaSettings) {
-  const isEV = route === "EV" && vehicle === "EV";
-  
+  const isEV = (route === "EV" && vehicle === "EV") || (route.toUpperCase().includes("EV") && vehicle.toUpperCase().includes("EV"));
+  let result = 0;
+
   if (isEV) {
     const formula = settings?.estimatedPayFormula || DEFAULT_FORMULA_SETTINGS.estimatedPayFormula;
-    return evaluateFormula(formula, { stops, miles });
+    result = evaluateFormula(formula, { stops, miles });
   } else {
     // Non-EV/GAS routes
     const formula = settings?.gasEstimatedPayFormula || DEFAULT_FORMULA_SETTINGS.gasEstimatedPayFormula;
-    return evaluateFormula(formula, { stops, miles });
+    result = evaluateFormula(formula, { stops, miles });
   }
+
+  return Number(result.toFixed(2));
 }
 
 /**
@@ -54,14 +58,16 @@ export function estimatePay(stops: number, miles: number = 0, route: string = ""
  */
 export function estimateFuel(miles: number, settings?: FormulaSettings) {
   const formula = settings?.estimatedFuelFormula || DEFAULT_FORMULA_SETTINGS.estimatedFuelFormula;
-  return evaluateFormula(formula, { miles });
+  const result = evaluateFormula(formula, { miles });
+  return Number(result.toFixed(2));
 }
 
 export function driverPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
   const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings);
+  const isEV = (route === "EV" && vehicle === "EV") || (route.toUpperCase().includes("EV") && vehicle.toUpperCase().includes("EV"));
   
   // Special Rule for EV
-  if (route === "EV" && vehicle === "EV") {
+  if (isEV) {
     const formula = settings?.evDriverPayFormula || DEFAULT_FORMULA_SETTINGS.evDriverPayFormula;
     return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
   }
@@ -72,9 +78,10 @@ export function driverPay(stops: number, miles: number = 0, route: string = "", 
 
 export function helperPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
   const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings);
+  const isEV = (route === "EV" && vehicle === "EV") || (route.toUpperCase().includes("EV") && vehicle.toUpperCase().includes("EV"));
   
   // Special Rule for EV
-  if (route === "EV" && vehicle === "EV") {
+  if (isEV) {
     const formula = settings?.evHelperPayFormula || DEFAULT_FORMULA_SETTINGS.evHelperPayFormula;
     return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
   }
@@ -103,7 +110,7 @@ function amountForRole(row: RouteTrackerRow, role: RoleType, settings?: FormulaS
   
   const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings);
   const hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings);
-  return dPay + hPay;
+  return Number((dPay + hPay).toFixed(2));
 }
 
 export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: RouteTrackerRow[], settings?: FormulaSettings): EarningsLine[] {
@@ -119,7 +126,7 @@ export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: R
         client: row.route,
         role,
         description: `${displayDate} - ${row.routeType} ${role}`,
-        amount: Number(amountForRole(row, role, settings).toFixed(2)),
+        amount: amountForRole(row, role, settings),
       } satisfies EarningsLine;
     })
     .filter(Boolean) as EarningsLine[];
