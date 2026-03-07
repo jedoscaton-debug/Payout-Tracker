@@ -25,8 +25,8 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { RXORouteDetail, RouteTrackerRow } from "@/app/lib/types";
-import { currency, shortDate } from "@/app/lib/payroll-utils";
+import { RXORouteDetail, RouteTrackerRow, FormulaSettings } from "@/app/lib/types";
+import { currency, shortDate, estimatePay } from "@/app/lib/payroll-utils";
 import { cn } from "@/lib/utils";
 
 interface RouteAuditTableProps {
@@ -36,9 +36,10 @@ interface RouteAuditTableProps {
   setSearch: (v: string) => void;
   onRecalculate: () => void;
   onAddInternalRoute?: (route: RouteTrackerRow) => void;
+  settings?: FormulaSettings;
 }
 
-export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearch, onRecalculate, onAddInternalRoute }: RouteAuditTableProps) {
+export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearch, onRecalculate, onAddInternalRoute, settings }: RouteAuditTableProps) {
   const filtered = routeDetails.filter(r => 
     r.routeId.toLowerCase().includes(search.toLowerCase()) ||
     r.market.toLowerCase().includes(search.toLowerCase())
@@ -79,7 +80,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                     <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-slate-800">RXO Stop Count</th>
                     <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-slate-700">Internal Stops</th>
                     
-                    <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest bg-slate-800">Estimated Pay</th>
+                    <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest bg-slate-800">Estimated Pay (Tracker)</th>
                     <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest bg-slate-700">RXO Settlement Amount</th>
                     
                     <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest border-l border-white/10">Delta</th>
@@ -94,9 +95,19 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                     </tr>
                   ) : filtered.map(row => {
                     const matchedInternal = internalRoutes.find(ir => ir.id === row.internalRouteId);
-                    const isRed = row.deltaStatus === 'RED';
-                    const milesMatch = row.internalMiles === row.routeMiles;
-                    const stopsMatch = row.internalStops === row.stopCount;
+                    
+                    // GET LIVE ESTIMATED PAY FROM TRACKER
+                    const liveInternalEst = matchedInternal 
+                      ? (matchedInternal.estimatedPay && matchedInternal.estimatedPay > 0 
+                          ? matchedInternal.estimatedPay 
+                          : estimatePay(matchedInternal.stops, matchedInternal.miles, matchedInternal.route, matchedInternal.vehicleNumber, settings, matchedInternal.routeType))
+                      : row.systemEstimatedPay; // Fallback to snapshot if internal route was deleted
+
+                    const liveDelta = Number((row.rxoSettlementPay - liveInternalEst).toFixed(2));
+                    const isRed = liveDelta < -50;
+                    
+                    const milesMatch = matchedInternal ? matchedInternal.miles === row.routeMiles : false;
+                    const stopsMatch = matchedInternal ? matchedInternal.stops === row.stopCount : false;
                     
                     return (
                       <tr key={row.id} className={cn("hover:bg-slate-50/50 transition-colors group", !matchedInternal && "bg-slate-50/20")}>
@@ -126,16 +137,16 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                         
                         <td className="px-4 py-5 text-center font-bold text-slate-500 bg-slate-50/50">{row.routeMiles}</td>
                         <td className={cn("px-4 py-5 text-center font-bold bg-slate-50/30", !milesMatch && matchedInternal ? "text-rose-500 underline decoration-dotted decoration-2 underline-offset-4" : "text-slate-900")}>
-                          {row.internalMiles ?? "—"}
+                          {matchedInternal?.miles ?? "—"}
                         </td>
                         
                         <td className="px-4 py-5 text-center font-bold text-slate-500 bg-slate-50/50">{row.stopCount}</td>
                         <td className={cn("px-4 py-5 text-center font-bold bg-slate-50/30", !stopsMatch && matchedInternal ? "text-rose-500 underline decoration-dotted decoration-2 underline-offset-4" : "text-slate-900")}>
-                          {row.internalStops ?? "—"}
+                          {matchedInternal?.stops ?? "—"}
                         </td>
                         
-                        <td className="px-4 py-5 text-right font-bold text-slate-400 bg-slate-50/30">
-                          {currency(row.systemEstimatedPay)}
+                        <td className="px-4 py-5 text-right font-black text-primary bg-slate-50/30">
+                          {currency(liveInternalEst)}
                         </td>
                         <td className="px-4 py-5 text-right font-black text-slate-900 bg-slate-50/50">
                           {currency(row.rxoSettlementPay)}
@@ -145,7 +156,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                           "px-4 py-5 text-right font-black text-xs border-l",
                           isRed ? "text-rose-600 bg-rose-50/30" : "text-emerald-600 bg-emerald-50/30"
                         )}>
-                          {currency(row.delta)}
+                          {currency(liveDelta)}
                         </td>
                         
                         <td className="px-4 py-5 text-center">

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -35,7 +36,7 @@ import {
   RouteTrackerRow,
   FormulaSettings
 } from "@/app/lib/types";
-import { currency, shortDate } from "@/app/lib/payroll-utils";
+import { currency, shortDate, estimatePay } from "@/app/lib/payroll-utils";
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, doc, query, orderBy, limit, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -70,16 +71,46 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
   );
   const { data: routeDetails } = useCollection<RXORouteDetail>(routeDetailsQuery);
 
-  const summaryRowsQuery = useMemoFirebase(() => 
-    selectedReportId ? query(collection(db, "rxoSettlementSummaryRows"), where("reportId", "==", selectedReportId)) : null, 
-    [db, selectedReportId]
-  );
-  const { data: summaryRows } = useCollection<any>(summaryRowsQuery);
+  // Recalculate Live Stats based on current Route Tracker values
+  const liveStats = useMemo(() => {
+    if (!routeDetails || !routes) return null;
+    
+    let totalInternalEst = 0;
+    routeDetails.forEach(row => {
+      const matched = routes.find(r => r.id === row.internalRouteId);
+      const est = matched 
+        ? (matched.estimatedPay && matched.estimatedPay > 0 
+            ? matched.estimatedPay 
+            : estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType))
+        : row.systemEstimatedPay;
+      totalInternalEst += est;
+    });
 
-  const flaggedRoutes = useMemo(() => routeDetails?.filter(r => r.deltaStatus === 'RED') || [], [routeDetails]);
+    const rxoTotal = selectedReport?.rxoTotalPay || 0;
+    const delta = rxoTotal - totalInternalEst;
+
+    return {
+      internalEst: totalInternalEst,
+      delta,
+      isRed: delta < -500
+    };
+  }, [routeDetails, routes, selectedReport, settings]);
+
+  const flaggedRoutes = useMemo(() => {
+    if (!routeDetails) return [];
+    return routeDetails.filter(row => {
+      const matched = routes.find(r => r.id === row.internalRouteId);
+      const est = matched 
+        ? (matched.estimatedPay && matched.estimatedPay > 0 
+            ? matched.estimatedPay 
+            : estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType))
+        : row.systemEstimatedPay;
+      return (row.rxoSettlementPay - est) < -50;
+    });
+  }, [routeDetails, routes, settings]);
 
   const handleRecalculate = () => {
-    toast({ title: "Audit Re-synchronized", description: "Verifying estimates against internal logs..." });
+    toast({ title: "Audit Re-synchronized", description: "All estimates updated against active Route Tracker logs." });
   };
 
   const handleDeleteReport = (id: string) => {
@@ -93,7 +124,7 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-1">
           <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">RXO Settlement Audit</h3>
-          <p className="text-sm text-slate-500 font-medium">Verify RXO payout accuracy against internal route tracker estimates.</p>
+          <p className="text-sm text-slate-500 font-medium">Verify RXO payout accuracy using live estimates from your Route Tracker.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {reports && reports.length > 0 && (
@@ -114,34 +145,33 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
             </div>
           )}
           <Button variant="outline" className="rounded-xl h-11 bg-white font-bold" onClick={() => setIsImportOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" /> Import RXO File
+            <Upload className="mr-2 h-4 w-4" /> AI Batch Import
           </Button>
         </div>
       </div>
 
-      {selectedReport ? (
+      {selectedReport && liveStats ? (
         <>
           <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
             <StatCard label="Total Routes" value={selectedReport.routeCount} icon={ClipboardCheck} color="text-slate-900" />
             <StatCard label="Total Miles" value={selectedReport.totalMiles.toLocaleString()} icon={Layers} color="text-slate-500" />
             <StatCard label="Total Stops" value={selectedReport.totalStops} icon={Layers} color="text-slate-500" />
-            <StatCard label="System Oriented Est." value={currency(selectedReport.internalEstimatedTotalPay)} icon={Info} color="text-primary" />
+            <StatCard label="Internal Est. Pay" value={currency(liveStats.internalEst)} icon={Info} color="text-primary" />
             <StatCard label="RXO Settlement Pay" value={currency(selectedReport.rxoTotalPay)} icon={Download} color="text-slate-900" />
             <StatCard 
-              label="Total Delta" 
-              value={currency(selectedReport.totalDelta)} 
+              label="Weekly Delta" 
+              value={currency(liveStats.delta)} 
               icon={ArrowRightLeft} 
-              color={selectedReport.totalDelta < -500 ? "text-rose-500" : "text-emerald-500"} 
-              highlight={selectedReport.totalDelta < -500}
+              color={liveStats.isRed ? "text-rose-500" : "text-emerald-500"} 
+              highlight={liveStats.isRed}
             />
           </div>
 
-          {flaggedRoutes.length > 0 && <ExceptionPanel routes={flaggedRoutes} />}
+          {flaggedRoutes.length > 0 && <ExceptionPanel routes={flaggedRoutes as any} />}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="bg-white border p-1 rounded-2xl h-14 mb-6">
               <TabsTrigger value="audit" className="rounded-xl h-full font-bold uppercase text-[10px] px-8">Route Comparison Audit</TabsTrigger>
-              <TabsTrigger value="summary" className="rounded-xl h-full font-bold uppercase text-[10px] px-8">Market Summary</TabsTrigger>
               <TabsTrigger value="history" className="rounded-xl h-full font-bold uppercase text-[10px] px-8">Import History</TabsTrigger>
             </TabsList>
 
@@ -153,42 +183,13 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
                 setSearch={setSearch} 
                 onRecalculate={handleRecalculate}
                 onAddInternalRoute={onAddInternalRoute}
+                settings={settings}
               />
-            </TabsContent>
-
-            <TabsContent value="summary">
-              <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
-                <CardHeader className="bg-slate-50/50 border-b p-8"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Imported Summary Snapshot</CardTitle></CardHeader>
-                <CardContent className="p-0">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-slate-900 text-white">
-                        <th className="px-8 py-4 text-left text-[10px] font-black uppercase">Market</th>
-                        <th className="px-4 py-4 text-center text-[10px] font-black uppercase">Route Count</th>
-                        <th className="px-4 py-4 text-center text-[10px] font-black uppercase">Total Miles</th>
-                        <th className="px-4 py-4 text-center text-[10px] font-black uppercase">Total Stops</th>
-                        <th className="px-8 py-4 text-right text-[10px] font-black uppercase">Total Pay</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {summaryRows?.map((row: any, i: number) => (
-                        <tr key={i} className="hover:bg-slate-50">
-                          <td className="px-8 py-5 font-bold text-slate-900">{row.market}</td>
-                          <td className="px-4 py-5 text-center font-bold text-slate-500">{row.routeCount}</td>
-                          <td className="px-4 py-5 text-center font-bold text-slate-500">{row.totalMiles}</td>
-                          <td className="px-4 py-5 text-center font-bold text-slate-500">{row.totalStops}</td>
-                          <td className="px-8 py-5 text-right font-black text-slate-900">{currency(row.totalPay)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </CardContent>
-              </Card>
             </TabsContent>
 
             <TabsContent value="history">
               <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
-                <CardHeader className="bg-slate-50/50 border-b p-8"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Past Imported Reports</CardTitle></CardHeader>
+                <CardHeader className="bg-slate-50/50 border-b p-8"><CardTitle className="text-[10px] font-black uppercase text-slate-400">Past AI Audits</CardTitle></CardHeader>
                 <CardContent className="p-0">
                   <table className="w-full">
                     <thead>
@@ -197,7 +198,7 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
                         <th className="px-4 py-5 text-left">Imported Date</th>
                         <th className="px-4 py-5 text-center">Routes</th>
                         <th className="px-4 py-5 text-right">RXO Total</th>
-                        <th className="px-4 py-5 text-right">Delta</th>
+                        <th className="px-4 py-5 text-right">Snapshot Delta</th>
                         <th className="px-8 py-5 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -234,10 +235,10 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
           <div className="h-20 w-20 rounded-[2rem] bg-slate-50 flex items-center justify-center mx-auto text-slate-300"><ClipboardCheck className="h-10 w-10" /></div>
           <div className="space-y-2">
             <h4 className="text-xl font-black uppercase tracking-tighter text-slate-900">No Audits Imported</h4>
-            <p className="text-sm text-slate-500 font-medium">Import an RXO settlement file to begin automated cross-referencing.</p>
+            <p className="text-sm text-slate-500 font-medium">Upload RXO screenshots to begin AI-powered settlement cross-referencing.</p>
           </div>
           <Button className="rounded-xl h-14 bg-slate-900 px-10 font-bold uppercase text-xs" onClick={() => setIsImportOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" /> Start First Audit
+            <Upload className="mr-2 h-4 w-4" /> Start AI Batch Audit
           </Button>
         </Card>
       )}

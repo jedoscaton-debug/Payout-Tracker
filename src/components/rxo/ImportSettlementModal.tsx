@@ -14,6 +14,7 @@ import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeRXOSettlement } from "@/ai/flows/process-rxo-settlement-flow";
+import { estimatePay } from "@/app/lib/payroll-utils";
 import { cn } from "@/lib/utils";
 
 interface ImportSettlementModalProps {
@@ -64,7 +65,6 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-    // Previews index might mismatch if non-images are mixed, but simple cleanup for now
     setPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -116,16 +116,11 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         if (currentFile.type.startsWith('image/')) {
           const preview = previews[i] || "";
           if (preview) {
-            toast({ title: `Scanning Image ${i + 1}/${files.length}`, description: "Gemini is analyzing the screenshot..." });
+            toast({ title: `Scanning Image ${i + 1}/${files.length}`, description: "AI is analyzing settlement details..." });
             const aiResult = await analyzeRXOSettlement({ photoDataUri: preview });
             allExtractedRoutes = [...allExtractedRoutes, ...aiResult.extractedRoutes];
             totalSettlementPay += aiResult.totalPay;
           }
-        } else {
-          // Fallback simulation for non-image files (Excel/CSV)
-          const simulated = simulateFileExtraction(startDate);
-          allExtractedRoutes = [...allExtractedRoutes, ...simulated];
-          totalSettlementPay += simulated.reduce((sum, r) => sum + r.settlementAmount, 0);
         }
       }
 
@@ -142,28 +137,21 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         const matchedInternal = routes.find(r => {
           if (usedInternalIds.has(r.id)) return false;
           
-          // Date Check: Handle MMDDYYYY format from AI vs YYYY-MM-DD from tracker
-          const internalDate = r.date;
-          if (internalDate !== extracted.routeDate) return false;
+          // 1. Date Validation: Extracted date must match Internal Tracker date
+          if (r.date !== extracted.routeDate) return false;
 
           const rxoId = extracted.routeId.toUpperCase();
           const internalRoute = r.route.toUpperCase();
           const internalVehicle = r.vehicleNumber.toUpperCase();
 
-          // Rule 1: EV Pattern (DMPEV)
+          // Pattern A: EV Special Node (DMPEV prefix)
           if (rxoId.includes('DMPEV') && internalRoute === 'EV' && internalVehicle === 'EV') {
             return true;
           }
 
-          // Rule 2: LMH Pattern (Check suffix)
+          // Pattern B: LMH Standard Routes (LMH__BWI_MMDDYYYY_A01_EV)
+          // We check if the RXO ID contains the internal route code as a component
           if (rxoId.endsWith(`_${internalRoute}`)) {
-            return true;
-          }
-
-          // Relaxed suffix check
-          const parts = rxoId.split('_');
-          const suffix = parts[parts.length - 1];
-          if (suffix === internalRoute || (parts[parts.length - 2] === internalRoute && suffix === 'EV')) {
             return true;
           }
 
@@ -172,7 +160,13 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
 
         if (matchedInternal) usedInternalIds.add(matchedInternal.id);
 
-        const internalEst = matchedInternal?.estimatedPay || 0;
+        // Get Estimated Pay from Internal Tracker (stored value or calculated fallback)
+        const internalEst = matchedInternal 
+          ? (matchedInternal.estimatedPay && matchedInternal.estimatedPay > 0 
+              ? matchedInternal.estimatedPay 
+              : estimatePay(matchedInternal.stops, matchedInternal.miles, matchedInternal.route, matchedInternal.vehicleNumber, settings, matchedInternal.routeType))
+          : 0;
+
         totalInternalEst += internalEst;
 
         const delta = Number((extracted.settlementAmount - internalEst).toFixed(2));
@@ -214,7 +208,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         rxoTotalPay: Number(totalSettlementPay.toFixed(2)),
         internalEstimatedTotalPay: Number(totalInternalEst.toFixed(2)),
         totalDelta: Number((totalSettlementPay - totalInternalEst).toFixed(2)),
-        fileName: files.length > 1 ? `Batch (${files.length} files)` : files[0].name,
+        fileName: files.length > 1 ? `Batch (${files.length} screenshots)` : files[0].name,
         importedAt: now,
         importedBy: "System Admin",
         notes: `AI-powered batch audit for ${startDate} to ${endDate}.`
@@ -225,14 +219,14 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       setTimeout(() => {
         setIsImporting(false);
         onImportComplete(reportId);
-        toast({ title: "Audit Batch Complete", description: `Cross-referenced ${allExtractedRoutes.length} routes from ${files.length} files.` });
+        toast({ title: "AI Audit Complete", description: `Cross-referenced ${allExtractedRoutes.length} routes with your internal tracker.` });
         onClose();
       }, 1000);
 
     } catch (e) {
       console.error(e);
       setIsImporting(false);
-      toast({ variant: "destructive", title: "Import Failed", description: "AI batch processing encountered an error." });
+      toast({ variant: "destructive", title: "Import Failed", description: "The AI encountered an error while processing the images." });
     }
   };
 
@@ -285,31 +279,31 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             </div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-900">
-                {isDragging ? "Drop files here" : "Upload RXO Files or Screenshots"}
+                {isDragging ? "Drop screenshots here" : "Upload RXO Screenshots"}
               </p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                Supports multiple PNG, JPG, JPEG, and CSV files
+                Drag PNG, JPG, or JPEG images to begin AI scan
               </p>
             </div>
             <input 
               type="file" multiple ref={fileInputRef} className="hidden" 
-              accept="image/*,.csv,.xlsx,.xls" onChange={handleFileChange} 
+              accept="image/*" onChange={handleFileChange} 
             />
           </div>
 
           {files.length > 0 && (
             <div className="space-y-3">
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Selected Batch ({files.length})</p>
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Batch Queue ({files.length})</p>
               <ScrollArea className="max-h-[200px] rounded-2xl border border-slate-100 bg-slate-50/50">
                 <div className="p-4 space-y-2">
                   {files.map((f, i) => (
                     <div key={i} className="flex items-center gap-4 p-3 bg-white rounded-xl border border-slate-100 group">
                       <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500">
-                        <FileText className="h-4 w-4" />
+                        <ImageIcon className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-slate-900 truncate">{f.name}</p>
-                        <p className="text-[8px] font-black text-emerald-600 uppercase tracking-tight">Queue Position {i + 1}</p>
+                        <p className="text-[8px] font-black text-emerald-600 uppercase tracking-tight">Ready for AI processing</p>
                       </div>
                       <Button 
                         variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-rose-500"
@@ -326,9 +320,9 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
 
           <Alert className="rounded-2xl bg-blue-50 border-blue-100 text-blue-700">
             <Info className="h-4 w-4" />
-            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">AI Batch Processing</AlertTitle>
+            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">AI Matching Rules</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              Gemini AI will process all selected files in sequence. Each screenshot will be cross-referenced with your internal records. Discrepancies exceeding -$50.00 will be flagged.
+              AI will extract route codes and dates from screenshots. Matches are confirmed only when dates align with your internal Route Tracker. Discrepancies exceeding -$50.00 will be flagged in RED.
             </AlertDescription>
           </Alert>
         </div>
@@ -346,18 +340,4 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       </DialogContent>
     </Dialog>
   );
-}
-
-function simulateFileExtraction(date: string) {
-  const dateParts = date.split('-');
-  const dateFormatted = `${dateParts[1]}${dateParts[2]}${dateParts[0]}`;
-  
-  return Array.from({ length: 4 }).map((_, i) => ({
-    routeId: `LMH__BWI_${dateFormatted}_A${String(i+1).padStart(2, '0')}`,
-    market: "LMH Beltsville",
-    routeDate: date,
-    routeMiles: 110 + i,
-    stopCount: 15 + i,
-    settlementAmount: 440.21
-  }));
 }
