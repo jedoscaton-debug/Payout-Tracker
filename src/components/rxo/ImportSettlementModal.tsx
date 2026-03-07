@@ -52,48 +52,25 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       
       const reportRef = doc(db, "rxoSettlementReports", reportId);
 
-      // Simulation Data based on provided image patterns
-      const demoReport = {
-        id: reportId,
-        payee: "SYSTEM ORIENTED LLC",
-        companyName: "SYSTEM ORIENTED LLC",
-        settlementPeriodStart: startDate,
-        settlementPeriodEnd: endDate,
-        anticipatedIssueDate: now.split('T')[0],
-        marketCount: 1,
-        routeCount: 16,
-        totalMiles: 1764.1,
-        totalStops: 266,
-        rxoTotalPay: 7043.41,
-        internalEstimatedTotalPay: 0,
-        totalDelta: 0,
-        fileName: file?.name || `RXO_Settlement_${startDate}_${endDate}.xlsx`,
-        importedAt: now,
-        importedBy: "System Admin",
-        notes: `Imported for period ${startDate} to ${endDate}.`
-      };
-
-      // Generate demo routes following the exact string patterns requested
+      // Simulation Data matching the provided logic
       const demoRoutes = Array.from({ length: 16 }).map((_, i) => {
         let routeId = "";
         const dateStr = startDate.replace(/-/g, '');
+        const dateFormatted = dateStr.slice(4, 6) + dateStr.slice(6, 8) + dateStr.slice(0, 4); // MMDDYYYY
         
         if (i < 4) {
           // DMPEV pattern for EV/EV nodes
           routeId = `DMPEV___1589092-4_${String(100 + i).padStart(3, '0')}`;
-        } else if (i === 4) {
-          // DMPGAS pattern
-          routeId = `DMPGAS__1585466-6_281`;
         } else {
           // LMH pattern
-          const code = `A${String(i - 4).padStart(2, '0')}`;
+          const code = `A${String(i - 3).padStart(2, '0')}`;
           const suffix = i % 2 === 0 ? "_EV" : "";
-          routeId = `LMH__BWI_${dateStr}_${code}${suffix}`;
+          routeId = `LMH__BWI_${dateFormatted}_${code}${suffix}`;
         }
         
-        const stops = i < 10 ? 17 : 16;
-        const miles = i < 15 ? 110.2 : 111.1;
-        const rxoPay = i < 15 ? 440.21 : 440.26;
+        const stops = 17;
+        const miles = 110.2;
+        const rxoPay = 440.21;
 
         return {
           routeId, 
@@ -106,10 +83,13 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       });
 
       let totalInternalEst = 0;
+      let totalRXOPay = 0;
       const usedInternalIds = new Set<string>();
 
       demoRoutes.forEach((demo, idx) => {
-        // ENHANCED MATCHING LOGIC
+        totalRXOPay += demo.rxoPay;
+
+        // ENHANCED MATCHING LOGIC PER REQUIREMENTS
         const matchedInternal = routes.find(r => {
           if (usedInternalIds.has(r.id)) return false;
           const sameDate = r.date === demo.date;
@@ -120,12 +100,12 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           const internalVehicle = r.vehicleNumber.toUpperCase();
 
           // Rule 1: DMPEV pattern for EV/EV nodes
-          if (rxoId.startsWith('DMPEV') && internalRoute === 'EV' && internalVehicle === 'EV') {
+          if (rxoId.includes('DMPEV') && internalRoute === 'EV' && internalVehicle === 'EV') {
             return true;
           }
 
-          // Rule 2: LMH pattern for standard routes (Suffix match)
-          // Look for _A01_EV or _A01 etc.
+          // Rule 2: LMH pattern for standard routes
+          // If RXO ID ends with the route or contains it after the date string
           if (rxoId.includes(`_${internalRoute}`)) {
             return true;
           }
@@ -138,8 +118,10 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         const internalEst = matchedInternal?.estimatedPay || (demo.stops * 27);
         totalInternalEst += internalEst;
 
-        const delta = demo.rxoPay - internalEst;
+        const delta = Number((demo.rxoPay - internalEst).toFixed(2));
         const detailId = `rd-${Date.now()}-${idx}`;
+        
+        // Status Rule: < -50 is RED, otherwise GREEN
         const deltaStatus = delta < -50 ? 'RED' : 'GREEN';
 
         setDocumentNonBlocking(doc(db, "rxoSettlementRouteDetails", detailId), {
@@ -161,8 +143,25 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         }, { merge: true });
       });
 
-      demoReport.internalEstimatedTotalPay = totalInternalEst;
-      demoReport.totalDelta = demoReport.rxoTotalPay - totalInternalEst;
+      const demoReport = {
+        id: reportId,
+        payee: "SYSTEM ORIENTED LLC",
+        companyName: "SYSTEM ORIENTED LLC",
+        settlementPeriodStart: startDate,
+        settlementPeriodEnd: endDate,
+        anticipatedIssueDate: now.split('T')[0],
+        marketCount: 1,
+        routeCount: demoRoutes.length,
+        totalMiles: 1764.1,
+        totalStops: 266,
+        rxoTotalPay: totalRXOPay,
+        internalEstimatedTotalPay: totalInternalEst,
+        totalDelta: totalRXOPay - totalInternalEst,
+        fileName: file?.name || `RXO_Settlement_${startDate}_${endDate}.xlsx`,
+        importedAt: now,
+        importedBy: "System Admin",
+        notes: `Imported for period ${startDate} to ${endDate}.`
+      };
 
       setDocumentNonBlocking(reportRef, demoReport, { merge: true });
 
@@ -171,10 +170,10 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         reportId,
         companyName: "SYSTEM ORIENTED LLC",
         market: "LMH Beltsville",
-        routeCount: 16,
+        routeCount: demoRoutes.length,
         totalMiles: 1764.1,
         totalStops: 266,
-        totalPay: 7043.41,
+        totalPay: totalRXOPay,
         createdAt: now
       });
 
@@ -226,7 +225,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             </div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-900">Upload RXO Weekly Statement</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cross-referencing Summary & Route Details...</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Extracting Route Details & Summary...</p>
             </div>
             <input type="file" ref={fileInputRef} className="hidden" accept=".csv, .xlsx, .xls" onChange={(e) => setFile(e.target.files?.[0] || null)} />
           </div>
@@ -236,16 +235,16 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
               <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-emerald-500 shadow-sm"><FileText className="h-5 w-5" /></div>
               <div className="flex-1">
                 <p className="text-xs font-black text-slate-900">{file.name}</p>
-                <p className="text-[9px] font-bold text-emerald-600 uppercase">File loaded for cross-reference</p>
+                <p className="text-[9px] font-bold text-emerald-600 uppercase">File ready for automated matching</p>
               </div>
             </div>
           )}
 
           <Alert className="rounded-2xl bg-blue-50 border-blue-100 text-blue-700">
             <Info className="h-4 w-4" />
-            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Logic: Side-by-Side Verification</AlertTitle>
+            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Audit Logic: Route & Date Lock</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              The system compares RXO Route ID, Miles, and Stops against your internal tracker. Delta Status flags discrepancies {"<"} -50.00 in RED.
+              The system cross-references LMH/DMPEV IDs and dates against your internal logs. Discrepancies { '<' } -50.00 are flagged in RED.
             </AlertDescription>
           </Alert>
         </div>
