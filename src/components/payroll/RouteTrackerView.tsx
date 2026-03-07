@@ -85,13 +85,16 @@ export function RouteTrackerView({
 
   const currentRoute = isEditOpen ? editingRoute : newRoute;
   
+  const driverObj = employees.find(e => e.fullName === currentRoute?.driver);
+  const helperObj = employees.find(e => e.fullName === currentRoute?.helper);
+
   const estPayValue = currentRoute?.estimatedPay && currentRoute.estimatedPay > 0 
     ? currentRoute.estimatedPay 
     : estimatePay(currentRoute?.stops || 0, currentRoute?.miles || 0, currentRoute?.route || "", currentRoute?.vehicleNumber || "", settings, currentRoute?.routeType);
 
-  const dPayValue = driverPay(currentRoute?.stops || 0, currentRoute?.miles || 0, currentRoute?.route || "", currentRoute?.vehicleNumber || "", currentRoute?.estimatedPay, settings, currentRoute?.routeType);
+  const dPayValue = driverPay(currentRoute?.stops || 0, currentRoute?.miles || 0, currentRoute?.route || "", currentRoute?.vehicleNumber || "", currentRoute?.estimatedPay, settings, currentRoute?.routeType, driverObj);
   const hPayValue = currentRoute?.helper && currentRoute?.helper !== "No Helper" 
-    ? helperPay(currentRoute?.stops || 0, currentRoute?.miles || 0, currentRoute?.route || "", currentRoute?.vehicleNumber || "", currentRoute?.estimatedPay, settings, currentRoute?.routeType) 
+    ? helperPay(currentRoute?.stops || 0, currentRoute?.miles || 0, currentRoute?.route || "", currentRoute?.vehicleNumber || "", currentRoute?.estimatedPay, settings, currentRoute?.routeType, helperObj) 
     : 0;
     
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
@@ -133,9 +136,12 @@ export function RouteTrackerView({
 
   const totals = useMemo(() => {
     const raw = filtered.reduce((acc, row) => {
+      const dObj = employees.find(e => e.fullName === row.driver);
+      const hObj = employees.find(e => e.fullName === row.helper);
+
       const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings, row.routeType);
-      const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType);
-      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType) : 0;
+      const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, dObj);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, hObj) : 0;
       const fuel = estimateFuel(row.miles, settings);
       const mileageCost = truckRentalMileageCost(row.miles);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -166,7 +172,7 @@ export function RouteTrackerView({
       totalExp: Number(raw.totalExp.toFixed(2)),
       netProfit: Number(raw.netProfit.toFixed(2))
     };
-  }, [filtered, settings]);
+  }, [filtered, settings, employees]);
 
   const handleExportAudit = () => {
     const csvHeaders = [
@@ -177,9 +183,12 @@ export function RouteTrackerView({
     ];
 
     const rows = filtered.map(row => {
+      const dObj = employees.find(e => e.fullName === row.driver);
+      const hObj = employees.find(e => e.fullName === row.helper);
+
       const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings, row.routeType);
-      const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType);
-      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType) : 0;
+      const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, dObj);
+      const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, hObj) : 0;
       const mileageCost = truckRentalMileageCost(row.miles);
       const fuel = estimateFuel(row.miles, settings);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -480,9 +489,12 @@ export function RouteTrackerView({
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {filtered.map((row) => {
+                    const dObj = employees.find(e => e.fullName === row.driver);
+                    const hObj = employees.find(e => e.fullName === row.helper);
+
                     const estRev = row.estimatedPay && row.estimatedPay > 0 ? row.estimatedPay : estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings, row.routeType);
-                    const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType);
-                    const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType) : 0;
+                    const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, dObj);
+                    const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, hObj) : 0;
                     const mileageCost = truckRentalMileageCost(row.miles);
                     const fuel = estimateFuel(row.miles, settings);
                     const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
@@ -520,7 +532,7 @@ export function RouteTrackerView({
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100">
-                                <MoreHorizontal className="h-4 w-4 text-slate-400" />
+                                <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-xl p-2">

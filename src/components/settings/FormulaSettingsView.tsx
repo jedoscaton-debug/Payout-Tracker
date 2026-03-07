@@ -52,22 +52,19 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
   const testOutputs = useMemo(() => {
     const scope = { stops: testInputs.stops, miles: testInputs.miles };
     
-    // Choose formula based on EV toggle
     const estPay = testInputs.isEV
       ? evaluateFormula(formData.estimatedPayFormula || "", scope)
       : evaluateFormula(formData.gasEstimatedPayFormula || "", scope);
       
     const estFuel = evaluateFormula(formData.estimatedFuelFormula || "", scope);
     
-    const driverPay = testInputs.isEV
-      ? evaluateFormula(formData.evDriverPayFormula || "", { estimatedPay: estPay, ...scope })
-      : evaluateFormula(formData.driverPayFormula || "", { estimatedPay: estPay, ...scope });
+    // Use fixed standard percentages for the simulator preview
+    const dPercent = testInputs.isEV ? 33 : 27;
+    const hPercent = testInputs.isEV ? 27 : 23;
+    
+    const driverPayVal = Number((estPay * (dPercent / 100)).toFixed(2));
+    const helperPayVal = Number((estPay * (hPercent / 100)).toFixed(2));
       
-    const helperPay = testInputs.isEV
-      ? evaluateFormula(formData.evHelperPayFormula || "", { estimatedPay: estPay, ...scope })
-      : evaluateFormula(formData.helperPayFormula || "", { estimatedPay: estPay, ...scope });
-      
-    const delta = evaluateFormula(formData.deltaFormula || "", { actualPayAudit: testInputs.actualPayAudit, estimatedPay: estPay });
     const trueNet = evaluateFormula(formData.trueNetProfitFormula || "", { 
       fleetNetProfit: testInputs.fleetNetProfit, 
       estimatedWeeklyInsurance: testInputs.estimatedWeeklyInsurance,
@@ -75,7 +72,7 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
       reserveRate: testInputs.reserveRate
     });
 
-    return { estPay, estFuel, driverPay, helperPay, delta, trueNet };
+    return { estPay, estFuel, driverPay: driverPayVal, helperPay: helperPayVal, trueNet };
   }, [formData, testInputs]);
 
   const handleSave = () => {
@@ -83,7 +80,6 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
     const ref = doc(db, "payrollFormulaSettings", id);
     const now = new Date().toISOString();
     
-    // Create Audit Log Entries
     if (settings) {
       Object.entries(formData).forEach(([key, value]) => {
         if (settings[key as keyof FormulaSettings] !== value && key !== 'updatedAt') {
@@ -99,20 +95,20 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
     }
 
     setDocumentNonBlocking(ref, { ...formData, id, updatedAt: now }, { merge: true });
-    toast({ title: "Settings Saved", description: "All payroll formulas have been updated system-wide." });
+    toast({ title: "Settings Saved", description: "Formula changes have been applied." });
   };
 
   const resetToDefaults = () => {
     setFormData(DEFAULT_FORMULA_SETTINGS);
-    toast({ title: "Reset to Defaults", description: "Values restored to factory defaults." });
+    toast({ title: "Reset to Defaults" });
   };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Payroll Formula Settings</h3>
-          <p className="text-sm text-slate-500 font-medium">Control the core logic driving route estimates and payroll payouts.</p>
+          <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">System Calculation Engine</h3>
+          <p className="text-sm text-slate-500 font-medium">Manage formulas for route revenue, fuel estimates, and profitability boards.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" className="rounded-xl h-11 bg-white font-bold" onClick={resetToDefaults}>
@@ -124,20 +120,11 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-5">
-        <SummaryCard label="Active Formulas" value="15" icon={Terminal} color="text-blue-500" />
-        <SummaryCard label="Route Formulas" value="5" icon={Calculator} color="text-indigo-500" />
-        <SummaryCard label="Profitability Rules" value="6" icon={Settings2} color="text-emerald-500" />
-        <SummaryCard label="Deduction Rules" value="2" icon={ShieldCheck} color="text-rose-500" />
-        <SummaryCard label="Last Updated" value={settings?.updatedAt ? new Date(settings.updatedAt).toLocaleDateString() : "Just Now"} icon={History} color="text-amber-500" />
-      </div>
-
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-8">
           <Tabs defaultValue="routes" className="w-full">
             <TabsList className="bg-white border p-1 rounded-2xl h-14 mb-6">
               <TabsTrigger value="routes" className="rounded-xl h-full font-bold uppercase text-[10px]">Route Revenue & Cost</TabsTrigger>
-              <TabsTrigger value="payroll" className="rounded-xl h-full font-bold uppercase text-[10px]">Payroll Payouts</TabsTrigger>
               <TabsTrigger value="fleet" className="rounded-xl h-full font-bold uppercase text-[10px]">Fleet Profitability</TabsTrigger>
               <TabsTrigger value="deductions" className="rounded-xl h-full font-bold uppercase text-[10px]">Deduction Defaults</TabsTrigger>
             </TabsList>
@@ -181,53 +168,6 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            <TabsContent value="payroll">
-              <div className="space-y-8">
-                <Card className="rounded-[2rem] border-0 shadow-sm overflow-hidden bg-white">
-                  <CardHeader className="bg-slate-50/50 border-b p-8">
-                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Standard Staff Payouts</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-8 space-y-8">
-                    <FormulaField 
-                      label="Driver Pay Formula" 
-                      value={formData.driverPayFormula || ""} 
-                      onChange={v => setFormData({...formData, driverPayFormula: v})}
-                      hint="Variables: estimatedPay, stops, miles"
-                    />
-                    <FormulaField 
-                      label="Helper Pay Formula" 
-                      value={formData.helperPayFormula || ""} 
-                      onChange={v => setFormData({...formData, helperPayFormula: v})}
-                      hint="Variables: estimatedPay, stops, miles"
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card className="rounded-[2rem] border-0 shadow-sm overflow-hidden bg-white">
-                  <CardHeader className="bg-slate-50/50 border-b p-8">
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                      <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">EV Special Exceptions (Route=EV & Vehicle=EV)</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-8 space-y-8">
-                    <FormulaField 
-                      label="EV Driver Pay Formula" 
-                      value={formData.evDriverPayFormula || ""} 
-                      onChange={v => setFormData({...formData, evDriverPayFormula: v})}
-                      hint="Variables: estimatedPay, stops, miles"
-                    />
-                    <FormulaField 
-                      label="EV Helper Pay Formula" 
-                      value={formData.evHelperPayFormula || ""} 
-                      onChange={v => setFormData({...formData, evHelperPayFormula: v})}
-                      hint="Variables: estimatedPay, stops, miles"
-                    />
-                  </CardContent>
-                </Card>
-              </div>
             </TabsContent>
 
             <TabsContent value="fleet">
@@ -320,8 +260,8 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
                 <div className="space-y-4">
                   <ResultRow label="EST. PAY" value={testOutputs.estPay} />
                   <ResultRow label="EST. FUEL" value={testOutputs.estFuel} />
-                  <ResultRow label={testInputs.isEV ? "EV DRIVER PAY" : "DRIVER PAY"} value={testOutputs.driverPay} />
-                  <ResultRow label={testInputs.isEV ? "EV HELPER PAY" : "HELPER PAY"} value={testOutputs.helperPay} />
+                  <ResultRow label={testInputs.isEV ? "EV DRIVER PAY (33%)" : "DRIVER PAY (27%)"} value={testOutputs.driverPay} />
+                  <ResultRow label={testInputs.isEV ? "EV HELPER PAY (27%)" : "HELPER PAY (23%)"} value={testOutputs.helperPay} />
                   <ResultRow label="TRUE NET PROFIT" value={testOutputs.trueNet} isTotal />
                 </div>
               </div>
@@ -329,50 +269,13 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
               <div className="p-6 bg-primary/10 border border-primary/20 rounded-2xl flex items-start gap-3">
                 <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-[10px] font-medium text-slate-400 leading-relaxed italic">
-                  "Calculations update instantly as you type formulas. Use ROUND(x, 0) for rounding. Variables: stops, miles, estimatedPay."
+                  "Payouts are now determined by individual settings in the Employee Directory. Simulator uses standard node percentages for preview."
                 </p>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
-
-      <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
-        <CardHeader className="bg-slate-50/50 border-b p-8">
-          <div className="flex items-center gap-3">
-            <History className="h-5 w-5 text-slate-400" />
-            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Settings Audit Log</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50/50 border-b">
-                  <th className="px-8 py-4 text-left text-[9px] font-black uppercase text-slate-400">Setting</th>
-                  <th className="px-4 py-4 text-left text-[9px] font-black uppercase text-slate-400">Old Value</th>
-                  <th className="px-4 py-4 text-left text-[9px] font-black uppercase text-slate-400">New Value</th>
-                  <th className="px-4 py-4 text-left text-[9px] font-black uppercase text-slate-400">Date</th>
-                  <th className="px-8 py-4 text-right text-[9px] font-black uppercase text-slate-400">By</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {auditLogs.length === 0 ? (
-                  <tr><td colSpan={5} className="px-8 py-12 text-center text-[10px] font-bold text-slate-400 uppercase italic">No history recorded yet</td></tr>
-                ) : auditLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-8 py-4 font-black text-slate-900 text-xs uppercase tracking-tight">{log.settingName}</td>
-                    <td className="px-4 py-4 text-xs text-slate-500 font-mono">{log.oldValue}</td>
-                    <td className="px-4 py-4 text-xs text-emerald-600 font-mono font-bold">{log.newValue}</td>
-                    <td className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase">{new Date(log.changedAt).toLocaleString()}</td>
-                    <td className="px-8 py-4 text-right text-[10px] font-black uppercase text-slate-900">{log.changedBy}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

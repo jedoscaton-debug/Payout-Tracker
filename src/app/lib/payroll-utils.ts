@@ -35,6 +35,14 @@ export function getDayOfWeek(input: string) {
 }
 
 /**
+ * Standard Mileage Cost for Truck Rental.
+ * Calculating at $0.25 per mile.
+ */
+export function truckRentalMileageCost(miles: number): number {
+  return Number(((miles || 0) * 0.25).toFixed(2));
+}
+
+/**
  * Helper to determine if a route is EV based on rules:
  * 1. Route Type is explicitly "EV"
  * 2. Route ID contains "_EV" or starts with "DMPEV"
@@ -45,14 +53,10 @@ function isEVRoute(route: string, vehicle: string, routeType?: string): boolean 
   const v = (vehicle || "").toUpperCase();
   const rt = (routeType || "").toUpperCase();
   
-  // Rule 0: Explicit selection in dropdown
   if (rt === "EV") return true;
   if (rt === "GAS") return false;
   
-  // Rule 1: Route ID contains _EV or DMPEV prefix
   const isEVSuffix = r.includes("_EV") || r.startsWith("DMPEV");
-  
-  // Rule 2: Pure EV route and vehicle
   const isPureEV = r === "EV" && v === "EV";
   
   return isEVSuffix || isPureEV;
@@ -66,11 +70,9 @@ export function estimatePay(stops: number, miles: number = 0, route: string = ""
   let result = 0;
 
   if (isEV) {
-    // EV Formula: Default 27 * stops
     const formula = settings?.estimatedPayFormula || DEFAULT_FORMULA_SETTINGS.estimatedPayFormula;
     result = evaluateFormula(formula, { stops, miles });
   } else {
-    // GAS Formula: Default 100 + (1.37 * MILE) + (12.5 * STOPS)
     const formula = settings?.gasEstimatedPayFormula || DEFAULT_FORMULA_SETTINGS.gasEstimatedPayFormula;
     result = evaluateFormula(formula, { stops, miles });
   }
@@ -78,43 +80,58 @@ export function estimatePay(stops: number, miles: number = 0, route: string = ""
   return Number(result.toFixed(2));
 }
 
-/**
- * Dynamic Estimate Fuel based on settings
- */
 export function estimateFuel(miles: number, settings?: FormulaSettings) {
   const formula = settings?.estimatedFuelFormula || DEFAULT_FORMULA_SETTINGS.estimatedFuelFormula;
   const result = evaluateFormula(formula, { miles });
   return Number(result.toFixed(2));
 }
 
-export function driverPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings, routeType?: string) {
+/**
+ * Driver Payout Logic
+ * Priorities:
+ * 1. Employee Specific Share -> Employee %
+ * 2. Pure EV Node (EV/EV) -> 33% (System Rule)
+ * 3. Default -> 27%
+ */
+export function driverPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings, routeType?: string, employee?: Employee) {
   const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings, routeType);
-  const isEV = isEVRoute(route, vehicle, routeType);
   
-  if (isEV) {
-    const formula = settings?.evDriverPayFormula || DEFAULT_FORMULA_SETTINGS.evDriverPayFormula;
-    return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
+  const r = (route || "").toUpperCase();
+  const v = (vehicle || "").toUpperCase();
+  
+  let percentage = 27; // Default
+  
+  if (employee?.driverPayoutPercentage !== undefined) {
+    percentage = employee.driverPayoutPercentage;
+  } else if (r === "EV" && v === "EV") {
+    percentage = 33; // Node incentive fallback
   }
   
-  const formula = settings?.driverPayFormula || DEFAULT_FORMULA_SETTINGS.driverPayFormula;
-  return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
+  return Number((estPay * (percentage / 100)).toFixed(2));
 }
 
-export function helperPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings, routeType?: string) {
+/**
+ * Helper Payout Logic
+ * Priorities:
+ * 1. Employee Specific Share -> Employee %
+ * 2. Pure EV Node (EV/EV) -> 27% (System Rule)
+ * 3. Default -> 23%
+ */
+export function helperPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings, routeType?: string, employee?: Employee) {
   const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings, routeType);
-  const isEV = isEVRoute(route, vehicle, routeType);
   
-  if (isEV) {
-    const formula = settings?.evHelperPayFormula || DEFAULT_FORMULA_SETTINGS.evHelperPayFormula;
-    return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
+  const r = (route || "").toUpperCase();
+  const v = (vehicle || "").toUpperCase();
+  
+  let percentage = 23; // Default
+  
+  if (employee?.helperPayoutPercentage !== undefined) {
+    percentage = employee.helperPayoutPercentage;
+  } else if (r === "EV" && v === "EV") {
+    percentage = 27; // Node incentive fallback
   }
   
-  const formula = settings?.helperPayFormula || DEFAULT_FORMULA_SETTINGS.helperPayFormula;
-  return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
-}
-
-export function truckRentalMileageCost(miles: number) {
-  return 0; // Default $0.00 as requested
+  return Number((estPay * (percentage / 100)).toFixed(2));
 }
 
 function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType | null {
@@ -136,21 +153,11 @@ function amountForRole(row: RouteTrackerRow, role: RoleType, employee: Employee,
   let hPay = 0;
 
   if (isDriverPart) {
-    // Priority: Individual employee driver percentage override
-    if (employee.driverPayoutPercentage !== undefined) {
-      dPay = Number((estPay * (employee.driverPayoutPercentage / 100)).toFixed(2));
-    } else {
-      dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
-    }
+    dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType, employee);
   }
 
   if (isHelperPart) {
-    // Priority: Individual employee helper percentage override
-    if (employee.helperPayoutPercentage !== undefined) {
-      hPay = Number((estPay * (employee.helperPayoutPercentage / 100)).toFixed(2));
-    } else {
-      hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
-    }
+    hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType, employee);
   }
 
   return Number((dPay + hPay).toFixed(2));
@@ -178,16 +185,16 @@ export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: R
 export function computeTotals(item: PayrollItem): ComputedTotals {
   const earningsSum = item.earningsLines.reduce((sum, line) => sum + (line.amount || 0), 0);
   const otherEarningsSum = item.otherEarningsLines.reduce((sum, line) => sum + (line.amount || 0), 0);
-  const totalEarnings = earningsSum + otherEarningsSum;
+  const totalEarnings = Number((earningsSum + otherEarningsSum).toFixed(2));
     
-  const totalDeductions = item.deductionsLines.reduce((sum, line) => sum + (line.amount || 0), 0);
+  const totalDeductions = Number(item.deductionsLines.reduce((sum, line) => sum + (line.amount || 0), 0).toFixed(2));
   const grossPay = totalEarnings;
-  const netPay = grossPay - totalDeductions;
+  const netPay = Number((grossPay - totalDeductions).toFixed(2));
   
   return {
-    totalEarnings: Number(totalEarnings.toFixed(2)),
-    totalDeductions: Number(totalDeductions.toFixed(2)),
-    grossPay: Number(grossPay.toFixed(2)),
-    netPay: Number(netPay.toFixed(2)),
+    totalEarnings,
+    totalDeductions,
+    grossPay,
+    netPay,
   };
 }
