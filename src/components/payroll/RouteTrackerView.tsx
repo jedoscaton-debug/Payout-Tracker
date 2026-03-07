@@ -99,8 +99,9 @@ export function RouteTrackerView({
     
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
   const fuelValue = estimateFuel(currentRoute?.miles || 0, settings);
-  const totalExpensesValue = (currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue;
-  const netProfitValue = Number((estPayValue - (totalExpensesValue + dPayValue + hPayValue)).toFixed(2));
+  // Total Expenses logic: include labor
+  const totalExpensesValue = Number(((currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue + dPayValue + hPayValue).toFixed(2));
+  const netProfitValue = Number((estPayValue - totalExpensesValue).toFixed(2));
 
   const headers = [
     "Route",
@@ -144,7 +145,8 @@ export function RouteTrackerView({
       const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, hObj) : 0;
       const fuel = estimateFuel(row.miles, settings);
       const mileageCost = truckRentalMileageCost(row.miles);
-      const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
+      // Row total expenses include labor
+      const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel + dPay + hPay;
 
       return {
         miles: acc.miles + (row.miles || 0),
@@ -155,7 +157,7 @@ export function RouteTrackerView({
         truckRental: acc.truckRental + (row.truckRental || 0),
         fuel: acc.fuel + fuel,
         totalExp: acc.totalExp + totalExp,
-        netProfit: acc.netProfit + (estRev - totalExp - dPay - hPay)
+        netProfit: acc.netProfit + (estRev - totalExp)
       };
     }, {
       miles: 0, stops: 0, estPay: 0, driverPay: 0, helperPay: 0, truckRental: 0, fuel: 0, totalExp: 0, netProfit: 0
@@ -191,8 +193,8 @@ export function RouteTrackerView({
       const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, hObj) : 0;
       const mileageCost = truckRentalMileageCost(row.miles);
       const fuel = estimateFuel(row.miles, settings);
-      const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
-      const netProfit = Number((estRev - totalExp - dPay - hPay).toFixed(2));
+      const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel + dPay + hPay;
+      const netProfit = Number((estRev - totalExp).toFixed(2));
 
       return [
         `"${row.route}"`,
@@ -447,7 +449,7 @@ export function RouteTrackerView({
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Profit Calculation</p>
                     <p className="text-[9px] font-bold text-slate-500 italic">
-                      {currentRoute?.estimatedPay && currentRoute.estimatedPay > 0 ? "Using manual EST.PAY override" : "Using auto-calculated EST.PAY"}
+                      EST.PAY - TOTAL EXPENSES (Incl. Labor)
                     </p>
                   </div>
                   <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-rose-400" : "text-emerald-400")}>
@@ -497,8 +499,9 @@ export function RouteTrackerView({
                     const hPay = row.helper && row.helper !== "No Helper" ? helperPay(row.stops, row.miles, row.route, row.vehicleNumber, row.estimatedPay, settings, row.routeType, hObj) : 0;
                     const mileageCost = truckRentalMileageCost(row.miles);
                     const fuel = estimateFuel(row.miles, settings);
-                    const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel;
-                    const netProfit = Number((estRev - totalExp - dPay - hPay).toFixed(2));
+                    // Row total expenses include labor
+                    const totalExp = Number(((row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel + dPay + hPay).toFixed(2));
+                    const netProfit = Number((estRev - totalExp).toFixed(2));
                     
                     return (
                       <tr key={row.id} className="transition-colors group align-middle h-14 bg-white hover:bg-slate-50/50">
@@ -569,7 +572,9 @@ export function RouteTrackerView({
                     <td colSpan={2} className="border-r border-slate-800"></td>
                     <td className="px-3 py-2 text-center border-r border-slate-800">{currency(totals.fuel)}</td>
                     <td className="px-3 py-2 text-center border-r border-slate-800 font-mono">{currency(totals.totalExp)}</td>
-                    <td className="px-4 py-2 text-center bg-slate-800 font-black text-lg border-r border-slate-800">{currency(totals.netProfit)}</td>
+                    <td className={cn("px-4 py-2 text-center bg-slate-800 font-black text-lg border-r border-slate-800", totals.netProfit < 0 ? "text-rose-400" : "text-primary")}>
+                      {currency(totals.netProfit)}
+                    </td>
                     <td className="bg-slate-900"></td>
                   </tr>
                 </tfoot>
@@ -590,7 +595,7 @@ export function RouteTrackerView({
               <div className="grid grid-cols-5 gap-x-6 gap-y-8">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Route ID</Label>
-                  <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.route || ""} onChange={(e) => setEditingRoute({...editingRoute, route: e.target.value})} />
+                  <input className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.route || ""} onChange={(e) => setEditingRoute({...editingRoute, route: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Route Type</Label>
@@ -608,11 +613,11 @@ export function RouteTrackerView({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Vehicle #</Label>
-                  <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.vehicleNumber || ""} onChange={(e) => setEditingRoute({...editingRoute, vehicleNumber: e.target.value})} />
+                  <input className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.vehicleNumber || ""} onChange={(e) => setEditingRoute({...editingRoute, vehicleNumber: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Date</Label>
-                  <Input type="date" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.date || ""} onChange={(e) => setEditingRoute({...editingRoute, date: e.target.value})} />
+                  <input type="date" className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.date || ""} onChange={(e) => setEditingRoute({...editingRoute, date: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Day of Week</Label>
@@ -623,11 +628,11 @@ export function RouteTrackerView({
 
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Miles</Label>
-                  <Input type="number" step="0.1" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.miles || 0} onChange={(e) => setEditingRoute({...editingRoute, miles: Number(e.target.value)})} />
+                  <input type="number" step="0.1" className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.miles || 0} onChange={(e) => setEditingRoute({...editingRoute, miles: Number(e.target.value)})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Stops</Label>
-                  <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.stops || 0} onChange={(e) => setEditingRoute({...editingRoute, stops: Number(e.target.value)})} />
+                  <input type="number" className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.stops || 0} onChange={(e) => setEditingRoute({...editingRoute, stops: Number(e.target.value)})} />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-1">
@@ -643,9 +648,9 @@ export function RouteTrackerView({
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <Input 
+                  <input 
                     type="number" 
-                    className="h-12 rounded-xl bg-slate-100 border-none font-bold text-slate-900 focus:bg-white" 
+                    className="flex h-12 w-full border-none bg-slate-100 px-4 rounded-xl font-bold text-sm text-slate-900 focus:bg-white outline-none" 
                     placeholder={estimatePay(editingRoute.stops || 0, editingRoute.miles || 0, editingRoute.route || "", editingRoute.vehicleNumber || "", settings, editingRoute.routeType).toString()}
                     value={editingRoute.estimatedPay === 0 ? "" : editingRoute.estimatedPay} 
                     onChange={(e) => setEditingRoute({...editingRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} 
@@ -655,7 +660,7 @@ export function RouteTrackerView({
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Driver</Label>
                   <Select value={editingRoute.driver || ""} onValueChange={(v) => setEditingRoute({...editingRoute, driver: v})}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                      <SelectValue />
+                      <SelectValue placeholder="Select Driver" />
                     </SelectTrigger>
                     <SelectContent>
                       {employees.map(e => <SelectItem key={e.id} value={e.fullName}>{e.fullName}</SelectItem>)}
@@ -666,7 +671,7 @@ export function RouteTrackerView({
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Helper</Label>
                   <Select value={editingRoute.helper || "No Helper"} onValueChange={(v) => setEditingRoute({...editingRoute, helper: v})}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                      <SelectValue />
+                      <SelectValue placeholder="No Helper" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="No Helper">No Helper</SelectItem>
@@ -677,29 +682,29 @@ export function RouteTrackerView({
 
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Driver Pay</Label>
-                  <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold">
+                  <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold text-sm">
                     {currency(dPayValue)}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Helper Pay</Label>
-                  <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold">
+                  <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold text-sm">
                     {currency(hPayValue)}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Truck Rental</Label>
-                  <Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={editingRoute.truckRental || 0} onChange={(e) => setEditingRoute({...editingRoute, truckRental: Number(e.target.value)})} />
+                  <input type="number" className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.truckRental || 0} onChange={(e) => setEditingRoute({...editingRoute, truckRental: Number(e.target.value)})} />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Mileage Cost</Label>
-                  <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold">
+                  <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold text-sm">
                     {currency(mileageCostValue)}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Est. Fuel</Label>
-                  <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold">
+                  <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold text-sm">
                     {currency(fuelValue)}
                   </div>
                 </div>
@@ -709,7 +714,7 @@ export function RouteTrackerView({
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Profit Calculation</p>
                   <p className="text-[9px] font-bold text-slate-500 italic">
-                    {editingRoute.estimatedPay && editingRoute.estimatedPay > 0 ? "Using manual EST.PAY override" : "Using auto-calculated EST.PAY"}
+                    EST.PAY - TOTAL EXPENSES (Incl. Labor)
                   </p>
                 </div>
                 <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-rose-400" : "text-emerald-400")}>
