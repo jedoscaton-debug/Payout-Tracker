@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ interface ImportSettlementModalProps {
 export function ImportSettlementModal({ isOpen, onClose, onImportComplete, routes, settings }: ImportSettlementModalProps) {
   const [isImporting, setIsImporting] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const db = useFirestore();
   const { toast } = useToast();
 
@@ -148,7 +149,10 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         </DialogHeader>
         
         <div className="space-y-8 mt-6">
-          <div className="p-12 border-2 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center gap-4 bg-slate-50/50 hover:bg-slate-50 transition-all cursor-pointer group">
+          <div 
+            className="p-12 border-2 border-dashed border-slate-100 rounded-[2rem] flex flex-col items-center justify-center gap-4 bg-slate-50/50 hover:bg-slate-50 transition-all cursor-pointer group"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <div className="h-16 w-16 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
               <Upload className="h-8 w-8" />
             </div>
@@ -156,7 +160,13 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
               <p className="text-sm font-bold text-slate-900">Upload Settlement File</p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Excel or CSV files accepted</p>
             </div>
-            <Input type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              className="hidden" 
+              accept=".csv, .xlsx, .xls"
+              onChange={(e) => setFile(e.target.files?.[0] || null)} 
+            />
           </div>
 
           {file && (
@@ -183,7 +193,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           <Button 
             className="rounded-xl h-12 bg-slate-900 font-bold px-10 uppercase text-xs" 
             onClick={handleSimulateImport} 
-            disabled={isImporting}
+            disabled={isImporting || !file}
           >
             {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><CheckCircle2 className="mr-2 h-4 w-4" /> Process Settlement</>}
           </Button>
