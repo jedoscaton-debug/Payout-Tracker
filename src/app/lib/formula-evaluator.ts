@@ -44,6 +44,8 @@ export const DEFAULT_FORMULA_SETTINGS: Omit<import("./types").FormulaSettings, '
   estimatedFuelFormula: "(3.76 / 8) * miles",
   driverPayFormula: "estimatedPay * 0.27",
   helperPayFormula: "estimatedPay * 0.23",
+  evDriverPayFormula: "estimatedPay * 0.33",
+  evHelperPayFormula: "estimatedPay * 0.27",
   combinedPayMode: "sum",
   customCombinedFormula: "driverPay + helperPay",
   revenueSource: "estimatedPay",

@@ -51,26 +51,28 @@ export function estimateFuel(miles: number, settings?: FormulaSettings) {
 
 export function driverPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
   const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, settings);
-  const formula = settings?.driverPayFormula || DEFAULT_FORMULA_SETTINGS.driverPayFormula;
   
-  // Special Rule: EV Route + EV Vehicle = 33% Driver Rate (Hardcoded safety override)
+  // Special Rule for EV
   if (route === "EV" && vehicle === "EV") {
-    return Number((estPay * 0.33).toFixed(2));
+    const formula = settings?.evDriverPayFormula || DEFAULT_FORMULA_SETTINGS.evDriverPayFormula;
+    return Number(evaluateFormula(formula, { estimatedPay: estPay, stops }).toFixed(2));
   }
   
-  return Number(evaluateFormula(formula, { estimatedPay: estPay }).toFixed(2));
+  const formula = settings?.driverPayFormula || DEFAULT_FORMULA_SETTINGS.driverPayFormula;
+  return Number(evaluateFormula(formula, { estimatedPay: estPay, stops }).toFixed(2));
 }
 
 export function helperPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
   const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, settings);
-  const formula = settings?.helperPayFormula || DEFAULT_FORMULA_SETTINGS.helperPayFormula;
   
-  // Special Rule: EV Route + EV Vehicle = 27% Helper Rate (Hardcoded safety override)
+  // Special Rule for EV
   if (route === "EV" && vehicle === "EV") {
-    return Number((estPay * 0.27).toFixed(2));
+    const formula = settings?.evHelperPayFormula || DEFAULT_FORMULA_SETTINGS.evHelperPayFormula;
+    return Number(evaluateFormula(formula, { estimatedPay: estPay, stops }).toFixed(2));
   }
   
-  return Number(evaluateFormula(formula, { estimatedPay: estPay }).toFixed(2));
+  const formula = settings?.helperPayFormula || DEFAULT_FORMULA_SETTINGS.helperPayFormula;
+  return Number(evaluateFormula(formula, { estimatedPay: estPay, stops }).toFixed(2));
 }
 
 export function truckRentalMileageCost(miles: number) {

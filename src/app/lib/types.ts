@@ -107,6 +107,8 @@ export type FormulaSettings = {
   estimatedFuelFormula: string;
   driverPayFormula: string;
   helperPayFormula: string;
+  evDriverPayFormula: string;
+  evHelperPayFormula: string;
   combinedPayMode: 'sum' | 'custom';
   customCombinedFormula: string;
   revenueSource: 'actualPayAudit' | 'estimatedPay' | 'manualOverride';

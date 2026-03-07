@@ -42,7 +42,8 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
     fleetRevenue: 3645,
     fleetNetProfit: 380,
     estimatedWeeklyInsurance: 600,
-    reserveRate: 0.15
+    reserveRate: 0.15,
+    isEV: false
   });
   
   const db = useFirestore();
@@ -51,8 +52,15 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
   const testOutputs = useMemo(() => {
     const estPay = evaluateFormula(formData.estimatedPayFormula || "", { stops: testInputs.stops });
     const estFuel = evaluateFormula(formData.estimatedFuelFormula || "", { miles: testInputs.miles });
-    const driverPay = evaluateFormula(formData.driverPayFormula || "", { estimatedPay: estPay });
-    const helperPay = evaluateFormula(formData.helperPayFormula || "", { estimatedPay: estPay });
+    
+    const driverPay = testInputs.isEV
+      ? evaluateFormula(formData.evDriverPayFormula || "", { estimatedPay: estPay, stops: testInputs.stops })
+      : evaluateFormula(formData.driverPayFormula || "", { estimatedPay: estPay, stops: testInputs.stops });
+      
+    const helperPay = testInputs.isEV
+      ? evaluateFormula(formData.evHelperPayFormula || "", { estimatedPay: estPay, stops: testInputs.stops })
+      : evaluateFormula(formData.helperPayFormula || "", { estimatedPay: estPay, stops: testInputs.stops });
+      
     const delta = evaluateFormula(formData.deltaFormula || "", { actualPayAudit: testInputs.actualPayAudit, estimatedPay: estPay });
     const trueNet = evaluateFormula(formData.trueNetProfitFormula || "", { 
       fleetNetProfit: testInputs.fleetNetProfit, 
@@ -111,7 +119,7 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
       </div>
 
       <div className="grid gap-4 md:grid-cols-5">
-        <SummaryCard label="Active Formulas" value="12" icon={Terminal} color="text-blue-500" />
+        <SummaryCard label="Active Formulas" value="14" icon={Terminal} color="text-blue-500" />
         <SummaryCard label="Route Formulas" value="4" icon={Calculator} color="text-indigo-500" />
         <SummaryCard label="Profitability Rules" value="6" icon={Settings2} color="text-emerald-500" />
         <SummaryCard label="Deduction Rules" value="2" icon={ShieldCheck} color="text-rose-500" />
@@ -164,25 +172,50 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
             </TabsContent>
 
             <TabsContent value="payroll">
-              <Card className="rounded-[2rem] border-0 shadow-sm overflow-hidden bg-white">
-                <CardHeader className="bg-slate-50/50 border-b p-8">
-                  <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Staff Earnings Engine</CardTitle>
-                </CardHeader>
-                <CardContent className="p-8 space-y-8">
-                  <FormulaField 
-                    label="Driver Pay Ratio" 
-                    value={formData.driverPayFormula || ""} 
-                    onChange={v => setFormData({...formData, driverPayFormula: v})}
-                    hint="Variables: estimatedPay"
-                  />
-                  <FormulaField 
-                    label="Helper Pay Ratio" 
-                    value={formData.helperPayFormula || ""} 
-                    onChange={v => setFormData({...formData, helperPayFormula: v})}
-                    hint="Variables: estimatedPay"
-                  />
-                </CardContent>
-              </Card>
+              <div className="space-y-8">
+                <Card className="rounded-[2rem] border-0 shadow-sm overflow-hidden bg-white">
+                  <CardHeader className="bg-slate-50/50 border-b p-8">
+                    <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Standard Staff Payouts</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-8 space-y-8">
+                    <FormulaField 
+                      label="Driver Pay Formula" 
+                      value={formData.driverPayFormula || ""} 
+                      onChange={v => setFormData({...formData, driverPayFormula: v})}
+                      hint="Variables: estimatedPay, stops"
+                    />
+                    <FormulaField 
+                      label="Helper Pay Formula" 
+                      value={formData.helperPayFormula || ""} 
+                      onChange={v => setFormData({...formData, helperPayFormula: v})}
+                      hint="Variables: estimatedPay, stops"
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-[2rem] border-0 shadow-sm overflow-hidden bg-white">
+                  <CardHeader className="bg-slate-50/50 border-b p-8">
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                      <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">EV Special Exceptions (Route=EV & Vehicle=EV)</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-8 space-y-8">
+                    <FormulaField 
+                      label="EV Driver Pay Formula" 
+                      value={formData.evDriverPayFormula || ""} 
+                      onChange={v => setFormData({...formData, evDriverPayFormula: v})}
+                      hint="Variables: estimatedPay, stops"
+                    />
+                    <FormulaField 
+                      label="EV Helper Pay Formula" 
+                      value={formData.evHelperPayFormula || ""} 
+                      onChange={v => setFormData({...formData, evHelperPayFormula: v})}
+                      hint="Variables: estimatedPay, stops"
+                    />
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             <TabsContent value="fleet">
@@ -256,6 +289,18 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
                   <TestInput label="Stops" value={testInputs.stops} onChange={v => setTestInputs({...testInputs, stops: v})} />
                   <TestInput label="Miles" value={testInputs.miles} onChange={v => setTestInputs({...testInputs, miles: v})} />
                 </div>
+                
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10 mt-2">
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-black text-white/50 uppercase">EV Test Mode</p>
+                    <p className="text-[8px] text-white/30 font-medium">Simulate EV Route + Vehicle</p>
+                  </div>
+                  <Switch 
+                    checked={testInputs.isEV} 
+                    onCheckedChange={v => setTestInputs({...testInputs, isEV: v})}
+                    className="data-[state=checked]:bg-primary"
+                  />
+                </div>
               </div>
 
               <div className="space-y-4 pt-6 border-t border-white/5">
@@ -263,8 +308,8 @@ export function FormulaSettingsView({ settings, auditLogs }: FormulaSettingsView
                 <div className="space-y-4">
                   <ResultRow label="EST. PAY" value={testOutputs.estPay} />
                   <ResultRow label="EST. FUEL" value={testOutputs.estFuel} />
-                  <ResultRow label="DRIVER PAY" value={testOutputs.driverPay} />
-                  <ResultRow label="HELPER PAY" value={testOutputs.helperPay} />
+                  <ResultRow label={testInputs.isEV ? "EV DRIVER PAY" : "DRIVER PAY"} value={testOutputs.driverPay} />
+                  <ResultRow label={testInputs.isEV ? "EV HELPER PAY" : "HELPER PAY"} value={testOutputs.helperPay} />
                   <ResultRow label="TRUE NET PROFIT" value={testOutputs.trueNet} isTotal />
                 </div>
               </div>
