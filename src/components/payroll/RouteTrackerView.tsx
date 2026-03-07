@@ -99,7 +99,7 @@ export function RouteTrackerView({
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
   const fuelValue = estimateFuel(currentRoute?.miles || 0, settings);
   
-  // Total Expenses logic: include labor
+  // Total Expenses logic: strictly include labor for accurate net profit
   const totalExpensesValue = Number(((currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue + dPayValue + hPayValue).toFixed(2));
   const netProfitValue = Number((estPayValue - totalExpensesValue).toFixed(2));
 
@@ -446,14 +446,14 @@ export function RouteTrackerView({
                   </div>
                 </div>
 
-                <div className="bg-slate-900 rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl shadow-slate-900/20">
+                <div className={cn("rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-slate-900 shadow-slate-900/20")}>
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Profit Calculation</p>
                     <p className="text-[9px] font-bold text-slate-500 italic">
                       EST. PAY - TOTAL EXPENSES (Incl. Labor)
                     </p>
                   </div>
-                  <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-rose-400" : "text-emerald-400")}>
+                  <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-white" : "text-emerald-400")}>
                     {currency(netProfitValue)}
                   </div>
                 </div>
@@ -712,14 +712,14 @@ export function RouteTrackerView({
                 </div>
               </div>
 
-              <div className="bg-slate-900 rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl shadow-slate-900/20">
+              <div className={cn("rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-primary shadow-primary/20")}>
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Profit Calculation</p>
                   <p className="text-[9px] font-bold text-slate-500 italic">
                     EST. PAY - TOTAL EXPENSES (Incl. Labor)
                   </p>
                 </div>
-                <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-rose-400" : "text-emerald-400")}>
+                <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-white" : "text-white")}>
                   {currency(netProfitValue)}
                 </div>
               </div>
