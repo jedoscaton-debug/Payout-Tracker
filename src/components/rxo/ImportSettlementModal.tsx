@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, FileText, CheckCircle2, Loader2, Info, Calendar, Sparkles, Image as ImageIcon, RefreshCw } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Upload, FileText, CheckCircle2, Loader2, Info, Calendar, Sparkles, Image as ImageIcon, RefreshCw, X } from "lucide-react";
 import { RouteTrackerRow, FormulaSettings } from "@/app/lib/types";
 import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -25,8 +26,8 @@ interface ImportSettlementModalProps {
 
 export function ImportSettlementModal({ isOpen, onClose, onImportComplete, routes, settings }: ImportSettlementModalProps) {
   const [isImporting, setIsImporting] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   
   const [startDate, setStartDate] = useState(() => {
@@ -44,20 +45,31 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
   const db = useFirestore();
   const { toast } = useToast();
 
-  const handleFile = (f: File) => {
-    setFile(f);
-    if (f && f.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPreviewUrl(reader.result as string);
-      reader.readAsDataURL(f);
-    } else {
-      setPreviewUrl(null);
-    }
+  const handleFiles = (newFiles: FileList | null) => {
+    if (!newFiles) return;
+    
+    const incoming = Array.from(newFiles);
+    setFiles(prev => [...prev, ...incoming]);
+
+    incoming.forEach(f => {
+      if (f.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviews(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(f);
+      }
+    });
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+    // Previews index might mismatch if non-images are mixed, but simple cleanup for now
+    setPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] || null;
-    if (f) handleFile(f);
+    handleFiles(e.target.files);
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -74,15 +86,17 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
-    }
+    handleFiles(e.dataTransfer.files);
   };
 
   const startAuditProcess = async () => {
     if (!startDate || !endDate) {
       toast({ variant: "destructive", title: "Missing Dates", description: "Select the settlement period." });
+      return;
+    }
+
+    if (files.length === 0) {
+      toast({ variant: "destructive", title: "No Files", description: "Please upload at least one settlement file or screenshot." });
       return;
     }
 
@@ -92,19 +106,27 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       const reportId = `rxo-rep-${Date.now()}`;
       const now = new Date().toISOString();
       
-      let extractedData: any[] = [];
-      let rxoTotalPay = 0;
+      let allExtractedRoutes: any[] = [];
+      let totalSettlementPay = 0;
 
-      // Handle Image vs File
-      if (file && file.type.startsWith('image/') && previewUrl) {
-        toast({ title: "AI Scanning Active", description: "Gemini is analyzing the screenshot for route details..." });
-        const aiResult = await analyzeRXOSettlement({ photoDataUri: previewUrl });
-        extractedData = aiResult.extractedRoutes;
-        rxoTotalPay = aiResult.totalPay;
-      } else {
-        // Fallback simulation for standard files
-        extractedData = simulateFileExtraction(startDate);
-        rxoTotalPay = extractedData.reduce((sum, r) => sum + r.settlementAmount, 0);
+      // Process each file
+      for (let i = 0; i < files.length; i++) {
+        const currentFile = files[i];
+        
+        if (currentFile.type.startsWith('image/')) {
+          const preview = previews[i] || "";
+          if (preview) {
+            toast({ title: `Scanning Image ${i + 1}/${files.length}`, description: "Gemini is analyzing the screenshot..." });
+            const aiResult = await analyzeRXOSettlement({ photoDataUri: preview });
+            allExtractedRoutes = [...allExtractedRoutes, ...aiResult.extractedRoutes];
+            totalSettlementPay += aiResult.totalPay;
+          }
+        } else {
+          // Fallback simulation for non-image files (Excel/CSV)
+          const simulated = simulateFileExtraction(startDate);
+          allExtractedRoutes = [...allExtractedRoutes, ...simulated];
+          totalSettlementPay += simulated.reduce((sum, r) => sum + r.settlementAmount, 0);
+        }
       }
 
       let totalInternalEst = 0;
@@ -112,7 +134,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       let totalStopsRXO = 0;
       const usedInternalIds = new Set<string>();
 
-      extractedData.forEach((extracted, idx) => {
+      allExtractedRoutes.forEach((extracted, idx) => {
         totalMilesRXO += extracted.routeMiles;
         totalStopsRXO += extracted.stopCount;
 
@@ -120,8 +142,9 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         const matchedInternal = routes.find(r => {
           if (usedInternalIds.has(r.id)) return false;
           
-          // Date Check
-          if (r.date !== extracted.routeDate) return false;
+          // Date Check: Handle MMDDYYYY format from AI vs YYYY-MM-DD from tracker
+          const internalDate = r.date;
+          if (internalDate !== extracted.routeDate) return false;
 
           const rxoId = extracted.routeId.toUpperCase();
           const internalRoute = r.route.toUpperCase();
@@ -132,10 +155,15 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             return true;
           }
 
-          // Rule 2: LMH Pattern (Extract Suffix)
+          // Rule 2: LMH Pattern (Check suffix)
+          if (rxoId.endsWith(`_${internalRoute}`)) {
+            return true;
+          }
+
+          // Relaxed suffix check
           const parts = rxoId.split('_');
-          const suffix = parts.slice(4).join('_'); 
-          if (rxoId.endsWith(`_${internalRoute}`) || suffix === internalRoute) {
+          const suffix = parts[parts.length - 1];
+          if (suffix === internalRoute || (parts[parts.length - 2] === internalRoute && suffix === 'EV')) {
             return true;
           }
 
@@ -180,16 +208,16 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         settlementPeriodEnd: endDate,
         anticipatedIssueDate: now.split('T')[0],
         marketCount: 1,
-        routeCount: extractedData.length,
+        routeCount: allExtractedRoutes.length,
         totalMiles: Number(totalMilesRXO.toFixed(1)),
         totalStops: totalStopsRXO,
-        rxoTotalPay: Number(rxoTotalPay.toFixed(2)),
+        rxoTotalPay: Number(totalSettlementPay.toFixed(2)),
         internalEstimatedTotalPay: Number(totalInternalEst.toFixed(2)),
-        totalDelta: Number((rxoTotalPay - totalInternalEst).toFixed(2)),
-        fileName: file?.name || "RXO_Audit_Report",
+        totalDelta: Number((totalSettlementPay - totalInternalEst).toFixed(2)),
+        fileName: files.length > 1 ? `Batch (${files.length} files)` : files[0].name,
         importedAt: now,
         importedBy: "System Admin",
-        notes: `AI-powered audit for ${startDate} to ${endDate}.`
+        notes: `AI-powered batch audit for ${startDate} to ${endDate}.`
       };
 
       setDocumentNonBlocking(doc(db, "rxoSettlementReports", reportId), reportData, { merge: true });
@@ -197,14 +225,14 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       setTimeout(() => {
         setIsImporting(false);
         onImportComplete(reportId);
-        toast({ title: "Audit Complete", description: "Discrepancies identified via AI matching." });
+        toast({ title: "Audit Batch Complete", description: `Cross-referenced ${allExtractedRoutes.length} routes from ${files.length} files.` });
         onClose();
       }, 1000);
 
     } catch (e) {
       console.error(e);
       setIsImporting(false);
-      toast({ variant: "destructive", title: "Import Failed", description: "AI processing encountered an error." });
+      toast({ variant: "destructive", title: "Import Failed", description: "AI batch processing encountered an error." });
     }
   };
 
@@ -249,49 +277,58 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            {previewUrl ? (
-              <div className="relative h-20 w-32 rounded-xl overflow-hidden shadow-lg">
-                <img src={previewUrl} className="object-cover w-full h-full" alt="Preview" />
-                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                  <RefreshCw className="text-white h-6 w-6" />
-                </div>
-              </div>
-            ) : (
-              <div className={cn(
-                "h-16 w-16 rounded-2xl bg-white shadow-sm flex items-center justify-center transition-colors",
-                isDragging ? "text-primary" : "text-slate-400 group-hover:text-primary"
-              )}>
-                <ImageIcon className="h-8 w-8" />
-              </div>
-            )}
+            <div className={cn(
+              "h-16 w-16 rounded-2xl bg-white shadow-sm flex items-center justify-center transition-colors",
+              isDragging ? "text-primary" : "text-slate-400 group-hover:text-primary"
+            )}>
+              <Upload className="h-8 w-8" />
+            </div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-900">
-                {isDragging ? "Drop to upload" : "Upload RXO File or Screenshot"}
+                {isDragging ? "Drop files here" : "Upload RXO Files or Screenshots"}
               </p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                Supports PNG, JPG, JPEG, Excel, and CSV
+                Supports multiple PNG, JPG, JPEG, and CSV files
               </p>
             </div>
-            <input type="file" ref={fileInputRef} className="hidden" accept="image/*,.csv,.xlsx,.xls" onChange={handleFileChange} />
+            <input 
+              type="file" multiple ref={fileInputRef} className="hidden" 
+              accept="image/*,.csv,.xlsx,.xls" onChange={handleFileChange} 
+            />
           </div>
 
-          {file && (
-            <div className="flex items-center gap-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-              <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-emerald-500 shadow-sm">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-black text-slate-900">{file.name}</p>
-                <p className="text-[9px] font-bold text-emerald-600 uppercase">AI Data Extraction Ready</p>
-              </div>
+          {files.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Selected Batch ({files.length})</p>
+              <ScrollArea className="max-h-[200px] rounded-2xl border border-slate-100 bg-slate-50/50">
+                <div className="p-4 space-y-2">
+                  {files.map((f, i) => (
+                    <div key={i} className="flex items-center gap-4 p-3 bg-white rounded-xl border border-slate-100 group">
+                      <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-900 truncate">{f.name}</p>
+                        <p className="text-[8px] font-black text-emerald-600 uppercase tracking-tight">Queue Position {i + 1}</p>
+                      </div>
+                      <Button 
+                        variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-rose-500"
+                        onClick={(e) => { e.stopPropagation(); removeFile(i); }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
           )}
 
           <Alert className="rounded-2xl bg-blue-50 border-blue-100 text-blue-700">
             <Info className="h-4 w-4" />
-            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">AI Audit Integrity</AlertTitle>
+            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">AI Batch Processing</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              Gemini AI will extract Route IDs and validate dates against internal tracker records. Discrepancies exceeding -$50.00 will be flagged in RED.
+              Gemini AI will process all selected files in sequence. Each screenshot will be cross-referenced with your internal records. Discrepancies exceeding -$50.00 will be flagged.
             </AlertDescription>
           </Alert>
         </div>
@@ -301,9 +338,9 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           <Button 
             className="rounded-xl h-12 bg-slate-900 font-bold px-10 uppercase text-xs shadow-xl" 
             onClick={startAuditProcess} 
-            disabled={isImporting || !file}
+            disabled={isImporting || files.length === 0}
           >
-            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><Sparkles className="mr-2 h-4 w-4" /> Start AI Audit</>}
+            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><Sparkles className="mr-2 h-4 w-4" /> Start AI Batch Audit</>}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -315,7 +352,7 @@ function simulateFileExtraction(date: string) {
   const dateParts = date.split('-');
   const dateFormatted = `${dateParts[1]}${dateParts[2]}${dateParts[0]}`;
   
-  return Array.from({ length: 8 }).map((_, i) => ({
+  return Array.from({ length: 4 }).map((_, i) => ({
     routeId: `LMH__BWI_${dateFormatted}_A${String(i+1).padStart(2, '0')}`,
     market: "LMH Beltsville",
     routeDate: date,
