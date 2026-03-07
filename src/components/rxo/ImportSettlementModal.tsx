@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -31,16 +32,8 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
   const [previews, setPreviews] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 14);
-    return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString().split('T')[0];
-  });
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const db = useFirestore();
@@ -66,8 +59,6 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
     setPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => handleFiles(e.target.files);
-
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -81,31 +72,56 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
     handleFiles(e.dataTransfer.files);
   };
 
-  // Helper to extract date and code from RXO ID
-  const parseRXOId = (rxoId: string) => {
-    const id = rxoId.toUpperCase();
-    
-    // Case 3: EV Route
-    if (id.includes("DMPEV")) return { type: 'EV', code: 'EV' };
-    
-    // Case 4: GAS Route
-    if (id.includes("DMPGAS")) return { type: 'GAS', code: 'GAS' };
+  /**
+   * REFINED MATCHING ENGINE (Step 3 & 4)
+   * Implements the 4 defined cases for parsing RXO strings
+   */
+  const findInternalMatch = (rxoRouteId: string, rxoDate: string) => {
+    const id = (rxoRouteId || "").toUpperCase();
+    const date = rxoDate; // YYYY-MM-DD
 
-    // Case 1 & 2: LMH Patterns (e.g. LMH__BWI_02152026_A01_EV)
+    // Case 3: EV Route Detection
+    if (id.includes("DMPEV")) {
+      return routes.find(r => 
+        r.date === date && 
+        r.route.toUpperCase() === 'EV' && 
+        r.vehicleNumber.toUpperCase() === 'EV'
+      );
+    }
+
+    // Case 4: GAS Route Detection
+    if (id.includes("DMPGAS")) {
+      return routes.find(r => 
+        r.date === date && 
+        r.route.toUpperCase() === 'GAS'
+      );
+    }
+
+    // Case 1 & 2: LMH Patterns
     if (id.includes("LMH")) {
       const parts = id.split('_').filter(Boolean);
-      // Date is usually the numeric part MMDDYYYY
       const datePart = parts.find(p => /^\d{8}$/.test(p));
       
-      // Extract code (everything after date)
-      const dateIndex = parts.indexOf(datePart || "");
-      if (dateIndex !== -1) {
-        const codeParts = parts.slice(dateIndex + 1);
-        return { type: 'LMH', code: codeParts.join('_'), dateStr: datePart };
+      if (datePart) {
+        // Step 4 Validation
+        const m = datePart.substring(0, 2);
+        const d = datePart.substring(2, 4);
+        const y = datePart.substring(4, 8);
+        const formattedIdDate = `${y}-${m}-${d}`;
+        
+        if (formattedIdDate !== date) return null;
+
+        const dateIndex = parts.indexOf(datePart);
+        const code = parts.slice(dateIndex + 1).join('_');
+        
+        return routes.find(r => 
+          r.date === date && 
+          r.route.toUpperCase() === code.toUpperCase()
+        );
       }
     }
 
-    return { type: 'UNKNOWN', code: rxoId };
+    return null;
   };
 
   const startAuditProcess = async () => {
@@ -114,7 +130,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       return;
     }
     if (files.length === 0) {
-      toast({ variant: "destructive", title: "No Files", description: "Please upload at least one settlement file or screenshot." });
+      toast({ variant: "destructive", title: "No Files", description: "Upload settlement documents or screenshots." });
       return;
     }
 
@@ -124,7 +140,6 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       const reportId = `rxo-rep-${Date.now()}`;
       const now = new Date().toISOString();
       let allExtractedRoutes: any[] = [];
-      let totalSettlementPay = 0;
       let summaryTotalPay = 0;
       let orderDetailsRateSum = 0;
       let hasExcelIntegrity = false;
@@ -132,19 +147,13 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       for (let i = 0; i < files.length; i++) {
         const currentFile = files[i];
         if (currentFile.type.startsWith('image/')) {
-          const preview = previews[i];
-          if (preview) {
-            toast({ title: `AI Scanning Image ${i + 1}/${files.length}` });
-            const aiResult = await analyzeRXOSettlement({ photoDataUri: preview });
-            allExtractedRoutes = [...allExtractedRoutes, ...aiResult.extractedRoutes];
-            totalSettlementPay += aiResult.totalPay;
-          }
-        } else if (currentFile.name.endsWith('.xlsx') || currentFile.name.endsWith('.xls')) {
-          toast({ title: `Logic Audit: Excel` });
+          const aiResult = await analyzeRXOSettlement({ photoDataUri: previews[i] });
+          allExtractedRoutes = [...allExtractedRoutes, ...aiResult.extractedRoutes];
+        } else {
           const data = await currentFile.arrayBuffer();
           const workbook = XLSX.read(data);
           
-          // STEP 1: Settlement Validation Audit
+          // STEP 1: VALIDATION AUDIT
           const summarySheet = workbook.Sheets[workbook.SheetNames.find(n => n.toLowerCase().includes("summary")) || ""];
           if (summarySheet) {
             const json = XLSX.utils.sheet_to_json(summarySheet, { header: 1 }) as any[][];
@@ -164,7 +173,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             hasExcelIntegrity = true;
           }
 
-          // STEP 2: Route Details Extraction (from Excel)
+          // STEP 2: ROUTE EXTRACTION
           const routeSheet = workbook.Sheets[workbook.SheetNames.find(n => n.toLowerCase().includes("route")) || ""];
           if (routeSheet) {
             const json = XLSX.utils.sheet_to_json(routeSheet) as any[];
@@ -181,36 +190,16 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         }
       }
 
-      // STEP 3-6: Matching, Comparison, and Delta Audit
-      let totalInternalEst = 0;
-      let totalMilesRXO = 0;
-      let totalStopsRXO = 0;
-
+      // STEP 3-6: MATCHING & COMPARISON
       allExtractedRoutes.forEach((extracted, idx) => {
-        const { type, code, dateStr } = parseRXOId(extracted.routeId);
-        totalMilesRXO += extracted.routeMiles;
-        totalStopsRXO += extracted.stopCount;
-
-        // Match based on cases
-        const matchedInternal = routes.find(r => {
-          if (r.date !== extracted.routeDate) return false;
-          
-          if (type === 'EV') return r.route.toUpperCase() === 'EV' && r.vehicleNumber.toUpperCase() === 'EV';
-          if (type === 'GAS') return r.route.toUpperCase() === 'GAS';
-          
-          // LMH Case: Extract code must match exactly
-          return r.route.toUpperCase() === code;
-        });
-
-        const internalEst = matchedInternal 
-          ? (matchedInternal.estimatedPay || estimatePay(matchedInternal.stops, matchedInternal.miles, matchedInternal.route, matchedInternal.vehicleNumber, settings, matchedInternal.routeType))
+        const matched = findInternalMatch(extracted.routeId, extracted.routeDate);
+        const internalEst = matched 
+          ? (matched.estimatedPay || estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType))
           : 0;
 
-        totalInternalEst += internalEst;
         const delta = Number((extracted.settlementAmount - internalEst).toFixed(2));
-        const deltaStatus = delta < -50 ? 'RED' : 'GREEN';
-
         const detailId = `rd-${Date.now()}-${idx}`;
+        
         setDocumentNonBlocking(doc(db, "rxoSettlementRouteDetails", detailId), {
           id: detailId,
           reportId,
@@ -218,16 +207,13 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           market: extracted.market,
           routeDate: extracted.routeDate,
           routeMiles: extracted.routeMiles,
-          internalMiles: matchedInternal?.miles || 0,
           stopCount: extracted.stopCount,
-          internalStops: matchedInternal?.stops || 0,
           rxoSettlementPay: extracted.settlementAmount,
           systemEstimatedPay: internalEst,
           delta,
-          deltaStatus,
-          internalRouteId: matchedInternal?.id || null,
-          matchStatus: matchedInternal ? 'Matched' : 'Unmatched',
-          finalEstimatedPay: internalEst,
+          deltaStatus: delta < -50 ? 'RED' : 'GREEN',
+          internalRouteId: matched?.id || null,
+          matchStatus: matched ? 'Matched' : 'Unmatched',
           createdAt: now
         } satisfies RXORouteDetail, { merge: true });
       });
@@ -241,15 +227,15 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         anticipatedIssueDate: now.split('T')[0],
         marketCount: 1,
         routeCount: allExtractedRoutes.length,
-        totalMiles: Number(totalMilesRXO.toFixed(1)),
-        totalStops: totalStopsRXO,
-        rxoTotalPay: Number((summaryTotalPay || totalSettlementPay).toFixed(2)),
-        internalEstimatedTotalPay: Number(totalInternalEst.toFixed(2)),
-        totalDelta: Number(((summaryTotalPay || totalSettlementPay) - totalInternalEst).toFixed(2)),
+        totalMiles: allExtractedRoutes.reduce((sum, r) => sum + r.routeMiles, 0),
+        totalStops: allExtractedRoutes.reduce((sum, r) => sum + r.stopCount, 0),
+        rxoTotalPay: Number((summaryTotalPay || allExtractedRoutes.reduce((sum, r) => sum + r.settlementAmount, 0)).toFixed(2)),
+        internalEstimatedTotalPay: 0, // Will be computed live in view
+        totalDelta: 0,
         fileName: files.length > 1 ? `Batch (${files.length} files)` : files[0].name,
         importedAt: now,
         importedBy: "System Admin",
-        notes: `AI Audit Batch for ${startDate} to ${endDate}`,
+        notes: `AI Extraction Batch: ${startDate} to ${endDate}`,
         summaryTotalPay: Number(summaryTotalPay.toFixed(2)),
         orderDetailsRateSum: Number(orderDetailsRateSum.toFixed(2)),
         integrityStatus: hasExcelIntegrity 
@@ -261,12 +247,12 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       setIsImporting(false);
       onImportComplete(reportId);
       onClose();
-      toast({ title: "AI Audit Complete" });
+      toast({ title: "AI Settlement Audit Complete" });
 
     } catch (e) {
       console.error(e);
       setIsImporting(false);
-      toast({ variant: "destructive", title: "Import Failed", description: "Audit logic encountered an error." });
+      toast({ variant: "destructive", title: "Import Failed", description: "Matching logic encountered an error." });
     }
   };
 
@@ -283,11 +269,11 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         <div className="space-y-8 mt-6">
           <div className="grid grid-cols-2 gap-6 p-6 bg-slate-50 rounded-2xl border border-slate-100">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-slate-400">Week Start</Label>
+              <Label className="text-[10px] font-black uppercase text-slate-400 px-1">Settlement Start</Label>
               <Input type="date" className="h-12 rounded-xl bg-white border-none font-bold" value={startDate} onChange={e => setStartDate(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-slate-400">Week End</Label>
+              <Label className="text-[10px] font-black uppercase text-slate-400 px-1">Settlement End</Label>
               <Input type="date" className="h-12 rounded-xl bg-white border-none font-bold" value={endDate} onChange={e => setEndDate(e.target.value)} />
             </div>
           </div>
@@ -304,8 +290,8 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
               <Upload className="h-8 w-8" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-bold text-slate-900">{isDragging ? "Drop to Scan" : "Upload Batch"}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Images or RXO Excel Reports</p>
+              <p className="text-sm font-bold text-slate-900">{isDragging ? "Drop files to scan" : "Upload Settlement Batch"}</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Accepts Screenshots (PNG/JPG) & Excel (XLSX)</p>
             </div>
             <input type="file" multiple ref={fileInputRef} className="hidden" accept="image/*,.xlsx,.xls" onChange={handleFileChange} />
           </div>
@@ -319,7 +305,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
                       <FileText className="h-4 w-4 text-slate-400" />
                       <span className="text-xs font-bold text-slate-700 truncate max-w-[200px]">{f.name}</span>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => removeFile(i)}><X className="h-3 w-3" /></Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(i)}><X className="h-3 w-3" /></Button>
                   </div>
                 ))}
               </div>
@@ -328,9 +314,9 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
 
           <Alert className="rounded-2xl bg-blue-50 border-blue-100 text-blue-700">
             <Info className="h-4 w-4" />
-            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Matching Engine Active</AlertTitle>
+            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Matching Intelligence Active</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              Extracts route code from LMH patterns and validates MMDDYYYY strings. Case 3 (DMPEV) and Case 4 (DMPGAS) specific rules applied.
+              Validating LMH suffixes and DMPEV prefixes. Step 4 Date matching will ensure audit integrity before processing.
             </AlertDescription>
           </Alert>
         </div>
@@ -341,7 +327,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             className="rounded-xl h-12 bg-slate-900 font-bold px-10 uppercase text-xs shadow-xl" 
             onClick={startAuditProcess} disabled={isImporting || files.length === 0}
           >
-            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Run AI Audit Batch"}
+            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Run AI Settlement Audit"}
           </Button>
         </DialogFooter>
       </DialogContent>
