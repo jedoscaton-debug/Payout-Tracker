@@ -1,4 +1,3 @@
-
 import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollItem, ComputedTotals, FormulaSettings } from './types';
 import { evaluateFormula, DEFAULT_FORMULA_SETTINGS } from './formula-evaluator';
 
@@ -89,8 +88,8 @@ export function estimateFuel(miles: number, settings?: FormulaSettings) {
 /**
  * Driver Payout Logic
  * Priorities:
- * 1. Employee Specific Share -> Employee %
- * 2. Pure EV Node (EV/EV) -> 33% (System Rule)
+ * 1. Employee Specific Share -> Employee % (from Directory)
+ * 2. Pure EV Node (EV/EV) -> 33% (System Incentive)
  * 3. Default -> 27%
  */
 export function driverPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings, routeType?: string, employee?: Employee) {
@@ -113,8 +112,8 @@ export function driverPay(stops: number, miles: number = 0, route: string = "", 
 /**
  * Helper Payout Logic
  * Priorities:
- * 1. Employee Specific Share -> Employee %
- * 2. Pure EV Node (EV/EV) -> 27% (System Rule)
+ * 1. Employee Specific Share -> Employee % (from Directory)
+ * 2. Pure EV Node (EV/EV) -> 27% (System Incentive)
  * 3. Default -> 23%
  */
 export function helperPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings, routeType?: string, employee?: Employee) {

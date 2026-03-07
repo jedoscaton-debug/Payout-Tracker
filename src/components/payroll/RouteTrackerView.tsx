@@ -432,7 +432,7 @@ export function RouteTrackerView({
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Mileage Cost</Label>
                     <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold">
-                      {currency(mileageCostValue)}
+                      {mileageCostValue === 0 ? "TBD" : currency(mileageCostValue)}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -521,7 +521,7 @@ export function RouteTrackerView({
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(dPay)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{hPay > 0 ? currency(hPay) : ""}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(row.truckRental)}</td>
-                        <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(mileageCost)}</td>
+                        <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{mileageCost === 0 ? "TBD" : currency(mileageCost)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200 italic text-slate-400">Included</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(fuel)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(totalExp)}</td>
@@ -694,7 +694,7 @@ export function RouteTrackerView({
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Mileage Cost</Label>
                   <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold">
-                    {currency(mileageCostValue)}
+                    {mileageCostValue === 0 ? "TBD" : currency(mileageCostValue)}
                   </div>
                 </div>
                 <div className="space-y-2">
