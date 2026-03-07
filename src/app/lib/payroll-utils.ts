@@ -35,10 +35,10 @@ export function getDayOfWeek(input: string) {
 
 /**
  * Standard Mileage Cost for Truck Rental.
- * Calculating at $0.25 per mile.
+ * Defaulting to $0.00 as per user requirement.
  */
 export function truckRentalMileageCost(miles: number): number {
-  return Number(((miles || 0) * 0.25).toFixed(2));
+  return 0;
 }
 
 /**
