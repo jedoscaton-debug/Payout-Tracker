@@ -59,8 +59,8 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       };
 
       const demoRoutes = [
-        { routeId: "A01_EV", rxoPay: 729.00, stops: 27, miles: 68, market: "LMH Beltsville", date: "2024-03-04" },
-        { routeId: "A02_GAS", rxoPay: 680.50, stops: 30, miles: 142, market: "LMH Beltsville", date: "2024-03-05" },
+        { routeId: "DMPEV_A01", rxoPay: 729.00, stops: 27, miles: 68, market: "LMH Beltsville", date: "2024-03-04" },
+        { routeId: "DMPGAS_A02", rxoPay: 680.50, stops: 30, miles: 142, market: "LMH Beltsville", date: "2024-03-05" },
         { routeId: "A03_IKEA", rxoPay: 745.00, stops: 25, miles: 210, market: "LMH Beltsville", date: "2024-03-06" }
       ];
 
@@ -86,8 +86,19 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         const delta = demo.rxoPay - sysEst;
         const detailId = `rd-${Date.now()}-${demo.routeId}`;
 
-        // Find internal match
-        const matchedInternal = routes.find(r => r.route === demo.routeId && r.date === demo.date);
+        // Find internal match with the new DMPEV and DMPGAS mapping rules
+        const matchedInternal = routes.find(r => {
+          const isDateMatch = r.date === demo.date;
+          if (!isDateMatch) return false;
+
+          if (demo.routeId.startsWith("DMPEV")) {
+            return r.route === "EV" && r.vehicleNumber === "EV";
+          }
+          if (demo.routeId.startsWith("DMPGAS")) {
+            return r.route === "GAS" && r.vehicleNumber === "GAS";
+          }
+          return r.route === demo.routeId;
+        });
 
         setDocumentNonBlocking(doc(db, "rxoSettlementRouteDetails", detailId), {
           id: detailId,
@@ -108,7 +119,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         }, { merge: true });
 
         // Add dummy Order Details for the first route
-        if (demo.routeId === "A01_EV") {
+        if (demo.routeId === "DMPEV_A01") {
           for(let i=1; i<=3; i++) {
             addDocumentNonBlocking(collection(db, "rxoSettlementOrderDetails"), {
               reportId,
