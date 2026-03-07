@@ -31,13 +31,11 @@ interface RouteAuditTableProps {
 
 /**
  * STEP 3 & 4 — LIVE MATCHING ENGINE
- * Implements logic for Cases 1-4 and Date Locking for the comparison audit.
  */
 function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: RouteTrackerRow[]) {
   const id = (rxoRouteId || "").toUpperCase();
   const reportDate = rxoDate; // YYYY-MM-DD
 
-  // Case 3: EV Route Detection (Prefix DMPEV)
   if (id.includes("DMPEV")) {
     return internalRoutes.find(r => 
       r.date === reportDate && 
@@ -46,7 +44,6 @@ function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: 
     );
   }
 
-  // Case 4: GAS Route Detection (Prefix DMPGAS)
   if (id.includes("DMPGAS")) {
     return internalRoutes.find(r => 
       r.date === reportDate && 
@@ -54,23 +51,19 @@ function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: 
     );
   }
 
-  // Cases 1 & 2: LMH Patterns
   if (id.includes("LMH")) {
     const parts = id.split('_').filter(Boolean);
-    const datePart = parts.find(p => /^\d{8}$/.test(p)); // MMDDYYYY
+    const datePart = parts.find(p => /^\d{8}$/.test(p));
     
     if (datePart) {
-      // Step 4 Validation: Convert MMDDYYYY from ID to YYYY-MM-DD
       const m = datePart.substring(0, 2);
       const d = datePart.substring(2, 4);
       const y = datePart.substring(4, 8);
       const formattedIdDate = `${y}-${m}-${d}`;
       
-      // Strict match: ID embedded date must match the actual route date
       if (formattedIdDate !== reportDate) return null;
 
       const dateIndex = parts.indexOf(datePart);
-      // The actual internal route code is everything after the date part
       const code = parts.slice(dateIndex + 1).join('_');
       
       return internalRoutes.find(r => 
@@ -85,7 +78,7 @@ function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: 
 
 export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearch, onRecalculate, settings }: RouteAuditTableProps) {
   
-  // STEP 8 — DATE ORDERING (Sun to Sat / Chronological)
+  // STEP 8 — DATE ORDERING (Chronological)
   const sortedAndFiltered = useMemo(() => {
     return routeDetails
       .filter(r => 
@@ -109,7 +102,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
       return [
         row.routeId, row.routeDate, row.market, matched?.route || "N/A",
         row.routeMiles, matched?.miles || 0, row.stopCount, matched?.stops || 0,
-        est, row.rxoSettlementPay, delta, delta < 0 ? "RED" : "GREEN", matched ? "Verified Match" : "Unmatched"
+        est, row.rxoSettlementPay, delta, delta < 0 ? "RED" : "GREEN", matched ? (delta < 0 ? "VERIFIED MATCH" : "MATCHED") : "UNMATCHED"
       ];
     });
 
@@ -118,7 +111,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `RXO_Settlement_Audit_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `RXO_Settlement_Audit_Export.csv`;
     link.click();
   };
 
@@ -142,7 +135,6 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-900 text-white">
-                    {/* STEP 7 — AUDIT OUTPUT TABLE (13 COLUMNS) */}
                     <th className="px-8 py-6 text-left text-[10px] font-black uppercase tracking-widest min-w-[280px]">Route ID</th>
                     <th className="px-4 py-6 text-center text-[10px] font-black uppercase tracking-widest">Route Date</th>
                     <th className="px-4 py-6 text-center text-[10px] font-black uppercase tracking-widest">Market</th>
@@ -164,15 +156,11 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                       <td colSpan={13} className="py-20 text-center text-slate-400 font-bold uppercase text-xs tracking-widest">No routes found for this settlement period.</td>
                     </tr>
                   ) : sortedAndFiltered.map(row => {
-                    // STEP 3 & 4: LIVE DATA COMPARISON
                     const matched = findInternalMatch(row.routeId, row.routeDate, internalRoutes);
-                    // STEP 5: Use Estimated Pay from Tracker if matched
                     const est = matched ? (matched.estimatedPay || estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType)) : 0;
-                    
-                    // STEP 6: DELTA AUDIT
                     const liveDelta = Number((row.rxoSettlementPay - est).toFixed(2));
                     
-                    // CRITICAL: Mark ALL negative variance as RED (Even small differences like -11.25)
+                    // CRITICAL: Any negative variance is RED
                     const isRed = liveDelta < 0;
                     
                     return (
@@ -197,13 +185,9 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                           )}
                         </td>
                         <td className="px-4 py-5 text-center font-bold text-slate-400 bg-slate-50/50">{row.routeMiles}</td>
-                        <td className="px-4 py-5 text-center font-black text-slate-900 bg-slate-50/30">
-                          {matched ? matched.miles : "—"}
-                        </td>
+                        <td className="px-4 py-5 text-center font-black text-slate-900 bg-slate-50/30">{matched ? matched.miles : "—"}</td>
                         <td className="px-4 py-5 text-center font-bold text-slate-400 bg-slate-50/50">{row.stopCount}</td>
-                        <td className="px-4 py-5 text-center font-black text-slate-900 bg-slate-50/30">
-                          {matched ? matched.stops : "—"}
-                        </td>
+                        <td className="px-4 py-5 text-center font-black text-slate-900 bg-slate-50/30">{matched ? matched.stops : "—"}</td>
                         <td className="px-4 py-5 text-right font-black text-primary bg-slate-50/30">{currency(est)}</td>
                         <td className="px-4 py-5 text-right font-black text-slate-900 bg-slate-50/50">{currency(row.rxoSettlementPay)}</td>
                         <td className={cn("px-4 py-5 text-right font-black text-xs border-l", isRed ? "text-rose-600" : "text-emerald-600")}>
@@ -218,12 +202,18 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                           </div>
                         </td>
                         <td className="px-8 py-5 text-right">
-                          <Badge variant="outline" className={cn(
-                            "text-[8px] font-black uppercase px-3", 
-                            matched ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-100 text-slate-400 border-slate-200"
-                          )}>
-                            {matched ? 'Verified Match' : 'Unmatched'}
-                          </Badge>
+                          {matched ? (
+                            <Badge variant="outline" className={cn(
+                              "text-[8px] font-black uppercase px-3", 
+                              isRed ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-200"
+                            )}>
+                              {isRed ? 'VERIFIED MATCH' : 'MATCHED'}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-slate-100 text-slate-400 border-slate-200 text-[8px] font-black uppercase px-3">
+                              Unmatched
+                            </Badge>
+                          )}
                         </td>
                       </tr>
                     );
