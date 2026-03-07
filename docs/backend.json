@@ -13,7 +13,8 @@
         "defaultDailyRate": { "type": "string" },
         "paymentMethod": { "type": "string" },
         "authUid": { "type": "string" },
-        "payoutPercentage": { "type": "number", "description": "Individual share of route revenue." }
+        "driverPayoutPercentage": { "type": "number", "description": "Individual share when acting as a Driver." },
+        "helperPayoutPercentage": { "type": "number", "description": "Individual share when acting as a Helper." }
       },
       "required": ["id", "fullName", "role"]
     },

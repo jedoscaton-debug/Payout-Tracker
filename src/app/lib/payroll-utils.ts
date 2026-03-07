@@ -136,18 +136,18 @@ function amountForRole(row: RouteTrackerRow, role: RoleType, employee: Employee,
   let hPay = 0;
 
   if (isDriverPart) {
-    // Priority: Employee individual payout percentage if they are primarily a Driver
-    if (employee.role === "Driver" && employee.payoutPercentage !== undefined) {
-      dPay = Number((estPay * (employee.payoutPercentage / 100)).toFixed(2));
+    // Priority: Individual employee driver percentage override
+    if (employee.driverPayoutPercentage !== undefined) {
+      dPay = Number((estPay * (employee.driverPayoutPercentage / 100)).toFixed(2));
     } else {
       dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
     }
   }
 
   if (isHelperPart) {
-    // Priority: Employee individual payout percentage if they are primarily a Helper
-    if (employee.role === "Helper" && employee.payoutPercentage !== undefined) {
-      hPay = Number((estPay * (employee.payoutPercentage / 100)).toFixed(2));
+    // Priority: Individual employee helper percentage override
+    if (employee.helperPayoutPercentage !== undefined) {
+      hPay = Number((estPay * (employee.helperPayoutPercentage / 100)).toFixed(2));
     } else {
       hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
     }

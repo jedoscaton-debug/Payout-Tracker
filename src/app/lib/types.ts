@@ -53,7 +53,8 @@ export type Employee = {
   defaultDailyRate: string;
   paymentMethod?: string;
   authUid?: string;
-  payoutPercentage?: number;
+  driverPayoutPercentage?: number;
+  helperPayoutPercentage?: number;
 };
 
 export type DeductionRecord = {
