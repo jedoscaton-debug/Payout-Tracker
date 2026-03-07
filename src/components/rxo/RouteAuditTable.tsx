@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -13,10 +14,10 @@ import {
   ArrowRightLeft, 
   MoreHorizontal, 
   Plus,
-  Info,
   CheckCircle2,
   AlertCircle,
-  Calendar
+  Calendar,
+  Sparkles
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -43,20 +44,6 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
     r.market.toLowerCase().includes(search.toLowerCase())
   );
 
-  const headers = [
-    "Route ID",
-    "Route Date",
-    "Vehicle",
-    "Miles (Internal)",
-    "Route Miles (RXO)",
-    "Stops (Internal)",
-    "Stop Count (RXO)",
-    "Estimated Pay",
-    "RXO Settlement Pay",
-    "Delta",
-    "Delta Status"
-  ];
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -77,73 +64,77 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
         <CardContent className="p-0">
           <ScrollArea className="w-full">
-            <div className="min-w-[2400px]">
+            <div className="min-w-[2800px]">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-900 text-white">
-                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest min-w-[250px]">Route ID</th>
-                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest border-l border-white/10">Route Date</th>
-                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest">Vehicle</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest min-w-[250px]">RXO Route ID</th>
+                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest">Route Date</th>
+                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest">Market</th>
+                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-primary/10">Internal Route ID</th>
                     
-                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-slate-800">Miles (Internal)</th>
-                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-slate-700">Route Miles (RXO)</th>
+                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-slate-800">RXO Route Miles</th>
+                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-slate-700">Internal Miles</th>
                     
-                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-slate-800">Stops (Internal)</th>
-                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-slate-700">Stop Count (RXO)</th>
+                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-slate-800">RXO Stop Count</th>
+                    <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest bg-slate-700">Internal Stops</th>
                     
-                    <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest border-l border-white/10 bg-slate-800">Estimated Pay</th>
-                    <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest bg-slate-700">RXO Settlement Pay</th>
+                    <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest bg-slate-800">Estimated Pay</th>
+                    <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest bg-slate-700">RXO Settlement Amount</th>
                     
                     <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest border-l border-white/10">Delta</th>
                     <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest">Delta Status</th>
-                    <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest">Actions</th>
+                    <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest">Match Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-[10px]">No matches found for the selected review week.</td>
+                      <td colSpan={13} className="px-8 py-20 text-center text-slate-400 font-bold uppercase text-[10px]">No matches found for the selected review week.</td>
                     </tr>
                   ) : filtered.map(row => {
                     const matchedInternal = internalRoutes.find(ir => ir.id === row.internalRouteId);
                     const isRed = row.deltaStatus === 'RED';
-                    const milesMatch = matchedInternal ? row.routeMiles === matchedInternal.miles : false;
-                    const stopsMatch = matchedInternal ? row.stopCount === matchedInternal.stops : false;
+                    const milesMatch = row.internalMiles === row.routeMiles;
+                    const stopsMatch = row.internalStops === row.stopCount;
                     
                     return (
                       <tr key={row.id} className={cn("hover:bg-slate-50/50 transition-colors group", !matchedInternal && "bg-slate-50/20")}>
                         <td className="px-8 py-5">
-                          <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                             <span className="font-black text-slate-900 text-xs">{row.routeId}</span>
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">{row.market}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-center border-l">
+                        <td className="px-4 py-5 text-center">
                           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-[10px] font-black text-slate-600 uppercase">
                             <Calendar className="h-3 w-3" /> {shortDate(row.routeDate)}
                           </div>
                         </td>
                         <td className="px-4 py-5 text-center">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">{row.market}</span>
+                        </td>
+                        <td className="px-4 py-5 text-center bg-primary/5">
                           {matchedInternal ? (
-                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] font-black uppercase px-3 py-1">
-                              Node {matchedInternal.vehicleNumber}
+                            <Badge className="bg-primary text-white text-[10px] font-black uppercase">
+                              {matchedInternal.route}
                             </Badge>
                           ) : (
-                            <span className="text-[9px] font-bold uppercase text-slate-300 italic">Unmatched</span>
+                            <span className="text-[9px] font-bold uppercase text-slate-300 italic">No Match Found</span>
                           )}
                         </td>
                         
-                        <td className={cn("px-4 py-5 text-center font-bold bg-slate-50/30", matchedInternal && !milesMatch ? "text-rose-500 underline decoration-dotted decoration-2 underline-offset-4" : "text-slate-900")}>
-                          {matchedInternal?.miles ?? "—"}
-                        </td>
                         <td className="px-4 py-5 text-center font-bold text-slate-500 bg-slate-50/50">{row.routeMiles}</td>
-                        
-                        <td className={cn("px-4 py-5 text-center font-bold bg-slate-50/30", matchedInternal && !stopsMatch ? "text-rose-500 underline decoration-dotted decoration-2 underline-offset-4" : "text-slate-900")}>
-                          {matchedInternal?.stops ?? "—"}
+                        <td className={cn("px-4 py-5 text-center font-bold bg-slate-50/30", !milesMatch && matchedInternal ? "text-rose-500 underline decoration-dotted decoration-2 underline-offset-4" : "text-slate-900")}>
+                          {row.internalMiles ?? "—"}
                         </td>
-                        <td className="px-4 py-5 text-center font-bold text-slate-500 bg-slate-50/50">{row.stopCount}</td>
                         
-                        <td className="px-4 py-5 text-right font-bold text-primary bg-slate-50/30 border-l border-slate-200">
+                        <td className="px-4 py-5 text-center font-bold text-slate-500 bg-slate-50/50">{row.stopCount}</td>
+                        <td className={cn("px-4 py-5 text-center font-bold bg-slate-50/30", !stopsMatch && matchedInternal ? "text-rose-500 underline decoration-dotted decoration-2 underline-offset-4" : "text-slate-900")}>
+                          {row.internalStops ?? "—"}
+                        </td>
+                        
+                        <td className="px-4 py-5 text-right font-bold text-slate-400 bg-slate-50/30">
                           {currency(row.systemEstimatedPay)}
                         </td>
                         <td className="px-4 py-5 text-right font-black text-slate-900 bg-slate-50/50">
@@ -160,9 +151,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                         <td className="px-4 py-5 text-center">
                           <div className={cn(
                             "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase border-2",
-                            isRed 
-                              ? "bg-rose-50 text-rose-600 border-rose-200" 
-                              : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                            isRed ? "bg-rose-50 text-rose-600 border-rose-200" : "bg-emerald-50 text-emerald-600 border-emerald-200"
                           )}>
                             {isRed ? <AlertCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
                             {isRed ? "RED" : "GREEN"}
@@ -170,19 +159,22 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                         </td>
                         
                         <td className="px-8 py-5 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="rounded-xl w-56 p-2">
-                              {!matchedInternal && (
-                                <DropdownMenuItem className="rounded-lg font-bold text-xs uppercase text-emerald-600 gap-2">
-                                  <Plus className="h-3 w-3" /> Create Internal Log
+                          <div className="flex items-center justify-end gap-3">
+                            <Badge variant="outline" className={cn(
+                              "text-[8px] font-black uppercase px-2 py-0.5",
+                              row.matchStatus === 'Matched' ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"
+                            )}>
+                              {row.matchStatus}
+                            </Badge>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="rounded-xl w-56 p-2">
+                                <DropdownMenuItem className="rounded-lg font-bold text-xs uppercase text-primary gap-2">
+                                    <ArrowRightLeft className="h-3 w-3" /> Manual Overwrite
                                 </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem className="rounded-lg font-bold text-xs uppercase text-primary gap-2">
-                                  <ArrowRightLeft className="h-3 w-3" /> Manual Match ID
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </td>
                       </tr>
                     );

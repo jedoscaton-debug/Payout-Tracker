@@ -169,7 +169,9 @@ export type RXORouteDetail = {
   market: string;
   routeDate: string;
   routeMiles: number;
+  internalMiles?: number;
   stopCount: number;
+  internalStops?: number;
   rxoSettlementPay: number;
   systemEstimatedPay: number;
   delta: number;
