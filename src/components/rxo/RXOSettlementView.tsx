@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -21,7 +22,11 @@ import {
   ArrowRightLeft,
   Trash2,
   MoreHorizontal,
-  Scale
+  Scale,
+  Mail,
+  Copy,
+  CheckCircle2,
+  ExternalLink
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -29,6 +34,13 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogFooter
+} from "@/components/ui/dialog";
 import { 
   RXOSettlementReport, 
   RXORouteDetail, 
@@ -49,6 +61,7 @@ import { IntegrityAuditPanel } from "./IntegrityAuditPanel";
 export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { routes: RouteTrackerRow[], settings?: FormulaSettings, onAddInternalRoute?: (r: RouteTrackerRow) => void }) {
   const [activeTab, setActiveTab] = useState("audit");
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   
@@ -72,7 +85,7 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
   );
   const { data: routeDetails } = useCollection<RXORouteDetail>(routeDetailsQuery);
 
-  // Recalculate Live Stats based on current Route Tracker values
+  // Recalculate Live Stats
   const liveStats = useMemo(() => {
     if (!routeDetails || !routes) return null;
     
@@ -93,24 +106,66 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
     return {
       internalEst: totalInternalEst,
       delta,
-      // Flag summary if total variance is negative
       isRed: delta < 0
     };
   }, [routeDetails, routes, selectedReport, settings]);
 
   const flaggedRoutes = useMemo(() => {
-    if (!routeDetails) return [];
-    return routeDetails.filter(row => {
-      const matched = routes.find(r => r.id === row.internalRouteId);
-      const est = matched 
-        ? (matched.estimatedPay && matched.estimatedPay > 0 
-            ? matched.estimatedPay 
-            : estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType))
-        : row.systemEstimatedPay;
-      // Mark as flagged if RXO pays less than estimated (any negative)
-      return (row.rxoSettlementPay - est) < 0;
-    });
+    if (!routeDetails || !routes) return [];
+    return routeDetails
+      .map(row => {
+        const matched = routes.find(r => r.id === row.internalRouteId);
+        const est = matched 
+          ? (matched.estimatedPay && matched.estimatedPay > 0 
+              ? matched.estimatedPay 
+              : estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType))
+          : row.systemEstimatedPay;
+        return { ...row, liveDelta: row.rxoSettlementPay - est, internalMatch: matched };
+      })
+      .filter(row => row.liveDelta < 0)
+      .sort((a, b) => a.routeDate.localeCompare(b.routeDate));
   }, [routeDetails, routes, settings]);
+
+  const emailReportContent = useMemo(() => {
+    if (!selectedReport || flaggedRoutes.length === 0) return null;
+
+    const startDate = shortDate(selectedReport.settlementPeriodStart);
+    const endDate = shortDate(selectedReport.settlementPeriodEnd);
+    
+    let body = `Hello\n\nI've reviewed the Weekly Settlement Report for ${startDate} - ${endDate}\n\n`;
+    
+    flaggedRoutes.forEach(row => {
+      const routeName = row.internalMatch?.route || row.routeId;
+      const internalStops = row.internalMatch?.stops || 0;
+      const internalPay = row.internalMatch?.estimatedPay || row.systemEstimatedPay;
+      const rxoPay = row.rxoSettlementPay;
+      const rxoStops = row.stopCount;
+      const variance = Math.abs(row.liveDelta);
+      
+      body += `For Route ${routeName} ${shortDate(row.routeDate)}, we were projected to receive ${currency(internalPay)} for ${internalStops} stops, but only ${currency(rxoPay)} for ${rxoStops} stops was received, resulting in a variance of ${currency(variance)}\n\n`;
+    });
+
+    const totalVar = flaggedRoutes.reduce((sum, r) => sum + Math.abs(r.liveDelta), 0);
+    body += `Total variance for this week: ${currency(totalVar)}`;
+
+    const subject = `Route Reconciliation - ${startDate} thru ${endDate}, ${new Date().getFullYear()} - System Oriented`;
+
+    return { subject, body };
+  }, [selectedReport, flaggedRoutes]);
+
+  const handleCopyEmail = () => {
+    if (emailReportContent) {
+      navigator.clipboard.writeText(`${emailReportContent.subject}\n\n${emailReportContent.body}`);
+      toast({ title: "Report Copied", description: "Reconciliation text copied to clipboard." });
+    }
+  };
+
+  const handleSendEmail = () => {
+    if (emailReportContent) {
+      const mailto = `mailto:?subject=${encodeURIComponent(emailReportContent.subject)}&body=${encodeURIComponent(emailReportContent.body)}`;
+      window.location.href = mailto;
+    }
+  };
 
   const handleRecalculate = () => {
     toast({ title: "Audit Re-synchronized", description: "All estimates updated against active Route Tracker logs." });
@@ -131,21 +186,32 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {reports && reports.length > 0 && (
-            <div className="flex items-center gap-2 bg-white px-4 h-11 rounded-xl border border-slate-200 shadow-sm">
-              <span className="text-[9px] font-black uppercase text-slate-400 whitespace-nowrap">Review Week:</span>
-              <Select value={selectedReportId || ""} onValueChange={setSelectedReportId}>
-                <SelectTrigger className="h-8 border-none bg-transparent font-bold text-[10px] uppercase min-w-[180px] p-0 focus:ring-0">
-                  <SelectValue placeholder="Select period..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {reports.map(r => (
-                    <SelectItem key={r.id} value={r.id} className="text-[10px] font-bold uppercase">
-                      {shortDate(r.settlementPeriodStart)} - {shortDate(r.settlementPeriodEnd)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <>
+              {flaggedRoutes.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl h-11 border-primary text-primary font-bold bg-primary/5 hover:bg-primary/10"
+                  onClick={() => setIsEmailModalOpen(true)}
+                >
+                  <Mail className="mr-2 h-4 w-4" /> Generate Email Report
+                </Button>
+              )}
+              <div className="flex items-center gap-2 bg-white px-4 h-11 rounded-xl border border-slate-200 shadow-sm">
+                <span className="text-[9px] font-black uppercase text-slate-400 whitespace-nowrap">Review Week:</span>
+                <Select value={selectedReportId || ""} onValueChange={setSelectedReportId}>
+                  <SelectTrigger className="h-8 border-none bg-transparent font-bold text-[10px] uppercase min-w-[180px] p-0 focus:ring-0">
+                    <SelectValue placeholder="Select period..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {reports.map(r => (
+                      <SelectItem key={r.id} value={r.id} className="text-[10px] font-bold uppercase">
+                        {shortDate(r.settlementPeriodStart)} - {shortDate(r.settlementPeriodEnd)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
           )}
           <Button variant="outline" className="rounded-xl h-11 bg-white font-bold" onClick={() => setIsImportOpen(true)}>
             <Upload className="mr-2 h-4 w-4" /> AI Batch Import
@@ -266,6 +332,47 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
         routes={routes}
         settings={settings}
       />
+
+      <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
+        <DialogContent className="max-w-2xl rounded-[2rem] p-0 border-none shadow-2xl overflow-hidden bg-white">
+          <DialogHeader className="p-8 bg-slate-50 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white">
+                <Mail className="h-5 w-5" />
+              </div>
+              <DialogTitle className="text-xl font-black uppercase tracking-tighter">Reconciliation Report</DialogTitle>
+            </div>
+          </DialogHeader>
+          
+          <div className="p-8 space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-slate-400 px-1">Subject</label>
+              <div className="p-4 bg-slate-50 rounded-xl font-bold text-sm text-slate-900 border border-slate-100">
+                {emailReportContent?.subject}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-slate-400 px-1">Message Body</label>
+              <div className="p-6 bg-slate-50 rounded-xl font-medium text-sm text-slate-700 border border-slate-100 whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
+                {emailReportContent?.body}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4">
+            <Button variant="ghost" className="rounded-xl h-12 font-bold px-6" onClick={() => setIsEmailModalOpen(false)}>Close</Button>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" className="rounded-xl h-12 font-bold px-6 bg-white border-slate-200" onClick={handleCopyEmail}>
+                <Copy className="mr-2 h-4 w-4" /> Copy Text
+              </Button>
+              <Button className="rounded-xl h-12 font-bold px-8 bg-primary shadow-lg shadow-primary/20" onClick={handleSendEmail}>
+                <ExternalLink className="mr-2 h-4 w-4" /> Send Email
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
