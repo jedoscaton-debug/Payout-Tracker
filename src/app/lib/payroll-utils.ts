@@ -3,7 +3,7 @@ import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollI
 
 export const DIRECT_DEPOSIT_FEE = 4;
 export const TRUCK_RENTAL_FIXED = 52;
-export const TRUCK_MILEAGE_RATE = 0.25;
+export const TRUCK_MILEAGE_RATE = 0; // Set to 0 as requested for default $0.00 cost
 
 export function currency(value: number) {
   return new Intl.NumberFormat("en-US", { 
