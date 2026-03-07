@@ -68,7 +68,7 @@ export function RouteTrackerView({
   
   const [newRoute, setNewRoute] = useState<Partial<RouteTrackerRow>>({
     route: "",
-    routeType: "IKEA", // Default set to IKEA
+    routeType: "IKEA",
     vehicleNumber: "",
     date: new Date().toISOString().split('T')[0],
     miles: 0,
@@ -82,7 +82,6 @@ export function RouteTrackerView({
 
   const currentRoute = isEditOpen ? editingRoute : newRoute;
   
-  // Logical calculation for EST.PAY: Manual if > 0, else Auto based on stops
   const estPayValue = currentRoute?.estimatedPay && currentRoute.estimatedPay > 0 
     ? currentRoute.estimatedPay 
     : estimatePay(currentRoute?.stops || 0);
@@ -215,7 +214,7 @@ export function RouteTrackerView({
       setIsAddOpen(false);
       setNewRoute({
         route: "",
-        routeType: "IKEA", // Reset to default IKEA
+        routeType: "IKEA",
         vehicleNumber: "",
         date: new Date().toISOString().split('T')[0],
         miles: 0,
