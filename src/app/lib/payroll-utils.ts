@@ -1,3 +1,4 @@
+
 import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollItem, ComputedTotals, FormulaSettings } from './types';
 import { evaluateFormula, DEFAULT_FORMULA_SETTINGS } from './formula-evaluator';
 
@@ -125,13 +126,33 @@ function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType |
   return null;
 }
 
-function amountForRole(row: RouteTrackerRow, role: RoleType, settings?: FormulaSettings) {
+function amountForRole(row: RouteTrackerRow, role: RoleType, employee: Employee, settings?: FormulaSettings) {
   const estPay = row.estimatedPay || estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings, row.routeType);
-  if (role === "Driver") return driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
-  if (role === "Helper") return helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
   
-  const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
-  const hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
+  const isDriverPart = role === "Driver" || role === "Driver&Helper";
+  const isHelperPart = role === "Helper" || role === "Driver&Helper";
+
+  let dPay = 0;
+  let hPay = 0;
+
+  if (isDriverPart) {
+    // Priority: Employee individual payout percentage if they are primarily a Driver
+    if (employee.role === "Driver" && employee.payoutPercentage !== undefined) {
+      dPay = Number((estPay * (employee.payoutPercentage / 100)).toFixed(2));
+    } else {
+      dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
+    }
+  }
+
+  if (isHelperPart) {
+    // Priority: Employee individual payout percentage if they are primarily a Helper
+    if (employee.role === "Helper" && employee.payoutPercentage !== undefined) {
+      hPay = Number((estPay * (employee.payoutPercentage / 100)).toFixed(2));
+    } else {
+      hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
+    }
+  }
+
   return Number((dPay + hPay).toFixed(2));
 }
 
@@ -148,7 +169,7 @@ export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: R
         client: row.route,
         role,
         description: `${displayDate} - ${row.routeType} ${role}`,
-        amount: amountForRole(row, role, settings),
+        amount: amountForRole(row, role, employee, settings),
       } satisfies EarningsLine;
     })
     .filter(Boolean) as EarningsLine[];

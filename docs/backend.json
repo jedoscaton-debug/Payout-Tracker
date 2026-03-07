@@ -12,7 +12,8 @@
         "role": { "type": "string", "enum": ["Driver", "Helper"] },
         "defaultDailyRate": { "type": "string" },
         "paymentMethod": { "type": "string" },
-        "authUid": { "type": "string" }
+        "authUid": { "type": "string" },
+        "payoutPercentage": { "type": "number", "description": "Individual share of route revenue." }
       },
       "required": ["id", "fullName", "role"]
     },

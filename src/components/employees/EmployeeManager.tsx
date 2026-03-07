@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -9,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Employee } from "@/app/lib/types";
-import { Plus, Search, MoreHorizontal, Pencil, UserMinus } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, UserMinus, Percent } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface EmployeeManagerProps {
@@ -29,7 +30,7 @@ export function EmployeeManager({
   const { toast } = useToast();
   
   const [newStaff, setNewStaff] = useState<Omit<Employee, 'id'>>({
-    fullName: "", role: "Driver", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit"
+    fullName: "", role: "Driver", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit", payoutPercentage: 27
   });
 
   const filtered = employees.filter(e => (e.fullName || "").toLowerCase().includes(search.toLowerCase()));
@@ -41,6 +42,14 @@ export function EmployeeManager({
     return res;
   };
 
+  const handleRoleChange = (v: "Driver" | "Helper") => {
+    setNewStaff({
+      ...newStaff, 
+      role: v,
+      payoutPercentage: v === "Driver" ? 27 : 23
+    });
+  };
+
   const handleSubmitStaff = (e: React.FormEvent) => {
     e.preventDefault();
     const id = generateUID();
@@ -48,7 +57,7 @@ export function EmployeeManager({
       id, 
       ...newStaff
     });
-    setNewStaff({ fullName: "", role: "Driver", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" });
+    setNewStaff({ fullName: "", role: "Driver", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit", payoutPercentage: 27 });
     setIsAddOpen(false);
     toast({ title: "Staff Created", description: `HR Profile for ${newStaff.fullName} has been initialized.` });
   };
@@ -66,7 +75,7 @@ export function EmployeeManager({
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Employee Directory</h3>
-          <p className="text-sm text-slate-500 font-medium">Manage staff records and payroll configurations.</p>
+          <p className="text-sm text-slate-500 font-medium">Manage staff records and individual payout configurations.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -81,16 +90,28 @@ export function EmployeeManager({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Full Name</Label><Input required className="h-12 rounded-xl" value={newStaff.fullName || ""} onChange={(e) => setNewStaff({...newStaff, fullName: e.target.value})} /></div>
                   <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Role</Label>
-                    <Select value={newStaff.role} onValueChange={(v: any) => setNewStaff({...newStaff, role: v})}>
+                    <Select value={newStaff.role} onValueChange={handleRoleChange}>
                       <SelectTrigger className="h-12 rounded-xl"><SelectValue /></SelectTrigger>
                       <SelectContent><SelectItem value="Driver">Driver</SelectItem><SelectItem value="Helper">Helper</SelectItem></SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Daily Rate</Label><Input className="h-12 rounded-xl" value={newStaff.defaultDailyRate || ""} onChange={(e) => setNewStaff({...newStaff, defaultDailyRate: e.target.value})} /></div>
-                  <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Payment Method</Label><Input className="h-12 rounded-xl" value={newStaff.paymentMethod || ""} onChange={(e) => setNewStaff({...newStaff, paymentMethod: e.target.value})} /></div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-slate-400">Payout Share (%)</Label>
+                    <div className="relative">
+                      <Percent className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <Input 
+                        type="number" step="0.1" required 
+                        className="h-12 rounded-xl pl-10" 
+                        value={newStaff.payoutPercentage} 
+                        onChange={(e) => setNewStaff({...newStaff, payoutPercentage: Number(e.target.value)})} 
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Daily Rate Basis</Label><Input className="h-12 rounded-xl" value={newStaff.defaultDailyRate || ""} onChange={(e) => setNewStaff({...newStaff, defaultDailyRate: e.target.value})} /></div>
                 </div>
+                <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Payment Method</Label><Input className="h-12 rounded-xl" value={newStaff.paymentMethod || ""} onChange={(e) => setNewStaff({...newStaff, paymentMethod: e.target.value})} /></div>
                 <DialogFooter className="pt-4"><Button type="submit" className="w-full rounded-xl h-12 bg-slate-900 font-bold uppercase text-xs">Create HR Profile</Button></DialogFooter>
               </form>
             </DialogContent>
@@ -106,7 +127,8 @@ export function EmployeeManager({
                 <tr className="bg-slate-50/80 border-b">
                   <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Staff Member</th>
                   <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Role</th>
-                  <th className="px-8 py-5 text-left text-[10px) font-black uppercase tracking-widest text-slate-400">Rate Basis</th>
+                  <th className="px-8 py-5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Payout Share</th>
+                  <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Rate Basis</th>
                   <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</th>
                 </tr>
               </thead>
@@ -118,12 +140,17 @@ export function EmployeeManager({
                         <div className="font-bold text-slate-900">{emp.fullName}</div>
                       </td>
                       <td className="px-8 py-5 text-xs font-bold uppercase">{emp.role}</td>
+                      <td className="px-8 py-5 text-center">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-[10px] font-black text-slate-600 uppercase">
+                          <Percent className="h-2.5 w-2.5" /> {emp.payoutPercentage || (emp.role === "Driver" ? 27 : 23)}%
+                        </div>
+                      </td>
                       <td className="px-8 py-5 text-xs font-medium text-slate-500">{emp.defaultDailyRate || "Varies"}</td>
                       <td className="px-8 py-5 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="rounded-xl p-2 w-56">
-                            <DropdownMenuItem onClick={() => {setEditingEmployee(emp); setIsEditOpen(true);}}><Pencil className="mr-2 h-3 w-3" /> Edit Profile</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {setEditingEmployee(emp); setIsEditOpen(true);}}><Pencil className="mr-2 h-3 w-3" /> Edit Profile & Share</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onDeleteEmployee(emp.id)} className="text-rose-600"><UserMinus className="mr-2 h-3 w-3" /> Remove Staff</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -152,9 +179,21 @@ export function EmployeeManager({
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase text-slate-400">Payout Share (%)</Label>
+                  <div className="relative">
+                    <Percent className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Input 
+                      type="number" step="0.1" required 
+                      className="h-12 rounded-xl pl-10" 
+                      value={editingEmployee.payoutPercentage || ""} 
+                      onChange={(e) => setEditingEmployee({...editingEmployee, payoutPercentage: Number(e.target.value)})} 
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Daily Rate</Label><Input className="h-12 rounded-xl" value={editingEmployee.defaultDailyRate || ""} onChange={(e) => setEditingEmployee({...editingEmployee, defaultDailyRate: e.target.value})} /></div>
-                <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Payment Method</Label><Input className="h-12 rounded-xl" value={editingEmployee.paymentMethod || ""} onChange={(e) => setEditingEmployee({...editingEmployee, paymentMethod: e.target.value})} /></div>
               </div>
+              <div className="space-y-2"><Label className="text-[10px] font-bold uppercase text-slate-400">Payment Method</Label><Input className="h-12 rounded-xl" value={editingEmployee.paymentMethod || ""} onChange={(e) => setEditingEmployee({...editingEmployee, paymentMethod: e.target.value})} /></div>
               <DialogFooter className="pt-4"><Button type="submit" className="w-full rounded-xl h-12 bg-primary font-bold uppercase text-xs">Save Changes</Button></DialogFooter>
             </form>
           )}
