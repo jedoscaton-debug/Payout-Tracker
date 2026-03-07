@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -94,7 +93,8 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
     return {
       internalEst: totalInternalEst,
       delta,
-      isRed: delta < -500
+      // Flag summary if total variance is negative
+      isRed: delta < 0
     };
   }, [routeDetails, routes, selectedReport, settings]);
 
@@ -107,7 +107,8 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
             ? matched.estimatedPay 
             : estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType))
         : row.systemEstimatedPay;
-      return (row.rxoSettlementPay - est) < -50;
+      // Mark as flagged if RXO pays less than estimated (any negative)
+      return (row.rxoSettlementPay - est) < 0;
     });
   }, [routeDetails, routes, settings]);
 

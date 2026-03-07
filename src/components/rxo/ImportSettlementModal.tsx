@@ -151,11 +151,9 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       for (let i = 0; i < files.length; i++) {
         const currentFile = files[i];
         if (currentFile.type.startsWith('image/')) {
-          // AI Extraction for Screenshots
           const aiResult = await analyzeRXOSettlement({ photoDataUri: previews[i] });
           allExtractedRoutes = [...allExtractedRoutes, ...aiResult.extractedRoutes];
         } else {
-          // Logic Extraction for Excel
           const data = await currentFile.arrayBuffer();
           const workbook = XLSX.read(data);
           
@@ -179,7 +177,6 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             hasExcelIntegrity = true;
           }
 
-          // STEP 2: ROUTE DETAILS EXTRACTION (from Excel)
           const routeSheet = workbook.Sheets[workbook.SheetNames.find(n => n.toLowerCase().includes("route")) || ""];
           if (routeSheet) {
             const json = XLSX.utils.sheet_to_json(routeSheet) as any[];
@@ -196,7 +193,6 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         }
       }
 
-      // STEP 3-6: MATCHING & DELTA COMPARISON
       allExtractedRoutes.forEach((extracted, idx) => {
         const matched = findInternalMatch(extracted.routeId, extracted.routeDate);
         const internalEst = matched 
@@ -217,7 +213,8 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           rxoSettlementPay: extracted.settlementAmount,
           systemEstimatedPay: internalEst,
           delta,
-          deltaStatus: delta < -50 ? 'RED' : 'GREEN',
+          // CRITICAL: Mark any negative variance as RED
+          deltaStatus: delta < 0 ? 'RED' : 'GREEN',
           internalRouteId: matched?.id || null,
           matchStatus: matched ? 'Matched' : 'Unmatched',
           createdAt: now
@@ -322,7 +319,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             <Info className="h-4 w-4" />
             <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Matching Intelligence Active</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              Scanning LMH, DMPEV, and DMPGAS patterns. Discrepancies below -$50.00 are flagged in RED. Verified Sunday to Saturday audit order.
+              Scanning LMH, DMPEV, and DMPGAS patterns. Any negative payouts (under-estimated) are flagged in RED. Verified Sunday to Saturday audit order.
             </AlertDescription>
           </Alert>
         </div>

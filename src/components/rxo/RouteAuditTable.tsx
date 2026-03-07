@@ -109,7 +109,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
       return [
         row.routeId, row.routeDate, row.market, matched?.route || "N/A",
         row.routeMiles, matched?.miles || 0, row.stopCount, matched?.stops || 0,
-        est, row.rxoSettlementPay, delta, delta < -50 ? "RED" : "GREEN", matched ? "Verified Match" : "Unmatched"
+        est, row.rxoSettlementPay, delta, delta < 0 ? "RED" : "GREEN", matched ? "Verified Match" : "Unmatched"
       ];
     });
 
@@ -171,7 +171,9 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                     
                     // STEP 6: DELTA AUDIT
                     const liveDelta = Number((row.rxoSettlementPay - est).toFixed(2));
-                    const isRed = liveDelta < -50;
+                    
+                    // CRITICAL: Mark any negative value as RED (Step 6 override)
+                    const isRed = liveDelta < 0;
                     
                     return (
                       <tr key={row.id} className={cn("hover:bg-slate-50 transition-colors group", !matched && "bg-slate-50/20")}>
