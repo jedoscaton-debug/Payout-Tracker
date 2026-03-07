@@ -6,12 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Plus, RefreshCw, CheckCircle2, ShieldAlert } from "lucide-react";
+import { FileText, Plus, RefreshCw, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { useFirestore, updateDocumentNonBlocking } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
 
 import { 
   Employee, 
@@ -68,32 +67,6 @@ export function PayrollRunsView({
     toast({ title: "Sync Complete", description: "Routes and auto-deductions updated." });
   };
 
-  const handleFinalize = () => {
-    // Payroll finalization logic: Update deductions status/balance
-    payrollItems.forEach(item => {
-      item.deductionsLines.forEach(line => {
-        if (line.originalDeductionId) {
-          const original = deductions.find(d => d.id === line.originalDeductionId);
-          if (original) {
-            const newPaid = (original.installmentsPaid || 0) + 1;
-            const newBalance = Math.max(0, original.totalClaimAmount - (newPaid * original.perPayrollAmount));
-            const isCompleted = original.type === "One-Time" || (original.type === "Installment" && newBalance <= 0);
-            
-            updateDocumentNonBlocking(doc(db, "deductions", original.id), {
-              installmentsPaid: newPaid,
-              remainingBalance: newBalance,
-              status: isCompleted ? "Completed" : "Active",
-              lastAppliedPayDate: payrollRun.payDate
-            });
-          }
-        }
-      });
-    });
-
-    setPayrollRun(prev => ({ ...prev, status: "Finalized" }));
-    toast({ title: "Payroll Finalized", description: "Deduction balances updated system-wide." });
-  };
-
   const updateItem = (itemId: string, updater: (item: PayrollItem) => PayrollItem) => {
     if (payrollRun.status === "Finalized") return;
     setPayrollItems((current) => current.map((item) => (item.id === itemId ? updater(item) : item)));
@@ -134,9 +107,6 @@ export function PayrollRunsView({
             <div className="flex items-center gap-3">
               <Button variant="outline" className="h-10 rounded-xl bg-white border-slate-200 font-bold" onClick={refreshFromRoutes} disabled={payrollRun.status === "Finalized"}>
                 <RefreshCw className="mr-2 h-4 w-4" /> Sync Claims & Routes
-              </Button>
-              <Button className="h-10 rounded-xl bg-slate-900 font-bold" onClick={handleFinalize} disabled={payrollRun.status === "Finalized"}>
-                <CheckCircle2 className="mr-2 h-4 w-4" /> Finalize Payroll
               </Button>
             </div>
           </div>
