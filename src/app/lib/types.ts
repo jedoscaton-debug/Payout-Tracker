@@ -141,3 +141,59 @@ export type FormulaAuditLog = {
   changedAt: string;
   notes?: string;
 };
+
+// RXO Settlement Types
+export type RXOSettlementReport = {
+  id: string;
+  payee: string;
+  companyName: string;
+  settlementPeriodStart: string;
+  settlementPeriodEnd: string;
+  anticipatedIssueDate: string;
+  marketCount: number;
+  routeCount: number;
+  totalMiles: number;
+  totalStops: number;
+  rxoTotalPay: number;
+  internalEstimatedTotalPay: number;
+  totalDelta: number;
+  fileName: string;
+  importedAt: string;
+  importedBy: string;
+  notes: string;
+};
+
+export type RXORouteDetail = {
+  id: string;
+  reportId: string;
+  routeId: string;
+  market: string;
+  routeDate: string;
+  routeMiles: number;
+  stopCount: number;
+  rxoSettlementPay: number;
+  systemEstimatedPay: number;
+  delta: number;
+  deltaStatus: 'RED' | 'GREEN';
+  internalRouteId?: string;
+  matchStatus: 'Matched' | 'Partial Match' | 'Unmatched';
+  overrideEstimate?: number;
+  finalEstimatedPay: number;
+  notes?: string;
+  createdAt: string;
+};
+
+export type RXOOrderDetail = {
+  id: string;
+  reportId: string;
+  routeId: string;
+  market: string;
+  jobNumber: string;
+  service: string;
+  completion: string;
+  completedOn: string;
+  rate: number;
+  mileage: number;
+  supplement: number;
+  createdAt: string;
+};

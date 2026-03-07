@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { LayoutDashboard, Users, Receipt, Route, LogOut, Loader2, Shield, Wallet, BarChart3, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Receipt, Route, LogOut, Loader2, Shield, Wallet, BarChart3, Settings, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -19,12 +19,13 @@ import { DeductionBoard } from "@/components/deductions/DeductionBoard";
 import { FleetProfitabilityView } from "@/components/fleet/FleetProfitabilityView";
 import { LoginView } from "@/components/auth/LoginView";
 import { FormulaSettingsView } from "@/components/settings/FormulaSettingsView";
+import { RXOSettlementView } from "@/components/rxo/RXOSettlementView";
 
 import { useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, useAuth, useUser } from "@/firebase";
 import { collection, doc, query, orderBy, limit } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 
-type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "deductions" | "fleet" | "settings";
+type ActiveView = "dashboard" | "employees" | "payroll" | "routes" | "deductions" | "fleet" | "rxo" | "settings";
 
 export default function AppShell() {
   const [activeView, setActiveView] = useState<ActiveView | null>(null);
@@ -141,6 +142,7 @@ export default function AppShell() {
     { id: "routes", label: "Route Tracker", icon: Route },
     { id: "deductions", label: "Deductions", icon: Wallet },
     { id: "fleet", label: "Fleet Profitability", icon: BarChart3 },
+    { id: "rxo", label: "RXO Settlement", icon: ClipboardCheck },
     { id: "settings", label: "Formula Settings", icon: Settings },
   ];
 
@@ -172,6 +174,7 @@ export default function AppShell() {
             {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} settings={formulaSettings || undefined} />}
             {activeView === "deductions" && <DeductionBoard employees={employees} deductions={deductions} />}
             {activeView === "fleet" && <FleetProfitabilityView routeTracker={routeTracker} settings={formulaSettings || undefined} />}
+            {activeView === "rxo" && <RXOSettlementView routes={routeTracker} settings={formulaSettings || undefined} />}
             {activeView === "settings" && <FormulaSettingsView settings={formulaSettings || null} auditLogs={auditLogs || []} />}
           </>
         )}
