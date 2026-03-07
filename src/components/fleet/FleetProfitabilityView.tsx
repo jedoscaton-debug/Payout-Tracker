@@ -152,9 +152,18 @@ export function FleetProfitabilityView({ routeTracker }: FleetProfitabilityViewP
       laborCosts: acc.laborCosts + v.labor,
       vanFuelCosts: acc.vanFuelCosts + v.vanFuelCosts,
       totalCosts: acc.totalCosts + v.totalCosts,
-      netProfit: acc.netProfit + v.netProfit
+      netProfit: acc.netProfit + v.netProfit,
+      miles: acc.miles + v.miles,
+      stops: acc.stops + v.stops
     }), {
-      daysActive: 0, revenue: 0, laborCosts: 0, vanFuelCosts: 0, totalCosts: 0, netProfit: 0
+      daysActive: 0, 
+      revenue: 0, 
+      laborCosts: 0, 
+      vanFuelCosts: 0, 
+      totalCosts: 0, 
+      netProfit: 0,
+      miles: 0,
+      stops: 0
     });
   }, [vanStats]);
 
