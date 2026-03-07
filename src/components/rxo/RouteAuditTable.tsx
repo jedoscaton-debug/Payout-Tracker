@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo } from "react";
@@ -32,11 +31,11 @@ interface RouteAuditTableProps {
 
 /**
  * LIVE MATCHING ENGINE
- * Implements Step 3 & 4: Matches RXO strings to Internal Tracker by Code and Date
+ * Implements Steps 3 & 4 matching rules
  */
 function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: RouteTrackerRow[]) {
   const id = (rxoRouteId || "").toUpperCase();
-  const date = rxoDate; // Expected format YYYY-MM-DD
+  const date = rxoDate; // YYYY-MM-DD
 
   // Case 3: EV Route Detection (DMPEV prefix)
   if (id.includes("DMPEV")) {
@@ -55,14 +54,13 @@ function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: 
     );
   }
 
-  // Case 1 & 2: LMH Patterns (e.g. LMH__BWI_02152026_A01_EV)
+  // Case 1 & 2: LMH Patterns
   if (id.includes("LMH")) {
     const parts = id.split('_').filter(Boolean);
-    // Find numeric MMDDYYYY part
     const datePart = parts.find(p => /^\d{8}$/.test(p));
     
     if (datePart) {
-      // Step 4: Validate embedded ID date matches report date
+      // Step 4: Validate embedded MMDDYYYY against report date
       const m = datePart.substring(0, 2);
       const d = datePart.substring(2, 4);
       const y = datePart.substring(4, 8);
@@ -70,7 +68,6 @@ function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: 
       
       if (formattedIdDate !== date) return null;
 
-      // Extract core code (everything after the date index)
       const dateIndex = parts.indexOf(datePart);
       const code = parts.slice(dateIndex + 1).join('_');
       
@@ -84,8 +81,8 @@ function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: 
   return null;
 }
 
-export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearch, onRecalculate, onAddInternalRoute, settings }: RouteAuditTableProps) {
-  // Step 8: Arrange Sun to Sat (Chronological YYYY-MM-DD string sort)
+export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearch, onRecalculate, settings }: RouteAuditTableProps) {
+  // Step 8: Arrange chronologically Sun to Sat
   const sortedAndFiltered = useMemo(() => {
     return routeDetails
       .filter(r => 
@@ -118,7 +115,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `RXO_Final_Audit_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `RXO_Settlement_Audit_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
   };
 
@@ -130,8 +127,8 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
           <Input placeholder="Search Route ID or Market..." className="pl-10 h-11 rounded-xl bg-white border-slate-200" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="h-11 rounded-xl bg-white font-bold border-slate-200" onClick={onRecalculate}><RefreshCw className="mr-2 h-4 w-4" /> Re-sync Tracker</Button>
-          <Button variant="outline" className="h-11 rounded-xl bg-white font-bold border-slate-200" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export Final Audit</Button>
+          <Button variant="outline" className="h-11 rounded-xl bg-white font-bold border-slate-200" onClick={onRecalculate}><RefreshCw className="mr-2 h-4 w-4" /> Sync Tracker</Button>
+          <Button variant="outline" className="h-11 rounded-xl bg-white font-bold border-slate-200" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export CSV</Button>
         </div>
       </div>
 
@@ -160,14 +157,11 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                 <tbody className="divide-y divide-slate-100">
                   {sortedAndFiltered.length === 0 ? (
                     <tr>
-                      <td colSpan={13} className="py-20 text-center text-slate-400 font-bold uppercase text-xs tracking-widest">No matching routes extracted for this period.</td>
+                      <td colSpan={13} className="py-20 text-center text-slate-400 font-bold uppercase text-xs tracking-widest">No routes found for this settlement period.</td>
                     </tr>
                   ) : sortedAndFiltered.map(row => {
-                    // LIVE MATCHING
                     const matched = findInternalMatch(row.routeId, row.routeDate, internalRoutes);
                     const est = matched ? (matched.estimatedPay || estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType)) : 0;
-                    
-                    // Step 6: Delta Calculation
                     const liveDelta = Number((row.rxoSettlementPay - est).toFixed(2));
                     const isRed = liveDelta < -50;
                     

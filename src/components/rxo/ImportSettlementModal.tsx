@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, FileText, CheckCircle2, Loader2, Info, Calendar, Sparkles, Image as ImageIcon, RefreshCw, X, Table } from "lucide-react";
+import { Upload, FileText, Loader2, Info, Sparkles, X } from "lucide-react";
 import { RouteTrackerRow, FormulaSettings, RXORouteDetail } from "@/app/lib/types";
 import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -54,6 +53,10 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
     });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFiles(e.target.files);
+  };
+
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
     setPreviews(prev => prev.filter((_, i) => i !== index));
@@ -73,14 +76,14 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
   };
 
   /**
-   * REFINED MATCHING ENGINE (Step 3 & 4)
+   * REFINED MATCHING ENGINE (Steps 3 & 4)
    * Implements the 4 defined cases for parsing RXO strings
    */
   const findInternalMatch = (rxoRouteId: string, rxoDate: string) => {
     const id = (rxoRouteId || "").toUpperCase();
     const date = rxoDate; // YYYY-MM-DD
 
-    // Case 3: EV Route Detection
+    // Case 3: EV Route Detection (Prefix DMPEV)
     if (id.includes("DMPEV")) {
       return routes.find(r => 
         r.date === date && 
@@ -89,7 +92,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       );
     }
 
-    // Case 4: GAS Route Detection
+    // Case 4: GAS Route Detection (Prefix DMPGAS)
     if (id.includes("DMPGAS")) {
       return routes.find(r => 
         r.date === date && 
@@ -103,15 +106,17 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       const datePart = parts.find(p => /^\d{8}$/.test(p));
       
       if (datePart) {
-        // Step 4 Validation
+        // Step 4 Validation: Check embedded date
         const m = datePart.substring(0, 2);
         const d = datePart.substring(2, 4);
         const y = datePart.substring(4, 8);
         const formattedIdDate = `${y}-${m}-${d}`;
         
+        // Strict date match check
         if (formattedIdDate !== date) return null;
 
         const dateIndex = parts.indexOf(datePart);
+        // Extract everything after the date part as the code
         const code = parts.slice(dateIndex + 1).join('_');
         
         return routes.find(r => 
@@ -153,7 +158,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           const data = await currentFile.arrayBuffer();
           const workbook = XLSX.read(data);
           
-          // STEP 1: VALIDATION AUDIT
+          // STEP 1: VALIDATION AUDIT (Summary vs Order Details)
           const summarySheet = workbook.Sheets[workbook.SheetNames.find(n => n.toLowerCase().includes("summary")) || ""];
           if (summarySheet) {
             const json = XLSX.utils.sheet_to_json(summarySheet, { header: 1 }) as any[][];
@@ -230,7 +235,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         totalMiles: allExtractedRoutes.reduce((sum, r) => sum + r.routeMiles, 0),
         totalStops: allExtractedRoutes.reduce((sum, r) => sum + r.stopCount, 0),
         rxoTotalPay: Number((summaryTotalPay || allExtractedRoutes.reduce((sum, r) => sum + r.settlementAmount, 0)).toFixed(2)),
-        internalEstimatedTotalPay: 0, // Will be computed live in view
+        internalEstimatedTotalPay: 0,
         totalDelta: 0,
         fileName: files.length > 1 ? `Batch (${files.length} files)` : files[0].name,
         importedAt: now,
@@ -252,7 +257,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
     } catch (e) {
       console.error(e);
       setIsImporting(false);
-      toast({ variant: "destructive", title: "Import Failed", description: "Matching logic encountered an error." });
+      toast({ variant: "destructive", title: "Import Failed", description: "Audit engine encountered an error." });
     }
   };
 
@@ -316,7 +321,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             <Info className="h-4 w-4" />
             <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Matching Intelligence Active</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              Validating LMH suffixes and DMPEV prefixes. Step 4 Date matching will ensure audit integrity before processing.
+              Validating LMH suffixes, DMPEV, and DMPGAS prefixes. All routes must pass Step 4 Date verification against internal tracker.
             </AlertDescription>
           </Alert>
         </div>
