@@ -99,7 +99,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                <svg viewBox="0 0 100 100" className="h-10 w-10 fill-white">
                 <circle cx="50" cy="50" r="40" fill="#4461B5"/>
                 <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="32px" fill="white">S</text>
-              </svg>
+               </svg>
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-black tracking-tight uppercase text-slate-900 leading-none">SYSTEM ORIENTED LLC</h1>
@@ -163,14 +163,14 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 <div className="flex-1 border-r-2 border-transparent">
                   <div className="flex flex-col text-[10px] font-bold text-slate-700 py-1">
                     {item.earningsLines.map((line) => (
-                      <div key={line.id} className="grid grid-cols-[1fr_90px]">
-                        <span className="px-6 py-1.5 truncate">{line.description}</span>
+                      <div key={line.id} className="grid grid-cols-[1fr_90px] items-start">
+                        <span className="px-6 py-1.5 whitespace-normal break-words">{line.description}</span>
                         <span className="px-4 py-1.5 text-right font-black text-slate-900">{currency(line.amount)}</span>
                       </div>
                     ))}
                     {item.otherEarningsLines.map((line) => (
-                      <div key={line.id} className="grid grid-cols-[1fr_90px]">
-                        <span className="px-6 py-1.5 truncate">{line.description}</span>
+                      <div key={line.id} className="grid grid-cols-[1fr_90px] items-start">
+                        <span className="px-6 py-1.5 whitespace-normal break-words">{line.description}</span>
                         <span className="px-4 py-1.5 text-right font-black text-slate-900">{currency(line.amount)}</span>
                       </div>
                     ))}
@@ -179,8 +179,8 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
                 <div className="flex-1">
                   <div className="flex flex-col text-[10px] font-bold text-slate-700 py-1">
                     {item.deductionsLines.map((line) => (
-                      <div key={line.id} className="grid grid-cols-[1fr_90px]">
-                        <span className="px-6 py-1.5 truncate">{line.deductionName}</span>
+                      <div key={line.id} className="grid grid-cols-[1fr_90px] items-start">
+                        <span className="px-6 py-1.5 whitespace-normal break-words">{line.deductionName}</span>
                         <span className="px-4 py-1.5 text-right font-black text-rose-600">{currency(line.amount)}</span>
                       </div>
                     ))}
