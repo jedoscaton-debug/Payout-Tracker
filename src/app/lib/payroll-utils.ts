@@ -49,7 +49,8 @@ export function estimatePay(stops: number) {
 }
 
 export function estimateFuel(miles: number) {
-  return 0.47 * (miles || 0);
+  // Formula: (3.76 / 8) * MILES
+  return (3.76 / 8) * (miles || 0);
 }
 
 export function driverPay(stops: number, route: string = "", vehicle: string = "", estPayOverride?: number) {
