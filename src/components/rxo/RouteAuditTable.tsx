@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -15,7 +14,7 @@ import {
   MoreHorizontal, 
   Eye, 
   FileText, 
-  ShieldCheck,
+  Plus,
   Filter
 } from "lucide-react";
 import { 
@@ -25,9 +24,13 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RXORouteDetail, RXOOrderDetail } from "@/app/lib/types";
+import { RXORouteDetail, RXOOrderDetail, RouteTrackerRow } from "@/app/lib/types";
 import { currency, shortDate } from "@/app/lib/payroll-utils";
 import { cn } from "@/lib/utils";
+import { updateDocumentNonBlocking } from "@/firebase";
+import { doc } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 interface RouteAuditTableProps {
   routeDetails: RXORouteDetail[];
@@ -35,15 +38,59 @@ interface RouteAuditTableProps {
   search: string;
   setSearch: (v: string) => void;
   onRecalculate: () => void;
+  onAddInternalRoute?: (route: RouteTrackerRow) => void;
 }
 
-export function RouteAuditTable({ routeDetails, orderDetails, search, setSearch, onRecalculate }: RouteAuditTableProps) {
+export function RouteAuditTable({ routeDetails, orderDetails, search, setSearch, onRecalculate, onAddInternalRoute }: RouteAuditTableProps) {
   const [selectedRoute, setSelectedRoute] = useState<RXORouteDetail | null>(null);
+  const db = useFirestore();
+  const { toast } = useToast();
 
   const filtered = routeDetails.filter(r => 
     r.routeId.toLowerCase().includes(search.toLowerCase()) ||
     r.market.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleCreateInternalRoute = (row: RXORouteDetail) => {
+    if (!onAddInternalRoute) return;
+
+    let routeId = row.routeId;
+    let vehicleNum = "Varies";
+
+    if (row.routeId.startsWith("DMPEV")) {
+      routeId = "EV";
+      vehicleNum = "EV";
+    } else if (row.routeId.startsWith("DMPGAS")) {
+      routeId = "GAS";
+      vehicleNum = "GAS";
+    }
+
+    const newRoute: RouteTrackerRow = {
+      id: `rt-rxo-${Date.now()}`,
+      route: routeId,
+      routeType: "IKEA", // Default fallback
+      vehicleNumber: vehicleNum,
+      date: row.routeDate,
+      miles: row.routeMiles,
+      stops: row.stopCount,
+      estimatedPay: row.rxoSettlementPay, // Use settlement as reference
+      actualPayAudit: row.rxoSettlementPay,
+      truckRental: 52, // Default
+      insurance: 0,
+      driver: "Unassigned", // Admin will need to fix this in tracker
+      helper: "No Helper"
+    };
+
+    onAddInternalRoute(newRoute);
+    
+    // Update the settlement detail record to mark as matched
+    updateDocumentNonBlocking(doc(db, "rxoSettlementRouteDetails", row.id), {
+      internalRouteId: newRoute.id,
+      matchStatus: "Matched"
+    });
+
+    toast({ title: "Internal Route Created", description: `Added entry for ${routeId} on ${shortDate(row.routeDate)}.` });
+  };
 
   return (
     <div className="space-y-6">
@@ -112,15 +159,23 @@ export function RouteAuditTable({ routeDetails, orderDetails, search, setSearch,
                       <td className="px-8 py-5 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-xl w-48 p-2">
+                          <DropdownMenuContent align="end" className="rounded-xl w-56 p-2">
                             <DropdownMenuItem className="rounded-lg font-bold text-xs uppercase" onClick={() => setSelectedRoute(row)}>
                               <Eye className="mr-2 h-3 w-3" /> View Details
                             </DropdownMenuItem>
+                            {row.matchStatus !== 'Matched' && (
+                              <DropdownMenuItem 
+                                className="rounded-lg font-bold text-xs uppercase text-emerald-600"
+                                onClick={() => handleCreateInternalRoute(row)}
+                              >
+                                <Plus className="mr-2 h-3 w-3" /> Create Internal Route
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem className="rounded-lg font-bold text-xs uppercase">
                               <FileText className="mr-2 h-3 w-3" /> RXO Breakdown
                             </DropdownMenuItem>
                             <DropdownMenuItem className="rounded-lg font-bold text-xs uppercase text-primary">
-                              <ArrowRightLeft className="mr-2 h-3 w-3" /> Match System Log
+                              <ArrowRightLeft className="mr-2 h-3 w-3" /> Match Existing Log
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

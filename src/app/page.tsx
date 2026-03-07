@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
@@ -174,7 +173,13 @@ export default function AppShell() {
             {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} settings={formulaSettings || undefined} />}
             {activeView === "deductions" && <DeductionBoard employees={employees} deductions={deductions} />}
             {activeView === "fleet" && <FleetProfitabilityView routeTracker={routeTracker} settings={formulaSettings || undefined} />}
-            {activeView === "rxo" && <RXOSettlementView routes={routeTracker} settings={formulaSettings || undefined} />}
+            {activeView === "rxo" && (
+              <RXOSettlementView 
+                routes={routeTracker} 
+                settings={formulaSettings || undefined} 
+                onAddInternalRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})}
+              />
+            )}
             {activeView === "settings" && <FormulaSettingsView settings={formulaSettings || null} auditLogs={auditLogs || []} />}
           </>
         )}

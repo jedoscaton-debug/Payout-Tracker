@@ -47,9 +47,10 @@ import { ExceptionPanel } from "./ExceptionPanel";
 interface RXOSettlementViewProps {
   routes: RouteTrackerRow[];
   settings?: FormulaSettings;
+  onAddInternalRoute?: (route: RouteTrackerRow) => void;
 }
 
-export function RXOSettlementView({ routes, settings }: RXOSettlementViewProps) {
+export function RXOSettlementView({ routes, settings, onAddInternalRoute }: RXOSettlementViewProps) {
   const [activeTab, setActiveTab] = useState("audit");
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
@@ -112,7 +113,7 @@ export function RXOSettlementView({ routes, settings }: RXOSettlementViewProps) 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-1">
           <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">RXO Weekly Settlement Report</h3>
-          <p className="text-sm text-slate-500 font-medium">Import RXO settlement files, review payout details, and audit route estimates.</p>
+          <p className="text-sm text-slate-500 font-medium">Import RXO settlement files, review payout details, and audit route-level differences.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {reports && reports.length > 0 && (
@@ -192,7 +193,14 @@ export function RXOSettlementView({ routes, settings }: RXOSettlementViewProps) 
             </TabsList>
 
             <TabsContent value="audit">
-              <RouteAuditTable routeDetails={routeDetails || []} orderDetails={orderDetails || []} search={search} setSearch={setSearch} onRecalculate={handleRecalculate} />
+              <RouteAuditTable 
+                routeDetails={routeDetails || []} 
+                orderDetails={orderDetails || []} 
+                search={search} 
+                setSearch={setSearch} 
+                onRecalculate={handleRecalculate}
+                onAddInternalRoute={onAddInternalRoute}
+              />
             </TabsContent>
 
             <TabsContent value="summary">
@@ -232,7 +240,7 @@ export function RXOSettlementView({ routes, settings }: RXOSettlementViewProps) 
             <TabsContent value="orders">
               <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
                 <CardHeader className="bg-slate-50/50 border-b p-8">
-                  <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Raw Order Details Reference</CardTitle>
+                  <CardTitle className="text-[10px) font-black uppercase tracking-widest text-slate-400">Raw Order Details Reference</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto max-h-[600px]">

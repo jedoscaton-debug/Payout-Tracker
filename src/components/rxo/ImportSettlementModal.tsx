@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -35,6 +34,17 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
     try {
       const reportId = `rxo-rep-${Date.now()}`;
       const now = new Date().toISOString();
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Calculate dates relative to today for better simulation
+      const d1 = new Date(); d1.setDate(d1.getDate() - 3);
+      const d2 = new Date(); d2.setDate(d2.getDate() - 2);
+      const d3 = new Date(); d3.setDate(d3.getDate() - 1);
+      
+      const date1 = d1.toISOString().split('T')[0];
+      const date2 = d2.toISOString().split('T')[0];
+      const date3 = d3.toISOString().split('T')[0];
+
       const reportRef = doc(db, "rxoSettlementReports", reportId);
 
       // Simulation Data Construction
@@ -42,26 +52,26 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         id: reportId,
         payee: "SYSTEM ORIENTED LLC",
         companyName: "SYSTEM ORIENTED LLC",
-        settlementPeriodStart: "2024-03-01",
-        settlementPeriodEnd: "2024-03-07",
-        anticipatedIssueDate: "2024-03-12",
+        settlementPeriodStart: date1,
+        settlementPeriodEnd: date3,
+        anticipatedIssueDate: today,
         marketCount: 1,
         routeCount: 3,
         totalMiles: 420,
         totalStops: 82,
         rxoTotalPay: 2154.50,
-        internalEstimatedTotalPay: 2214.00, // 82 stops * 27
+        internalEstimatedTotalPay: 2214.00,
         totalDelta: -59.50,
-        fileName: file?.name || "RXO_Settlement_Week_9.xlsx",
+        fileName: file?.name || `RXO_Settlement_${today}.xlsx`,
         importedAt: now,
         importedBy: "Master Admin",
-        notes: "Demo import data generated for operational preview."
+        notes: "Real-time import data simulation."
       };
 
       const demoRoutes = [
-        { routeId: "DMPEV_A01", rxoPay: 729.00, stops: 27, miles: 68, market: "LMH Beltsville", date: "2024-03-04" },
-        { routeId: "DMPGAS_A02", rxoPay: 680.50, stops: 30, miles: 142, market: "LMH Beltsville", date: "2024-03-05" },
-        { routeId: "A03_IKEA", rxoPay: 745.00, stops: 25, miles: 210, market: "LMH Beltsville", date: "2024-03-06" }
+        { routeId: "DMPEV_A01", rxoPay: 729.00, stops: 27, miles: 68, market: "LMH Beltsville", date: date1 },
+        { routeId: "DMPGAS_A02", rxoPay: 680.50, stops: 30, miles: 142, market: "LMH Beltsville", date: date2 },
+        { routeId: "A03_IKEA", rxoPay: 745.00, stops: 25, miles: 210, market: "LMH Beltsville", date: date3 }
       ];
 
       // Save Report Header
@@ -86,18 +96,23 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         const delta = demo.rxoPay - sysEst;
         const detailId = `rd-${Date.now()}-${demo.routeId}`;
 
-        // Find internal match with the new DMPEV and DMPGAS mapping rules
+        // Flexible matching
         const matchedInternal = routes.find(r => {
           const isDateMatch = r.date === demo.date;
           if (!isDateMatch) return false;
 
-          if (demo.routeId.startsWith("DMPEV")) {
-            return r.route === "EV" && r.vehicleNumber === "EV";
+          const rxoIdClean = demo.routeId.toUpperCase();
+          const internalRouteClean = r.route.toUpperCase();
+          const internalVehicleClean = r.vehicleNumber?.toUpperCase() || "";
+
+          if (rxoIdClean.startsWith("DMPEV")) {
+            return internalRouteClean === "EV" && internalVehicleClean === "EV";
           }
-          if (demo.routeId.startsWith("DMPGAS")) {
-            return r.route === "GAS" && r.vehicleNumber === "GAS";
+          if (rxoIdClean.startsWith("DMPGAS")) {
+            return internalRouteClean === "GAS" && internalVehicleClean === "GAS";
           }
-          return r.route === demo.routeId;
+          
+          return internalRouteClean === rxoIdClean || rxoIdClean.includes(internalRouteClean);
         });
 
         setDocumentNonBlocking(doc(db, "rxoSettlementRouteDetails", detailId), {
