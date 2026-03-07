@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Upload, FileText, CheckCircle2, Loader2, Info, Calendar, Sparkles, Image as ImageIcon, RefreshCw, X } from "lucide-react";
+import { Upload, FileText, CheckCircle2, Loader2, Info, Calendar, Sparkles, Image as ImageIcon, RefreshCw, X, Table } from "lucide-react";
 import { RouteTrackerRow, FormulaSettings } from "@/app/lib/types";
 import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { analyzeRXOSettlement } from "@/ai/flows/process-rxo-settlement-flow";
 import { estimatePay } from "@/app/lib/payroll-utils";
 import { cn } from "@/lib/utils";
+import * as XLSX from "xlsx";
 
 interface ImportSettlementModalProps {
   isOpen: boolean;
@@ -59,6 +60,9 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           setPreviews(prev => [...prev, reader.result as string]);
         };
         reader.readAsDataURL(f);
+      } else {
+        // Placeholder for non-image previews (Excel)
+        setPreviews(prev => [...prev, "excel-placeholder"]);
       }
     });
   };
@@ -108,11 +112,17 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       
       let allExtractedRoutes: any[] = [];
       let totalSettlementPay = 0;
+      
+      // Integrity Check States
+      let summaryTotalPay = 0;
+      let orderDetailsRateSum = 0;
+      let hasExcelIntegrity = false;
 
       // Process each file
       for (let i = 0; i < files.length; i++) {
         const currentFile = files[i];
         
+        // 1. Process Images with AI
         if (currentFile.type.startsWith('image/')) {
           const preview = previews[i] || "";
           if (preview) {
@@ -120,6 +130,40 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             const aiResult = await analyzeRXOSettlement({ photoDataUri: preview });
             allExtractedRoutes = [...allExtractedRoutes, ...aiResult.extractedRoutes];
             totalSettlementPay += aiResult.totalPay;
+          }
+        } 
+        // 2. Process Excel for Integrity Audit
+        else if (currentFile.name.endsWith('.xlsx') || currentFile.name.endsWith('.xls')) {
+          toast({ title: `Scanning Excel`, description: "Performing settlement integrity audit..." });
+          const data = await currentFile.arrayBuffer();
+          const workbook = XLSX.read(data);
+          
+          // Find Summary and Order Details sheets
+          const summaryName = workbook.SheetNames.find(n => n.toLowerCase().includes("summary"));
+          const orderName = workbook.SheetNames.find(n => n.toLowerCase().includes("order"));
+
+          if (summaryName) {
+            const summarySheet = workbook.Sheets[summaryName];
+            const json = XLSX.utils.sheet_to_json(summarySheet, { header: 1 }) as any[][];
+            // Locate "Total Pay" - simple heuristic search
+            for (const row of json) {
+              const payIdx = row.findIndex(cell => String(cell).toLowerCase().includes("total pay"));
+              if (payIdx !== -1 && row[payIdx + 1]) {
+                summaryTotalPay = Number(row[payIdx + 1]);
+                break;
+              }
+            }
+          }
+
+          if (orderName) {
+            const orderSheet = workbook.Sheets[orderName];
+            const json = XLSX.utils.sheet_to_json(orderSheet) as any[];
+            // Sum "Rate" column
+            orderDetailsRateSum = json.reduce((sum, row) => {
+              const rateKey = Object.keys(row).find(k => k.toLowerCase() === "rate");
+              return sum + (rateKey ? Number(row[rateKey] || 0) : 0);
+            }, 0);
+            hasExcelIntegrity = true;
           }
         }
       }
@@ -136,31 +180,20 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         // MATCHING LOGIC
         const matchedInternal = routes.find(r => {
           if (usedInternalIds.has(r.id)) return false;
-          
-          // 1. Date Validation: Extracted date must match Internal Tracker date
           if (r.date !== extracted.routeDate) return false;
 
           const rxoId = extracted.routeId.toUpperCase();
           const internalRoute = r.route.toUpperCase();
           const internalVehicle = r.vehicleNumber.toUpperCase();
 
-          // Pattern A: EV Special Node (DMPEV prefix)
-          if (rxoId.includes('DMPEV') && internalRoute === 'EV' && internalVehicle === 'EV') {
-            return true;
-          }
-
-          // Pattern B: LMH Standard Routes (LMH__BWI_MMDDYYYY_A01_EV)
-          // We check if the RXO ID contains the internal route code as a component
-          if (rxoId.endsWith(`_${internalRoute}`)) {
-            return true;
-          }
+          if (rxoId.includes('DMPEV') && internalRoute === 'EV' && internalVehicle === 'EV') return true;
+          if (rxoId.endsWith(`_${internalRoute}`)) return true;
 
           return false;
         });
 
         if (matchedInternal) usedInternalIds.add(matchedInternal.id);
 
-        // Get Estimated Pay from Internal Tracker (stored value or calculated fallback)
         const internalEst = matchedInternal 
           ? (matchedInternal.estimatedPay && matchedInternal.estimatedPay > 0 
               ? matchedInternal.estimatedPay 
@@ -205,13 +238,18 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         routeCount: allExtractedRoutes.length,
         totalMiles: Number(totalMilesRXO.toFixed(1)),
         totalStops: totalStopsRXO,
-        rxoTotalPay: Number(totalSettlementPay.toFixed(2)),
+        rxoTotalPay: Number((summaryTotalPay || totalSettlementPay).toFixed(2)),
         internalEstimatedTotalPay: Number(totalInternalEst.toFixed(2)),
-        totalDelta: Number((totalSettlementPay - totalInternalEst).toFixed(2)),
-        fileName: files.length > 1 ? `Batch (${files.length} screenshots)` : files[0].name,
+        totalDelta: Number(((summaryTotalPay || totalSettlementPay) - totalInternalEst).toFixed(2)),
+        fileName: files.length > 1 ? `Batch (${files.length} files)` : files[0].name,
         importedAt: now,
         importedBy: "System Admin",
-        notes: `AI-powered batch audit for ${startDate} to ${endDate}.`
+        notes: `Audit for ${startDate} to ${endDate}.`,
+        summaryTotalPay: Number(summaryTotalPay.toFixed(2)),
+        orderDetailsRateSum: Number(orderDetailsRateSum.toFixed(2)),
+        integrityStatus: hasExcelIntegrity 
+          ? (Math.abs(summaryTotalPay - orderDetailsRateSum) < 0.01 ? 'Verified' : 'Mismatch')
+          : 'Pending'
       };
 
       setDocumentNonBlocking(doc(db, "rxoSettlementReports", reportId), reportData, { merge: true });
@@ -219,14 +257,14 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       setTimeout(() => {
         setIsImporting(false);
         onImportComplete(reportId);
-        toast({ title: "AI Audit Complete", description: `Cross-referenced ${allExtractedRoutes.length} routes with your internal tracker.` });
+        toast({ title: "Audit Complete", description: `Cross-referenced settlement data with your internal tracker.` });
         onClose();
       }, 1000);
 
     } catch (e) {
       console.error(e);
       setIsImporting(false);
-      toast({ variant: "destructive", title: "Import Failed", description: "The AI encountered an error while processing the images." });
+      toast({ variant: "destructive", title: "Import Failed", description: "The system encountered an error while processing the files." });
     }
   };
 
@@ -279,15 +317,15 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             </div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-900">
-                {isDragging ? "Drop screenshots here" : "Upload RXO Screenshots"}
+                {isDragging ? "Drop files here" : "Upload Settlement Data"}
               </p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                Drag PNG, JPG, or JPEG images to begin AI scan
+                Accepts RXO Screenshots (PNG/JPG) or Excel (.XLSX)
               </p>
             </div>
             <input 
               type="file" multiple ref={fileInputRef} className="hidden" 
-              accept="image/*" onChange={handleFileChange} 
+              accept="image/*,.xlsx,.xls" onChange={handleFileChange} 
             />
           </div>
 
@@ -298,12 +336,17 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
                 <div className="p-4 space-y-2">
                   {files.map((f, i) => (
                     <div key={i} className="flex items-center gap-4 p-3 bg-white rounded-xl border border-slate-100 group">
-                      <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500">
-                        <ImageIcon className="h-4 w-4" />
+                      <div className={cn(
+                        "h-8 w-8 rounded-lg flex items-center justify-center",
+                        f.type.startsWith('image/') ? "bg-emerald-50 text-emerald-500" : "bg-blue-50 text-blue-500"
+                      )}>
+                        {f.type.startsWith('image/') ? <ImageIcon className="h-4 w-4" /> : <Table className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-slate-900 truncate">{f.name}</p>
-                        <p className="text-[8px] font-black text-emerald-600 uppercase tracking-tight">Ready for AI processing</p>
+                        <p className="text-[8px] font-black text-slate-400 uppercase tracking-tight">
+                          {f.type.startsWith('image/') ? "AI Scanning Enabled" : "Logic Audit Enabled"}
+                        </p>
                       </div>
                       <Button 
                         variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-rose-500"
@@ -320,9 +363,9 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
 
           <Alert className="rounded-2xl bg-blue-50 border-blue-100 text-blue-700">
             <Info className="h-4 w-4" />
-            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">AI Matching Rules</AlertTitle>
+            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Audit Rules</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              AI will extract route codes and dates from screenshots. Matches are confirmed only when dates align with your internal Route Tracker. Discrepancies exceeding -$50.00 will be flagged in RED.
+              The system compares RXO Route ID, Miles, and Stops against your internal tracker. Excel files undergo a specific "Summary vs Order Rate" integrity check.
             </AlertDescription>
           </Alert>
         </div>
@@ -334,7 +377,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             onClick={startAuditProcess} 
             disabled={isImporting || files.length === 0}
           >
-            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><Sparkles className="mr-2 h-4 w-4" /> Start AI Batch Audit</>}
+            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><Sparkles className="mr-2 h-4 w-4" /> Start Audit Batch</>}
           </Button>
         </DialogFooter>
       </DialogContent>

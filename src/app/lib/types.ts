@@ -160,6 +160,9 @@ export type RXOSettlementReport = {
   importedAt: string;
   importedBy: string;
   notes: string;
+  summaryTotalPay?: number;
+  orderDetailsRateSum?: number;
+  integrityStatus?: 'Verified' | 'Mismatch' | 'Pending';
 };
 
 export type RXORouteDetail = {

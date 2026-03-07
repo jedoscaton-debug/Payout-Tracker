@@ -21,7 +21,8 @@ import {
   Layers,
   ArrowRightLeft,
   Trash2,
-  MoreHorizontal
+  MoreHorizontal,
+  Scale
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -44,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { ImportSettlementModal } from "./ImportSettlementModal";
 import { RouteAuditTable } from "./RouteAuditTable";
 import { ExceptionPanel } from "./ExceptionPanel";
+import { IntegrityAuditPanel } from "./IntegrityAuditPanel";
 
 export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { routes: RouteTrackerRow[], settings?: FormulaSettings, onAddInternalRoute?: (r: RouteTrackerRow) => void }) {
   const [activeTab, setActiveTab] = useState("audit");
@@ -167,7 +169,13 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
             />
           </div>
 
-          {flaggedRoutes.length > 0 && <ExceptionPanel routes={flaggedRoutes as any} />}
+          <div className="grid gap-6">
+            {selectedReport.summaryTotalPay !== undefined && selectedReport.orderDetailsRateSum !== undefined && (
+              <IntegrityAuditPanel report={selectedReport} />
+            )}
+            
+            {flaggedRoutes.length > 0 && <ExceptionPanel routes={flaggedRoutes as any} />}
+          </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="bg-white border p-1 rounded-2xl h-14 mb-6">
@@ -198,7 +206,7 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
                         <th className="px-4 py-5 text-left">Imported Date</th>
                         <th className="px-4 py-5 text-center">Routes</th>
                         <th className="px-4 py-5 text-right">RXO Total</th>
-                        <th className="px-4 py-5 text-right">Snapshot Delta</th>
+                        <th className="px-4 py-5 text-right">Integrity</th>
                         <th className="px-8 py-5 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -209,8 +217,15 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
                           <td className="px-4 py-5 text-sm font-medium text-slate-500">{new Date(report.importedAt).toLocaleDateString()}</td>
                           <td className="px-4 py-5 text-center font-bold">{report.routeCount}</td>
                           <td className="px-4 py-5 text-right font-bold">{currency(report.rxoTotalPay)}</td>
-                          <td className={cn("px-4 py-5 text-right font-black", report.totalDelta < -100 ? "text-rose-500" : "text-emerald-500")}>
-                            {currency(report.totalDelta)}
+                          <td className="px-4 py-5 text-right">
+                            <div className={cn(
+                              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase border",
+                              report.integrityStatus === 'Verified' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : 
+                              report.integrityStatus === 'Mismatch' ? "bg-rose-50 text-rose-600 border-rose-100" :
+                              "bg-slate-50 text-slate-400 border-slate-100"
+                            )}>
+                              {report.integrityStatus || 'N/A'}
+                            </div>
                           </td>
                           <td className="px-8 py-5 text-right">
                             <DropdownMenu>
@@ -235,10 +250,10 @@ export function RXOSettlementView({ routes, settings, onAddInternalRoute }: { ro
           <div className="h-20 w-20 rounded-[2rem] bg-slate-50 flex items-center justify-center mx-auto text-slate-300"><ClipboardCheck className="h-10 w-10" /></div>
           <div className="space-y-2">
             <h4 className="text-xl font-black uppercase tracking-tighter text-slate-900">No Audits Imported</h4>
-            <p className="text-sm text-slate-500 font-medium">Upload RXO screenshots to begin AI-powered settlement cross-referencing.</p>
+            <p className="text-sm text-slate-500 font-medium">Upload RXO screenshots or Excel files to begin settlement cross-referencing.</p>
           </div>
           <Button className="rounded-xl h-14 bg-slate-900 px-10 font-bold uppercase text-xs" onClick={() => setIsImportOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" /> Start AI Batch Audit
+            <Upload className="mr-2 h-4 w-4" /> Start Audit Batch
           </Button>
         </Card>
       )}
