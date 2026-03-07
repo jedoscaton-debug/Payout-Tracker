@@ -99,9 +99,11 @@ export function RouteTrackerView({
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
   const fuelValue = estimateFuel(currentRoute?.miles || 0, settings);
   
-  // Total Expenses logic: strictly include labor for accurate net profit
+  // Total Expenses includes labor + operational costs
   const totalExpensesValue = Number(((currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue + dPayValue + hPayValue).toFixed(2));
-  const netProfitValue = Number((estPayValue - totalExpensesValue).toFixed(2));
+  
+  // AUDIT LOGIC: Expenses - Estimated Pay = Net Profit (Negative Red = Profit)
+  const netProfitValue = Number((totalExpensesValue - estPayValue).toFixed(2));
 
   const headers = [
     "Route",
@@ -146,7 +148,6 @@ export function RouteTrackerView({
       const fuel = estimateFuel(row.miles, settings);
       const mileageCost = truckRentalMileageCost(row.miles);
       
-      // Row total expenses include labor
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel + dPay + hPay;
 
       return {
@@ -158,7 +159,7 @@ export function RouteTrackerView({
         truckRental: acc.truckRental + (row.truckRental || 0),
         fuel: acc.fuel + fuel,
         totalExp: acc.totalExp + totalExp,
-        netProfit: acc.netProfit + (estRev - totalExp)
+        netProfit: acc.netProfit + (totalExp - estRev)
       };
     }, {
       miles: 0, stops: 0, estPay: 0, driverPay: 0, helperPay: 0, truckRental: 0, fuel: 0, totalExp: 0, netProfit: 0
@@ -195,7 +196,7 @@ export function RouteTrackerView({
       const mileageCost = truckRentalMileageCost(row.miles);
       const fuel = estimateFuel(row.miles, settings);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel + dPay + hPay;
-      const netProfit = Number((estRev - totalExp).toFixed(2));
+      const netProfit = Number((totalExp - estRev).toFixed(2));
 
       return [
         `"${row.route}"`,
@@ -446,14 +447,14 @@ export function RouteTrackerView({
                   </div>
                 </div>
 
-                <div className={cn("rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-slate-900 shadow-slate-900/20")}>
+                <div className={cn("rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl transition-colors", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-emerald-600 shadow-emerald-900/20")}>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Profit Calculation</p>
-                    <p className="text-[9px] font-bold text-slate-500 italic">
-                      EST. PAY - TOTAL EXPENSES (Incl. Labor)
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Audit Net Profit</p>
+                    <p className="text-[9px] font-bold text-white/50 italic">
+                      TOTAL EXPENSES - ESTIMATED PAY (Profit = Negative Red)
                     </p>
                   </div>
-                  <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-white" : "text-emerald-400")}>
+                  <div className="text-4xl font-black tracking-tighter text-white">
                     {currency(netProfitValue)}
                   </div>
                 </div>
@@ -501,9 +502,10 @@ export function RouteTrackerView({
                     const mileageCost = truckRentalMileageCost(row.miles);
                     const fuel = estimateFuel(row.miles, settings);
                     
-                    // Total Expenses strictly includes labor for this view
                     const totalExp = Number(((row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel + dPay + hPay).toFixed(2));
-                    const netProfit = Number((estRev - totalExp).toFixed(2));
+                    
+                    // AUDIT LOGIC: Expenses - Pay = Profit (Profit is Negative Red)
+                    const netProfit = Number((totalExp - estRev).toFixed(2));
                     
                     return (
                       <tr key={row.id} className="transition-colors group align-middle h-14 bg-white hover:bg-slate-50/50">
@@ -530,7 +532,7 @@ export function RouteTrackerView({
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200 text-slate-400">{currency(row.insurance || 0)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(fuel)}</td>
                         <td className="px-3 py-2 text-[10px] font-bold text-center border-r border-slate-200">{currency(totalExp)}</td>
-                        <td className={cn("px-4 py-2 text-[10px] font-black text-center border-r border-slate-200", netProfit < 0 ? "text-rose-600" : "text-emerald-600")}>
+                        <td className={cn("px-4 py-2 text-[10px] font-black text-center border-r border-slate-200", netProfit < 0 ? "text-rose-600 bg-rose-50/30" : "text-emerald-600 bg-emerald-50/30")}>
                           {currency(netProfit)}
                         </td>
                         <td className="px-4 py-2 text-center">
@@ -712,21 +714,21 @@ export function RouteTrackerView({
                 </div>
               </div>
 
-              <div className={cn("rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-primary shadow-primary/20")}>
+              <div className={cn("rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl transition-colors", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-emerald-600 shadow-emerald-900/20")}>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Profit Calculation</p>
-                  <p className="text-[9px] font-bold text-slate-500 italic">
-                    EST. PAY - TOTAL EXPENSES (Incl. Labor)
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Audit Net Profit</p>
+                  <p className="text-[9px] font-bold text-white/50 italic">
+                    TOTAL EXPENSES - ESTIMATED PAY (Profit = Negative Red)
                   </p>
                 </div>
-                <div className={cn("text-4xl font-black tracking-tighter", netProfitValue < 0 ? "text-white" : "text-white")}>
+                <div className="text-4xl font-black tracking-tighter text-white">
                   {currency(netProfitValue)}
                 </div>
               </div>
 
               <div className="flex items-center justify-end gap-4 pt-4">
                 <Button variant="ghost" onClick={() => setIsEditOpen(false)} className="px-8 font-bold text-slate-500 rounded-xl">Cancel</Button>
-                <Button onClick={handleSubmitEdit} className="bg-primary text-white px-10 h-14 rounded-[1.25rem] font-bold shadow-xl shadow-primary/10 transition-transform hover:-translate-y-0.5">
+                <Button onClick={handleSubmitEdit} className="bg-slate-900 text-white px-10 h-14 rounded-[1.25rem] font-bold shadow-xl shadow-slate-900/10 transition-transform hover:-translate-y-0.5">
                   Update System Log
                 </Button>
               </div>
