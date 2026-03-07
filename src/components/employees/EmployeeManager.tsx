@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -9,9 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Employee } from "@/app/lib/types";
-import { Plus, Search, MoreHorizontal, Pencil, Shield, UserMinus, Key } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, UserMinus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface EmployeeManagerProps {
@@ -19,15 +17,10 @@ interface EmployeeManagerProps {
   onAddEmployee: (employee: Employee) => void;
   onUpdateEmployee: (employee: Employee) => void;
   onDeleteEmployee: (id: string) => void;
-  allAdmins?: any[];
-  onGrantAdmin?: (uid: string) => void;
-  onRevokeAdmin?: (uid: string) => void;
-  isMasterAdmin?: boolean;
 }
 
 export function EmployeeManager({ 
-  employees, onAddEmployee, onUpdateEmployee, onDeleteEmployee,
-  allAdmins = [], onGrantAdmin, onRevokeAdmin, isMasterAdmin = false
+  employees, onAddEmployee, onUpdateEmployee, onDeleteEmployee
 }: EmployeeManagerProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -36,7 +29,7 @@ export function EmployeeManager({
   const { toast } = useToast();
   
   const [newStaff, setNewStaff] = useState<Omit<Employee, 'id'>>({
-    fullName: "", role: "Driver", email: "", contactNumber: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit"
+    fullName: "", role: "Driver", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit"
   });
 
   const filtered = employees.filter(e => (e.fullName || "").toLowerCase().includes(search.toLowerCase()));
@@ -51,14 +44,11 @@ export function EmployeeManager({
   const handleSubmitStaff = (e: React.FormEvent) => {
     e.preventDefault();
     const id = generateUID();
-    // Maintain empty strings for email/contact to satisfy existing data schemas
     onAddEmployee({ 
       id, 
-      ...newStaff, 
-      email: (newStaff.email || "").toLowerCase().trim(),
-      contactNumber: newStaff.contactNumber || ""
+      ...newStaff
     });
-    setNewStaff({ fullName: "", role: "Driver", email: "", contactNumber: "", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" });
+    setNewStaff({ fullName: "", role: "Driver", defaultDailyRate: "Varies", paymentMethod: "Direct Deposit" });
     setIsAddOpen(false);
     toast({ title: "Staff Created", description: `HR Profile for ${newStaff.fullName} has been initialized.` });
   };
@@ -116,14 +106,12 @@ export function EmployeeManager({
                 <tr className="bg-slate-50/80 border-b">
                   <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Staff Member</th>
                   <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Role</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Rate Basis</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Admin Status</th>
+                  <th className="px-8 py-5 text-left text-[10px) font-black uppercase tracking-widest text-slate-400">Rate Basis</th>
                   <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filtered.map(emp => {
-                  const isAdminMember = allAdmins.some(a => a.id === emp.authUid);
                   return (
                     <tr key={emp.id} className="hover:bg-slate-50/50">
                       <td className="px-8 py-5">
@@ -131,19 +119,11 @@ export function EmployeeManager({
                       </td>
                       <td className="px-8 py-5 text-xs font-bold uppercase">{emp.role}</td>
                       <td className="px-8 py-5 text-xs font-medium text-slate-500">{emp.defaultDailyRate || "Varies"}</td>
-                      <td className="px-8 py-5">
-                        {isAdminMember && <Badge className="bg-primary text-white text-[9px] uppercase"><Shield className="h-3 w-3 mr-1" /> Admin</Badge>}
-                      </td>
                       <td className="px-8 py-5 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="rounded-xl p-2 w-56">
                             <DropdownMenuItem onClick={() => {setEditingEmployee(emp); setIsEditOpen(true);}}><Pencil className="mr-2 h-3 w-3" /> Edit Profile</DropdownMenuItem>
-                            {isMasterAdmin && emp.authUid && (
-                              <DropdownMenuItem onClick={() => isAdminMember ? onRevokeAdmin?.(emp.authUid!) : onGrantAdmin?.(emp.authUid!)} className={isAdminMember ? "text-rose-600" : "text-primary"}>
-                                <Shield className="mr-2 h-3 w-3" /> {isAdminMember ? "Revoke Admin" : "Grant Admin"}
-                              </DropdownMenuItem>
-                            )}
                             <DropdownMenuItem onClick={() => onDeleteEmployee(emp.id)} className="text-rose-600"><UserMinus className="mr-2 h-3 w-3" /> Remove Staff</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
