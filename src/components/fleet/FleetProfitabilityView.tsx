@@ -78,7 +78,10 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
     }> = {};
 
     filteredRoutes.forEach(r => {
-      const vanId = r.vehicleNumber || "Unknown";
+      // Group "GAS" vehicle numbers into the "EV" category for aggregation in Fleet Profitability
+      let vanId = r.vehicleNumber || "Unknown";
+      if (vanId.toUpperCase() === "GAS") vanId = "EV";
+
       if (!groups[vanId]) {
         groups[vanId] = {
           van: vanId,
@@ -246,14 +249,14 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-black text-slate-400 uppercase">Revenue Formula (GAS)</p>
-              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.gasEstimatedPayFormula || "100 + (1.37 * MILE) + (12.5 * STOPS)"}</p>
+              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.gasEstimatedPayFormula || "100 + (1.37 * ROUND(miles, 0)) + (12.5 * ROUND(stops, 0))"}</p>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-black text-slate-400 uppercase">Fuel Ratio</p>
-              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.estimatedFuelFormula || "(3.76/8)*miles"}</p>
+              <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.estimatedFuelFormula || "(3.76 / 8) * miles"}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase">Reserves</p>
+              <p className="text-[10px) font-black text-slate-400 uppercase">Reserves</p>
               <p className="text-xs font-bold text-slate-700 leading-relaxed italic">Ins: {currency(realityCheck.insurance)}<br/>RXO: {(realityCheck.reserveRate * 100).toFixed(0)}%</p>
             </div>
           </div>
