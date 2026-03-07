@@ -76,52 +76,51 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
   };
 
   /**
-   * REFINED MATCHING ENGINE (Steps 3 & 4)
+   * STEP 3 & 4 — REFINED MATCHING ENGINE
    * Implements the 4 defined cases for parsing RXO strings
    */
   const findInternalMatch = (rxoRouteId: string, rxoDate: string) => {
     const id = (rxoRouteId || "").toUpperCase();
-    const date = rxoDate; // YYYY-MM-DD
+    const reportDate = rxoDate; // YYYY-MM-DD
 
-    // Case 3: EV Route Detection (Prefix DMPEV)
+    // CASE 3: EV Route Detection (Prefix DMPEV)
     if (id.includes("DMPEV")) {
       return routes.find(r => 
-        r.date === date && 
+        r.date === reportDate && 
         r.route.toUpperCase() === 'EV' && 
         r.vehicleNumber.toUpperCase() === 'EV'
       );
     }
 
-    // Case 4: GAS Route Detection (Prefix DMPGAS)
+    // CASE 4: GAS Route Detection (Prefix DMPGAS)
     if (id.includes("DMPGAS")) {
       return routes.find(r => 
-        r.date === date && 
+        r.date === reportDate && 
         r.route.toUpperCase() === 'GAS'
       );
     }
 
-    // Case 1 & 2: LMH Patterns
+    // CASE 1 & 2: LMH Patterns
     if (id.includes("LMH")) {
       const parts = id.split('_').filter(Boolean);
-      const datePart = parts.find(p => /^\d{8}$/.test(p));
+      const datePart = parts.find(p => /^\d{8}$/.test(p)); // Finds MMDDYYYY
       
       if (datePart) {
-        // Step 4 Validation: Check embedded date
+        // STEP 4 Validation: Check embedded date against report date
         const m = datePart.substring(0, 2);
         const d = datePart.substring(2, 4);
         const y = datePart.substring(4, 8);
         const formattedIdDate = `${y}-${m}-${d}`;
         
-        // Strict date match check
-        if (formattedIdDate !== date) return null;
+        if (formattedIdDate !== reportDate) return null;
 
         const dateIndex = parts.indexOf(datePart);
-        // Extract everything after the date part as the code
-        const code = parts.slice(dateIndex + 1).join('_');
+        // Extract everything after the date part as the route code
+        const extractedCode = parts.slice(dateIndex + 1).join('_');
         
         return routes.find(r => 
-          r.date === date && 
-          r.route.toUpperCase() === code.toUpperCase()
+          r.date === reportDate && 
+          r.route.toUpperCase() === extractedCode.toUpperCase()
         );
       }
     }
@@ -152,9 +151,11 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       for (let i = 0; i < files.length; i++) {
         const currentFile = files[i];
         if (currentFile.type.startsWith('image/')) {
+          // AI Extraction for Screenshots
           const aiResult = await analyzeRXOSettlement({ photoDataUri: previews[i] });
           allExtractedRoutes = [...allExtractedRoutes, ...aiResult.extractedRoutes];
         } else {
+          // Logic Extraction for Excel
           const data = await currentFile.arrayBuffer();
           const workbook = XLSX.read(data);
           
@@ -178,7 +179,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             hasExcelIntegrity = true;
           }
 
-          // STEP 2: ROUTE EXTRACTION
+          // STEP 2: ROUTE DETAILS EXTRACTION (from Excel)
           const routeSheet = workbook.Sheets[workbook.SheetNames.find(n => n.toLowerCase().includes("route")) || ""];
           if (routeSheet) {
             const json = XLSX.utils.sheet_to_json(routeSheet) as any[];
@@ -195,7 +196,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         }
       }
 
-      // STEP 3-6: MATCHING & COMPARISON
+      // STEP 3-6: MATCHING & DELTA COMPARISON
       allExtractedRoutes.forEach((extracted, idx) => {
         const matched = findInternalMatch(extracted.routeId, extracted.routeDate);
         const internalEst = matched 
@@ -321,7 +322,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             <Info className="h-4 w-4" />
             <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Matching Intelligence Active</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              Validating LMH suffixes, DMPEV, and DMPGAS prefixes. All routes must pass Step 4 Date verification against internal tracker.
+              Scanning LMH, DMPEV, and DMPGAS patterns. Discrepancies below -$50.00 are flagged in RED. Verified Sunday to Saturday audit order.
             </AlertDescription>
           </Alert>
         </div>

@@ -30,49 +30,51 @@ interface RouteAuditTableProps {
 }
 
 /**
- * LIVE MATCHING ENGINE
- * Implements Steps 3 & 4 matching rules
+ * STEP 3 & 4 — LIVE MATCHING ENGINE
+ * Implements logic for Cases 1-4 and Date Locking
  */
 function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: RouteTrackerRow[]) {
   const id = (rxoRouteId || "").toUpperCase();
-  const date = rxoDate; // YYYY-MM-DD
+  const reportDate = rxoDate; // YYYY-MM-DD
 
-  // Case 3: EV Route Detection (DMPEV prefix)
+  // Case 3: EV Route Detection (Prefix DMPEV)
   if (id.includes("DMPEV")) {
     return internalRoutes.find(r => 
-      r.date === date && 
+      r.date === reportDate && 
       r.route.toUpperCase() === 'EV' && 
       r.vehicleNumber.toUpperCase() === 'EV'
     );
   }
 
-  // Case 4: GAS Route Detection (DMPGAS prefix)
+  // Case 4: GAS Route Detection (Prefix DMPGAS)
   if (id.includes("DMPGAS")) {
     return internalRoutes.find(r => 
-      r.date === date && 
+      r.date === reportDate && 
       r.route.toUpperCase() === 'GAS'
     );
   }
 
-  // Case 1 & 2: LMH Patterns
+  // Cases 1 & 2: LMH Patterns
   if (id.includes("LMH")) {
     const parts = id.split('_').filter(Boolean);
-    const datePart = parts.find(p => /^\d{8}$/.test(p));
+    const datePart = parts.find(p => /^\d{8}$/.test(p)); // MMDDYYYY
     
     if (datePart) {
-      // Step 4: Validate embedded MMDDYYYY against report date
+      // Step 4 Validation: Convert MMDDYYYY to YYYY-MM-DD
       const m = datePart.substring(0, 2);
       const d = datePart.substring(2, 4);
       const y = datePart.substring(4, 8);
       const formattedIdDate = `${y}-${m}-${d}`;
       
-      if (formattedIdDate !== date) return null;
+      // Strict match: ID date must match Report date
+      if (formattedIdDate !== reportDate) return null;
 
       const dateIndex = parts.indexOf(datePart);
+      // Extract the internal route code (the part after the date)
       const code = parts.slice(dateIndex + 1).join('_');
       
       return internalRoutes.find(r => 
-        r.date === date && 
+        r.date === reportDate && 
         r.route.toUpperCase() === code.toUpperCase()
       );
     }
@@ -82,7 +84,8 @@ function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: 
 }
 
 export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearch, onRecalculate, settings }: RouteAuditTableProps) {
-  // Step 8: Arrange chronologically Sun to Sat
+  
+  // STEP 8 — DATE ORDERING (Sun to Sat / A-Z)
   const sortedAndFiltered = useMemo(() => {
     return routeDetails
       .filter(r => 
@@ -106,7 +109,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
       return [
         row.routeId, row.routeDate, row.market, matched?.route || "N/A",
         row.routeMiles, matched?.miles || 0, row.stopCount, matched?.stops || 0,
-        est, row.rxoSettlementPay, delta, delta < -50 ? "RED" : "GREEN", matched ? "Matched" : "Unmatched"
+        est, row.rxoSettlementPay, delta, delta < -50 ? "RED" : "GREEN", matched ? "Verified Match" : "Unmatched"
       ];
     });
 
@@ -139,6 +142,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-slate-900 text-white">
+                    {/* STEP 7 — AUDIT OUTPUT TABLE (13 COLUMNS) */}
                     <th className="px-8 py-6 text-left text-[10px] font-black uppercase tracking-widest min-w-[280px]">Route ID</th>
                     <th className="px-4 py-6 text-center text-[10px] font-black uppercase tracking-widest">Route Date</th>
                     <th className="px-4 py-6 text-center text-[10px] font-black uppercase tracking-widest">Market</th>
@@ -160,8 +164,12 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                       <td colSpan={13} className="py-20 text-center text-slate-400 font-bold uppercase text-xs tracking-widest">No routes found for this settlement period.</td>
                     </tr>
                   ) : sortedAndFiltered.map(row => {
+                    // STEP 3 & 4: LIVE DATA COMPARISON
                     const matched = findInternalMatch(row.routeId, row.routeDate, internalRoutes);
+                    // STEP 5: Use Estimated Pay from Tracker if available
                     const est = matched ? (matched.estimatedPay || estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType)) : 0;
+                    
+                    // STEP 6: DELTA AUDIT
                     const liveDelta = Number((row.rxoSettlementPay - est).toFixed(2));
                     const isRed = liveDelta < -50;
                     
