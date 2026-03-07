@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef } from "react";
@@ -61,7 +60,6 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         };
         reader.readAsDataURL(f);
       } else {
-        // Placeholder for non-image previews (Excel)
         setPreviews(prev => [...prev, "excel-placeholder"]);
       }
     });
@@ -113,16 +111,13 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       let allExtractedRoutes: any[] = [];
       let totalSettlementPay = 0;
       
-      // Integrity Check States
       let summaryTotalPay = 0;
       let orderDetailsRateSum = 0;
       let hasExcelIntegrity = false;
 
-      // Process each file
       for (let i = 0; i < files.length; i++) {
         const currentFile = files[i];
         
-        // 1. Process Images with AI
         if (currentFile.type.startsWith('image/')) {
           const preview = previews[i] || "";
           if (preview) {
@@ -132,20 +127,17 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             totalSettlementPay += aiResult.totalPay;
           }
         } 
-        // 2. Process Excel for Integrity Audit
         else if (currentFile.name.endsWith('.xlsx') || currentFile.name.endsWith('.xls')) {
           toast({ title: `Scanning Excel`, description: "Performing settlement integrity audit..." });
           const data = await currentFile.arrayBuffer();
           const workbook = XLSX.read(data);
           
-          // Find Summary and Order Details sheets
           const summaryName = workbook.SheetNames.find(n => n.toLowerCase().includes("summary"));
           const orderName = workbook.SheetNames.find(n => n.toLowerCase().includes("order"));
 
           if (summaryName) {
             const summarySheet = workbook.Sheets[summaryName];
             const json = XLSX.utils.sheet_to_json(summarySheet, { header: 1 }) as any[][];
-            // Locate "Total Pay" - simple heuristic search
             for (const row of json) {
               const payIdx = row.findIndex(cell => String(cell).toLowerCase().includes("total pay"));
               if (payIdx !== -1 && row[payIdx + 1]) {
@@ -158,7 +150,6 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           if (orderName) {
             const orderSheet = workbook.Sheets[orderName];
             const json = XLSX.utils.sheet_to_json(orderSheet) as any[];
-            // Sum "Rate" column
             orderDetailsRateSum = json.reduce((sum, row) => {
               const rateKey = Object.keys(row).find(k => k.toLowerCase() === "rate");
               return sum + (rateKey ? Number(row[rateKey] || 0) : 0);
@@ -177,7 +168,6 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         totalMilesRXO += extracted.routeMiles;
         totalStopsRXO += extracted.stopCount;
 
-        // MATCHING LOGIC
         const matchedInternal = routes.find(r => {
           if (usedInternalIds.has(r.id)) return false;
           if (r.date !== extracted.routeDate) return false;
@@ -365,7 +355,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             <Info className="h-4 w-4" />
             <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Audit Rules</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              The system compares RXO Route ID, Miles, and Stops against your internal tracker. Excel files undergo a specific "Summary vs Order Rate" integrity check.
+              The system compares RXO Route ID, Miles, and Stops against your internal tracker. Excel files undergo a specific "Summary vs Order Rate" integrity check. Significant underpayments are flagged in red.
             </AlertDescription>
           </Alert>
         </div>
