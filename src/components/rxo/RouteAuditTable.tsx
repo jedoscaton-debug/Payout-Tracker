@@ -31,7 +31,7 @@ interface RouteAuditTableProps {
 
 /**
  * STEP 3 & 4 — LIVE MATCHING ENGINE
- * Implements logic for Cases 1-4 and Date Locking
+ * Implements logic for Cases 1-4 and Date Locking for the comparison audit.
  */
 function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: RouteTrackerRow[]) {
   const id = (rxoRouteId || "").toUpperCase();
@@ -60,17 +60,17 @@ function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: 
     const datePart = parts.find(p => /^\d{8}$/.test(p)); // MMDDYYYY
     
     if (datePart) {
-      // Step 4 Validation: Convert MMDDYYYY to YYYY-MM-DD
+      // Step 4 Validation: Convert MMDDYYYY from ID to YYYY-MM-DD
       const m = datePart.substring(0, 2);
       const d = datePart.substring(2, 4);
       const y = datePart.substring(4, 8);
       const formattedIdDate = `${y}-${m}-${d}`;
       
-      // Strict match: ID date must match Report date
+      // Strict match: ID embedded date must match the actual route date
       if (formattedIdDate !== reportDate) return null;
 
       const dateIndex = parts.indexOf(datePart);
-      // Extract the internal route code (the part after the date)
+      // The actual internal route code is everything after the date part
       const code = parts.slice(dateIndex + 1).join('_');
       
       return internalRoutes.find(r => 
@@ -85,7 +85,7 @@ function findInternalMatch(rxoRouteId: string, rxoDate: string, internalRoutes: 
 
 export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearch, onRecalculate, settings }: RouteAuditTableProps) {
   
-  // STEP 8 — DATE ORDERING (Sun to Sat / A-Z)
+  // STEP 8 — DATE ORDERING (Sun to Sat / Chronological)
   const sortedAndFiltered = useMemo(() => {
     return routeDetails
       .filter(r => 
@@ -99,7 +99,7 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
     const headers = [
       "Route ID", "Route Date", "Market", "Internal Route ID", 
       "RXO Route Miles", "Internal Miles", "RXO Stop Count", "Internal Stops", 
-      "Estimated Pay", "RXO Settlement Amount", "Delta", "Delta Status", "Match Status"
+      "Estimated Pay", "RXO Settlement Pay", "Delta", "Delta Status", "Match Status"
     ];
     
     const rows = sortedAndFiltered.map(row => {
@@ -166,13 +166,13 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                   ) : sortedAndFiltered.map(row => {
                     // STEP 3 & 4: LIVE DATA COMPARISON
                     const matched = findInternalMatch(row.routeId, row.routeDate, internalRoutes);
-                    // STEP 5: Use Estimated Pay from Tracker if available
+                    // STEP 5: Use Estimated Pay from Tracker if matched
                     const est = matched ? (matched.estimatedPay || estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType)) : 0;
                     
                     // STEP 6: DELTA AUDIT
                     const liveDelta = Number((row.rxoSettlementPay - est).toFixed(2));
                     
-                    // CRITICAL: Mark any negative value as RED (Step 6 override)
+                    // CRITICAL: Mark ALL negative variance as RED (Even small differences like -11.25)
                     const isRed = liveDelta < 0;
                     
                     return (

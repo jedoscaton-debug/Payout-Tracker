@@ -77,13 +77,14 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
 
   /**
    * STEP 3 & 4 — REFINED MATCHING ENGINE
-   * Implements the 4 defined cases for parsing RXO strings
+   * Implements the 4 defined cases for parsing RXO strings with strict date validation.
    */
   const findInternalMatch = (rxoRouteId: string, rxoDate: string) => {
     const id = (rxoRouteId || "").toUpperCase();
     const reportDate = rxoDate; // YYYY-MM-DD
 
     // CASE 3: EV Route Detection (Prefix DMPEV)
+    // Matches internal where Route = EV AND Vehicle = EV
     if (id.includes("DMPEV")) {
       return routes.find(r => 
         r.date === reportDate && 
@@ -103,19 +104,20 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
     // CASE 1 & 2: LMH Patterns
     if (id.includes("LMH")) {
       const parts = id.split('_').filter(Boolean);
-      const datePart = parts.find(p => /^\d{8}$/.test(p)); // Finds MMDDYYYY
+      const datePart = parts.find(p => /^\d{8}$/.test(p)); // Finds MMDDYYYY string
       
       if (datePart) {
-        // STEP 4 Validation: Check embedded date against report date
+        // STEP 4 Validation: Extract date from ID and check against report date
         const m = datePart.substring(0, 2);
         const d = datePart.substring(2, 4);
         const y = datePart.substring(4, 8);
         const formattedIdDate = `${y}-${m}-${d}`;
         
+        // Strict match: Embedded ID date must match Report date
         if (formattedIdDate !== reportDate) return null;
 
         const dateIndex = parts.indexOf(datePart);
-        // Extract everything after the date part as the route code
+        // The actual route code is everything after the date part (Case 1: A01_EV, Case 2: A01)
         const extractedCode = parts.slice(dateIndex + 1).join('_');
         
         return routes.find(r => 
@@ -163,7 +165,10 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             const json = XLSX.utils.sheet_to_json(summarySheet, { header: 1 }) as any[][];
             for (const row of json) {
               const payIdx = row.findIndex(cell => String(cell).toLowerCase().includes("total pay"));
-              if (payIdx !== -1 && row[payIdx + 1]) { summaryTotalPay = Number(row[payIdx + 1]); break; }
+              if (payIdx !== -1 && row[payIdx + 1]) { 
+                summaryTotalPay = Number(row[payIdx + 1]); 
+                break; 
+              }
             }
           }
 
@@ -199,6 +204,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           ? (matched.estimatedPay || estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType))
           : 0;
 
+        // STEP 6: DELTA AUDIT
         const delta = Number((extracted.settlementAmount - internalEst).toFixed(2));
         const detailId = `rd-${Date.now()}-${idx}`;
         
@@ -213,7 +219,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           rxoSettlementPay: extracted.settlementAmount,
           systemEstimatedPay: internalEst,
           delta,
-          // CRITICAL: Mark any negative variance as RED
+          // CRITICAL: Any negative variance (less than 0) must be flagged as RED
           deltaStatus: delta < 0 ? 'RED' : 'GREEN',
           internalRouteId: matched?.id || null,
           matchStatus: matched ? 'Matched' : 'Unmatched',
