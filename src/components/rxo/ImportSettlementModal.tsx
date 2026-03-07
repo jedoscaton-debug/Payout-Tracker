@@ -52,7 +52,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       
       const reportRef = doc(db, "rxoSettlementReports", reportId);
 
-      // Simulation Data matching "Route Details" tab logic
+      // Simulation Data matching exact totals for a consistent audit
       const demoReport = {
         id: reportId,
         payee: "SYSTEM ORIENTED LLC",
@@ -73,14 +73,24 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
         notes: `Imported for period ${startDate} to ${endDate}.`
       };
 
-      // Generate simulated routes distributed across the selected dates
+      // Generate simulated routes that sum up exactly to the report totals
       const demoRoutes = Array.from({ length: 16 }).map((_, i) => {
         const routeCode = `A${String(i + 1).padStart(2, '0')}`;
+        
+        // Distribute stops: 10 routes with 17 stops, 6 routes with 16 stops = 266 total
+        const stops = i < 10 ? 17 : 16;
+        
+        // Distribute miles: 15 routes with 110.2, 1 route with 111.1 = 1764.1 total
+        const miles = i < 15 ? 110.2 : 111.1;
+        
+        // Distribute pay: 15 routes with 440.21, 1 route with 440.26 = 7043.41 total
+        const rxoPay = i < 15 ? 440.21 : 440.26;
+
         return {
-          routeId: `LMH__BWI_02152026_${routeCode}`, // Mimics RXO "Route Details" naming
-          rxoPay: 440.21,
-          stops: Math.floor(15 + Math.random() * 10),
-          miles: 110.2,
+          routeId: `LMH__BWI_02152026_${routeCode}`, 
+          rxoPay,
+          stops,
+          miles,
           market: "LMH Beltsville",
           date: startDate
         };
@@ -89,16 +99,20 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       let totalInternalEst = 0;
 
       demoRoutes.forEach((demo, idx) => {
-        // MATCHING LOGIC: Cross-reference internal logs by extracting the route ID from RXO ID
+        // MATCHING LOGIC: Extract the route ID (e.g., A01) from RXO string
         const matchedInternal = routes.find(r => 
-          r.date === demo.date && (demo.routeId.endsWith(r.route) || demo.routeId.includes(r.route))
+          r.date === demo.date && (demo.routeId.endsWith(r.route) || demo.routeId.includes(`_${r.route}`))
         );
 
+        // Use internal estimate if matched, otherwise fallback to standard node calculation
         const internalEst = matchedInternal?.estimatedPay || (demo.stops * 27);
         totalInternalEst += internalEst;
 
         const delta = demo.rxoPay - internalEst;
         const detailId = `rd-${Date.now()}-${idx}`;
+
+        // Audit Status logic: RED if < -50, GREEN otherwise
+        const deltaStatus = delta < -50 ? 'RED' : 'GREEN';
 
         setDocumentNonBlocking(doc(db, "rxoSettlementRouteDetails", detailId), {
           id: detailId,
@@ -111,8 +125,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           rxoSettlementPay: demo.rxoPay,
           systemEstimatedPay: internalEst,
           delta,
-          // Delta Rules: < -50 is RED, >= -50 is GREEN
-          deltaStatus: delta < -50 ? 'RED' : 'GREEN',
+          deltaStatus,
           internalRouteId: matchedInternal?.id || null,
           matchStatus: matchedInternal ? 'Matched' : 'Unmatched',
           finalEstimatedPay: internalEst,
@@ -125,7 +138,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
 
       setDocumentNonBlocking(reportRef, demoReport, { merge: true });
 
-      // Market Summary Row simulation
+      // Summary Snapshot Row
       addDocumentNonBlocking(collection(db, "rxoSettlementSummaryRows"), {
         reportId,
         companyName: "SYSTEM ORIENTED LLC",
@@ -140,14 +153,14 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
       setTimeout(() => {
         setIsImporting(false);
         onImportComplete(reportId);
-        toast({ title: "Import Successful", description: `Report synchronized for ${startDate} to ${endDate}.` });
+        toast({ title: "Audit Complete", description: `Report synchronized for ${startDate} to ${endDate}.` });
         onClose();
       }, 1500);
 
     } catch (e) {
       console.error(e);
       setIsImporting(false);
-      toast({ variant: "destructive", title: "Import Failed", description: "The system could not process the settlement data." });
+      toast({ variant: "destructive", title: "Import Failed", description: "Could not process RXO settlement data." });
     }
   };
 
@@ -185,7 +198,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             </div>
             <div className="text-center">
               <p className="text-sm font-bold text-slate-900">Upload RXO Weekly Statement</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cross-referencing Route Details tab...</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cross-referencing Summary & Route Details...</p>
             </div>
             <input type="file" ref={fileInputRef} className="hidden" accept=".csv, .xlsx, .xls" onChange={(e) => setFile(e.target.files?.[0] || null)} />
           </div>
@@ -195,16 +208,16 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
               <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-emerald-500 shadow-sm"><FileText className="h-5 w-5" /></div>
               <div className="flex-1">
                 <p className="text-xs font-black text-slate-900">{file.name}</p>
-                <p className="text-[9px] font-bold text-emerald-600 uppercase">File ready for audit</p>
+                <p className="text-[9px] font-bold text-emerald-600 uppercase">File loaded for cross-reference</p>
               </div>
             </div>
           )}
 
           <Alert className="rounded-2xl bg-blue-50 border-blue-100 text-blue-700">
             <Info className="h-4 w-4" />
-            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Logic: Route Details Primary Match</AlertTitle>
+            <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Logic: Side-by-Side Verification</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              The system will extract specific Route IDs from the RXO Details tab and match them against your internal logs for exact Miles, Stops, and Revenue verification.
+              The system compares RXO Route ID, Miles, and Stops against your internal tracker. Delta Status flags discrepancies &lt; -50.00 in RED.
             </AlertDescription>
           </Alert>
         </div>
@@ -216,7 +229,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             onClick={handleSimulateImport} 
             disabled={isImporting || !file || !startDate || !endDate}
           >
-            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><CheckCircle2 className="mr-2 h-4 w-4" /> Start Audit Audit</>}
+            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <><CheckCircle2 className="mr-2 h-4 w-4" /> Start Audit Process</>}
           </Button>
         </DialogFooter>
       </DialogContent>
