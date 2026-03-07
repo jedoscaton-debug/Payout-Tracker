@@ -13,7 +13,8 @@ import {
   Calendar,
   AlertCircle,
   CheckCircle2,
-  MapPin
+  MapPin,
+  XCircle
 } from "lucide-react";
 import { RXORouteDetail, RouteTrackerRow, FormulaSettings } from "@/app/lib/types";
 import { currency, shortDate, estimatePay } from "@/app/lib/payroll-utils";
@@ -99,10 +100,13 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
       const matched = findInternalMatch(row.routeId, row.routeDate, internalRoutes);
       const est = matched ? (matched.estimatedPay || estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType)) : 0;
       const delta = Number((row.rxoSettlementPay - est).toFixed(2));
+      const isRed = delta < 0;
+      const matchLabel = matched ? (isRed ? 'NOT MATCH' : 'VERIFIED MATCH') : 'UNMATCHED';
+      
       return [
         row.routeId, row.routeDate, row.market, matched?.route || "N/A",
         row.routeMiles, matched?.miles || 0, row.stopCount, matched?.stops || 0,
-        est, row.rxoSettlementPay, delta, delta < 0 ? "RED" : "GREEN", matched ? (delta < 0 ? "VERIFIED MATCH" : "MATCHED") : "UNMATCHED"
+        est, row.rxoSettlementPay, delta, isRed ? "RED" : "GREEN", matchLabel
       ];
     });
 
@@ -163,6 +167,13 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                     // CRITICAL: Any negative variance is RED
                     const isRed = liveDelta < 0;
                     
+                    // STATUS TEXT LOGIC:
+                    // RED Delta -> NOT MATCH
+                    // GREEN Delta -> VERIFIED MATCH
+                    const matchLabel = matched 
+                      ? (isRed ? "NOT MATCH" : "VERIFIED MATCH") 
+                      : "UNMATCHED";
+                    
                     return (
                       <tr key={row.id} className={cn("hover:bg-slate-50 transition-colors group", !matched && "bg-slate-50/20")}>
                         <td className="px-8 py-5 font-black text-slate-900 text-xs">{row.routeId}</td>
@@ -202,18 +213,17 @@ export function RouteAuditTable({ routeDetails, internalRoutes, search, setSearc
                           </div>
                         </td>
                         <td className="px-8 py-5 text-right">
-                          {matched ? (
-                            <Badge variant="outline" className={cn(
-                              "text-[8px] font-black uppercase px-3", 
-                              isRed ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-200"
-                            )}>
-                              {isRed ? 'VERIFIED MATCH' : 'MATCHED'}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-slate-100 text-slate-400 border-slate-200 text-[8px] font-black uppercase px-3">
-                              Unmatched
-                            </Badge>
-                          )}
+                          <div className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase border-2 transition-all",
+                            matchLabel === "VERIFIED MATCH" ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                            matchLabel === "NOT MATCH" ? "bg-rose-50 text-rose-600 border-rose-200 animate-pulse" :
+                            "bg-slate-50 text-slate-400 border-slate-200"
+                          )}>
+                            {matchLabel === "VERIFIED MATCH" ? <CheckCircle2 className="h-3 w-3" /> : 
+                             matchLabel === "NOT MATCH" ? <XCircle className="h-3 w-3" /> : 
+                             <MapPin className="h-3 w-3" />}
+                            {matchLabel}
+                          </div>
                         </td>
                       </tr>
                     );

@@ -77,14 +77,12 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
 
   /**
    * STEP 3 & 4 — REFINED MATCHING ENGINE
-   * Implements the 4 defined cases for parsing RXO strings with strict date validation.
    */
   const findInternalMatch = (rxoRouteId: string, rxoDate: string) => {
     const id = (rxoRouteId || "").toUpperCase();
     const reportDate = rxoDate; // YYYY-MM-DD
 
     // CASE 3: EV Route Detection (Prefix DMPEV)
-    // Matches internal where Route = EV AND Vehicle = EV
     if (id.includes("DMPEV")) {
       return routes.find(r => 
         r.date === reportDate && 
@@ -104,20 +102,17 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
     // CASE 1 & 2: LMH Patterns
     if (id.includes("LMH")) {
       const parts = id.split('_').filter(Boolean);
-      const datePart = parts.find(p => /^\d{8}$/.test(p)); // Finds MMDDYYYY string
+      const datePart = parts.find(p => /^\d{8}$/.test(p));
       
       if (datePart) {
-        // STEP 4 Validation: Extract date from ID and check against report date
         const m = datePart.substring(0, 2);
         const d = datePart.substring(2, 4);
         const y = datePart.substring(4, 8);
         const formattedIdDate = `${y}-${m}-${d}`;
         
-        // Strict match: Embedded ID date must match Report date
         if (formattedIdDate !== reportDate) return null;
 
         const dateIndex = parts.indexOf(datePart);
-        // The actual route code is everything after the date part (Case 1: A01_EV, Case 2: A01)
         const extractedCode = parts.slice(dateIndex + 1).join('_');
         
         return routes.find(r => 
@@ -159,7 +154,6 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           const data = await currentFile.arrayBuffer();
           const workbook = XLSX.read(data);
           
-          // STEP 1: VALIDATION AUDIT (Summary vs Order Details)
           const summarySheet = workbook.Sheets[workbook.SheetNames.find(n => n.toLowerCase().includes("summary")) || ""];
           if (summarySheet) {
             const json = XLSX.utils.sheet_to_json(summarySheet, { header: 1 }) as any[][];
@@ -204,10 +198,16 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           ? (matched.estimatedPay || estimatePay(matched.stops, matched.miles, matched.route, matched.vehicleNumber, settings, matched.routeType))
           : 0;
 
-        // STEP 6: DELTA AUDIT
         const delta = Number((extracted.settlementAmount - internalEst).toFixed(2));
         const detailId = `rd-${Date.now()}-${idx}`;
         
+        // NEW STATUS LOGIC:
+        // Red Delta (< 0) -> NOT MATCH
+        // Green Delta (>= 0) -> VERIFIED MATCH
+        const matchLabel = matched 
+          ? (delta < 0 ? 'NOT MATCH' : 'VERIFIED MATCH') 
+          : 'UNMATCHED';
+
         setDocumentNonBlocking(doc(db, "rxoSettlementRouteDetails", detailId), {
           id: detailId,
           reportId,
@@ -219,10 +219,9 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
           rxoSettlementPay: extracted.settlementAmount,
           systemEstimatedPay: internalEst,
           delta,
-          // CRITICAL: Any negative variance (less than 0) must be flagged as RED
           deltaStatus: delta < 0 ? 'RED' : 'GREEN',
           internalRouteId: matched?.id || null,
-          matchStatus: matched ? 'Matched' : 'Unmatched',
+          matchStatus: matchLabel,
           createdAt: now
         } satisfies RXORouteDetail, { merge: true });
       });
@@ -325,7 +324,7 @@ export function ImportSettlementModal({ isOpen, onClose, onImportComplete, route
             <Info className="h-4 w-4" />
             <AlertTitle className="text-[10px] font-black uppercase tracking-widest">Matching Intelligence Active</AlertTitle>
             <AlertDescription className="text-[10px] font-medium leading-relaxed mt-1">
-              Scanning LMH, DMPEV, and DMPGAS patterns. Any negative payouts (under-estimated) are flagged in RED. Verified Sunday to Saturday audit order.
+              Scanning LMH, DMPEV, and DMPGAS patterns. Any negative payouts are flagged as RED / NOT MATCH. Verified Sunday to Saturday audit order.
             </AlertDescription>
           </Alert>
         </div>
