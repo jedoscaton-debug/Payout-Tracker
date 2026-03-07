@@ -35,17 +35,23 @@ export function getDayOfWeek(input: string) {
 
 /**
  * Helper to determine if a route is EV based on rules:
- * 1. Route ID contains "_EV" (e.g. A01_EV)
- * 2. Route ID is "EV" and Vehicle # is "EV"
+ * 1. Route Type is explicitly "EV"
+ * 2. Route ID contains "_EV" or starts with "DMPEV"
+ * 3. Route ID is "EV" and Vehicle # is "EV"
  */
-function isEVRoute(route: string, vehicle: string): boolean {
+function isEVRoute(route: string, vehicle: string, routeType?: string): boolean {
   const r = (route || "").toUpperCase();
   const v = (vehicle || "").toUpperCase();
+  const rt = (routeType || "").toUpperCase();
   
-  // Condition 1: Route ID contains _EV (covers A01_EV with any vehicle type)
-  const isEVSuffix = r.includes("_EV");
+  // Rule 0: Explicit selection in dropdown
+  if (rt === "EV") return true;
+  if (rt === "GAS") return false;
   
-  // Condition 2: Pure EV route and vehicle
+  // Rule 1: Route ID contains _EV or DMPEV prefix
+  const isEVSuffix = r.includes("_EV") || r.startsWith("DMPEV");
+  
+  // Rule 2: Pure EV route and vehicle
   const isPureEV = r === "EV" && v === "EV";
   
   return isEVSuffix || isPureEV;
@@ -54,8 +60,8 @@ function isEVRoute(route: string, vehicle: string): boolean {
 /**
  * Dynamic Estimate Pay based on settings and route type (EV vs GAS)
  */
-export function estimatePay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", settings?: FormulaSettings) {
-  const isEV = isEVRoute(route, vehicle);
+export function estimatePay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", settings?: FormulaSettings, routeType?: string) {
+  const isEV = isEVRoute(route, vehicle, routeType);
   let result = 0;
 
   if (isEV) {
@@ -63,8 +69,7 @@ export function estimatePay(stops: number, miles: number = 0, route: string = ""
     const formula = settings?.estimatedPayFormula || DEFAULT_FORMULA_SETTINGS.estimatedPayFormula;
     result = evaluateFormula(formula, { stops, miles });
   } else {
-    // GAS Formula: Used for routes like A01 (no _EV) or GAS/GAS
-    // Default: 100 + (1.37 * ROUND(miles, 0)) + (12.5 * ROUND(stops, 0))
+    // GAS Formula: Default 100 + (1.37 * MILE) + (12.5 * STOPS)
     const formula = settings?.gasEstimatedPayFormula || DEFAULT_FORMULA_SETTINGS.gasEstimatedPayFormula;
     result = evaluateFormula(formula, { stops, miles });
   }
@@ -81,9 +86,9 @@ export function estimateFuel(miles: number, settings?: FormulaSettings) {
   return Number(result.toFixed(2));
 }
 
-export function driverPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
-  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings);
-  const isEV = isEVRoute(route, vehicle);
+export function driverPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings, routeType?: string) {
+  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings, routeType);
+  const isEV = isEVRoute(route, vehicle, routeType);
   
   if (isEV) {
     const formula = settings?.evDriverPayFormula || DEFAULT_FORMULA_SETTINGS.evDriverPayFormula;
@@ -94,9 +99,9 @@ export function driverPay(stops: number, miles: number = 0, route: string = "", 
   return Number(evaluateFormula(formula, { estimatedPay: estPay, stops, miles }).toFixed(2));
 }
 
-export function helperPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings) {
-  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings);
-  const isEV = isEVRoute(route, vehicle);
+export function helperPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings, routeType?: string) {
+  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings, routeType);
+  const isEV = isEVRoute(route, vehicle, routeType);
   
   if (isEV) {
     const formula = settings?.evHelperPayFormula || DEFAULT_FORMULA_SETTINGS.evHelperPayFormula;
@@ -121,12 +126,12 @@ function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType |
 }
 
 function amountForRole(row: RouteTrackerRow, role: RoleType, settings?: FormulaSettings) {
-  const estPay = row.estimatedPay || estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings);
-  if (role === "Driver") return driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings);
-  if (role === "Helper") return helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings);
+  const estPay = row.estimatedPay || estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings, row.routeType);
+  if (role === "Driver") return driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
+  if (role === "Helper") return helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
   
-  const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings);
-  const hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings);
+  const dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
+  const hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType);
   return Number((dPay + hPay).toFixed(2));
 }
 
