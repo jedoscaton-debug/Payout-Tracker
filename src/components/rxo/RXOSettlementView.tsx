@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -31,6 +30,7 @@ import { currency, shortDate } from "@/app/lib/payroll-utils";
 import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from "@/firebase";
 import { collection, doc, query, orderBy, limit, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { ImportSettlementModal } from "./ImportSettlementModal";
 import { RouteAuditTable } from "./RouteAuditTable";
 import { ExceptionPanel } from "./ExceptionPanel";
@@ -222,7 +222,7 @@ export function RXOSettlementView({ routes, settings }: RXOSettlementViewProps) 
                       <th className="px-4 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Imported Date</th>
                       <th className="px-4 py-5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Routes</th>
                       <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">RXO Total</th>
-                      <th className="px-4 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Delta</th>
+                      <th className="px-4 py-5 text-right text-[10px) font-black uppercase tracking-widest text-slate-400">Delta</th>
                       <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</th>
                     </tr>
                   </thead>
