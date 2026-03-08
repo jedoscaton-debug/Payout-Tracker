@@ -63,8 +63,9 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
     const estPay = evaluateFormula(formData.estimatedPayFormula || "", scope);
     const estFuel = evaluateFormula(formData.estimatedFuelFormula || "", scope);
     
-    const dPay = evaluateFormula(formData.driverPayFormula || "", { ...scope, estimatedPay: estPay });
-    const hPay = evaluateFormula(formData.helperPayFormula || "", { ...scope, estimatedPay: estPay });
+    // Simulator uses standard defaults since it's now linked to specific employee shares
+    const dPay = estPay * 0.27;
+    const hPay = estPay * 0.23;
     
     const delta = evaluateFormula(formData.deltaFormula || "", { 
       rxoSettlementPay: testInputs.rxoSettlementPay, 
@@ -86,9 +87,14 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
     const ref = doc(db, "adminSettings", id);
     const now = new Date().toISOString();
     
+    // Sanitize data to prevent Firestore 'undefined' errors
+    const cleanedData = Object.fromEntries(
+      Object.entries(formData).filter(([_, v]) => v !== undefined)
+    );
+
     // Audit Logging
     if (settings) {
-      Object.entries(formData).forEach(([key, value]) => {
+      Object.entries(cleanedData).forEach(([key, value]) => {
         if (settings[key as keyof AdminSettings] !== value && key !== 'updatedAt') {
           addDocumentNonBlocking(collection(db, "adminSettingsAuditLog"), {
             settingName: key,
@@ -101,7 +107,7 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
       });
     }
 
-    setDocumentNonBlocking(ref, { ...formData, id, updatedAt: now }, { merge: true });
+    setDocumentNonBlocking(ref, { ...cleanedData, id, updatedAt: now }, { merge: true });
     toast({ title: "Configuration Saved", description: "Global settings updated across all modules." });
   };
 
@@ -128,7 +134,8 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
   };
 
   const clearLogo = () => {
-    setFormData(prev => ({ ...prev, companyLogo: undefined }));
+    // Set to null instead of undefined to explicitly clear in Firestore
+    setFormData(prev => ({ ...prev, companyLogo: null as any }));
     toast({ title: "Logo Removed" });
   };
 
@@ -172,11 +179,15 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
               <SettingsCard title="Payroll Calculation Logic" icon={Calculator}>
                 <div className="space-y-8">
                   <FormulaField label="EST. PAY Formula" value={formData.estimatedPayFormula || ""} onChange={v => setFormData({...formData, estimatedPayFormula: v})} hint="Variables: stops, miles" />
-                  <div className="grid grid-cols-2 gap-6">
-                    <FormulaField label="DRIVER PAY Share" value={formData.driverPayFormula || ""} onChange={v => setFormData({...formData, driverPayFormula: v})} hint="e.g. estimatedPay * 0.27" />
-                    <FormulaField label="HELPER PAY Share" value={formData.helperPayFormula || ""} onChange={v => setFormData({...formData, helperPayFormula: v})} hint="e.g. estimatedPay * 0.23" />
+                  
+                  <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Individual Payout Control</p>
+                    <p className="text-xs font-medium text-slate-500 leading-relaxed">
+                      Driver and Helper shares are now managed directly within the <span className="font-bold text-slate-900">Employee Directory</span>. 
+                      The system automatically applies individual percentages to the Estimated Pay for each payroll line item.
+                    </p>
                   </div>
-                  <FormulaField label="COMBINED PAY Formula" value={formData.combinedPayFormula || ""} onChange={v => setFormData({...formData, combinedPayFormula: v})} hint="e.g. driverPay + helperPay" />
+
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-slate-400">Negative Net Pay Rule</Label>
                     <Select value={formData.negativeNetPayRule} onValueChange={(v: any) => setFormData({...formData, negativeNetPayRule: v})}>
@@ -469,8 +480,8 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
                 <div className="space-y-3">
                   <ResultRow label="EST. PAY" value={testOutputs.estPay} />
                   <ResultRow label="EST. FUEL" value={testOutputs.estFuel} />
-                  <ResultRow label="DRIVER PAY" value={testOutputs.dPay} />
-                  <ResultRow label="HELPER PAY" value={testOutputs.hPay} />
+                  <ResultRow label="DRIVER PAY (EST. 27%)" value={testOutputs.dPay} />
+                  <ResultRow label="HELPER PAY (EST. 23%)" value={testOutputs.hPay} />
                   <div className="h-px bg-white/5 my-2" />
                   <ResultRow label="DELTA Variance" value={testOutputs.delta} isNegative={testOutputs.delta < 0} />
                   <ResultRow label="TRUE NET PROFIT" value={testOutputs.trueNet} isTotal />
@@ -480,7 +491,7 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
               <div className="p-6 bg-primary/10 border border-primary/20 rounded-2xl flex items-start gap-3">
                 <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-[10px] font-medium text-slate-400 leading-relaxed italic">
-                  "Outputs update in real-time as you modify formulas. Ensure variables match the hint text provided in each field."
+                  "Outputs update in real-time as you modify formulas. Driver/Helper previews use baseline percentages (27%/23%) for estimation."
                 </p>
               </div>
             </CardContent>
