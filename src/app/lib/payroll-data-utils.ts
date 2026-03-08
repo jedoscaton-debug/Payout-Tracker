@@ -3,14 +3,33 @@ import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord, De
 import { autoBuildEarnings } from "./payroll-utils";
 
 /**
- * Generates a new unique payroll run state.
+ * Generates a new unique payroll run state following fixed rules:
+ * - Start: Sunday
+ * - End: Saturday
+ * - Pay Date: Following Friday
  */
 export function createNewPayrollRun(): PayrollRun {
+  const now = new Date();
+  
+  // Find this week's Sunday
+  const start = new Date(now);
+  start.setDate(now.getDate() - now.getDay());
+  
+  // Saturday of the same week
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  
+  // Friday of the following week (6 days after Saturday)
+  const pay = new Date(end);
+  pay.setDate(end.getDate() + 6);
+
+  const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
   return {
-    id: `run-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 5)}`,
-    payPeriodStart: new Date().toISOString().split('T')[0],
-    payPeriodEnd: new Date().toISOString().split('T')[0],
-    payDate: new Date().toISOString().split('T')[0],
+    id: `run-${formatDate(now)}-${Math.random().toString(36).substr(2, 5)}`,
+    payPeriodStart: formatDate(start),
+    payPeriodEnd: formatDate(end),
+    payDate: formatDate(pay),
     status: "Draft",
   };
 }

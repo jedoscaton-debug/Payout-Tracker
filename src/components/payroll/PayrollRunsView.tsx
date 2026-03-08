@@ -18,7 +18,8 @@ import {
   ChevronDown,
   Loader2,
   Save,
-  Trash2
+  Trash2,
+  CalendarDays
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -75,9 +76,41 @@ export function PayrollRunsView({
   const { toast } = useToast();
   const db = useFirestore();
 
-  // Fetch past runs for the browser
   const runsQuery = useMemoFirebase(() => query(collection(db, "payrollRuns"), orderBy("payDate", "desc"), limit(10)), [db]);
   const { data: pastRuns } = useCollection<PayrollRun>(runsQuery);
+
+  const handlePeriodStartChange = (val: string) => {
+    if (!val) return;
+    const start = new Date(`${val}T12:00:00`);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    const pay = new Date(end);
+    pay.setDate(end.getDate() + 6);
+
+    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+    setPayrollRun(prev => ({
+      ...prev,
+      payPeriodStart: val,
+      payPeriodEnd: formatDate(end),
+      payDate: formatDate(pay)
+    }));
+  };
+
+  const handlePeriodEndChange = (val: string) => {
+    if (!val) return;
+    const end = new Date(`${val}T12:00:00`);
+    const pay = new Date(end);
+    pay.setDate(end.getDate() + 6);
+
+    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+    setPayrollRun(prev => ({
+      ...prev,
+      payPeriodEnd: val,
+      payDate: formatDate(pay)
+    }));
+  };
 
   const refreshFromRoutes = () => {
     if (payrollRun.status === "Finalized") return;
@@ -104,10 +137,8 @@ export function PayrollRunsView({
       const runId = payrollRun.id;
       const finalizedRun: PayrollRun = { ...payrollRun, status: "Finalized" };
       
-      // 1. Save Run metadata
       setDocumentNonBlocking(doc(db, "payrollRuns", runId), finalizedRun, { merge: true });
 
-      // 2. Save each Payroll Item
       payrollItems.forEach(item => {
         const itemWithSnapshot = {
           ...item,
@@ -118,7 +149,6 @@ export function PayrollRunsView({
         };
         setDocumentNonBlocking(doc(db, "payrollRuns", runId, "payrollItems", item.id), itemWithSnapshot, { merge: true });
 
-        // 3. Update Deductions (Automatic Tracking)
         item.deductionsLines.forEach(line => {
           if (line.originalDeductionId) {
             const original = deductions.find(d => d.id === line.originalDeductionId);
@@ -139,7 +169,7 @@ export function PayrollRunsView({
       });
 
       setPayrollRun(finalizedRun);
-      toast({ title: "Payroll Finalized", description: "All records saved and deductions updated." });
+      toast({ title: "Payroll Finalized" });
     } catch (e) {
       console.error(e);
       toast({ variant: "destructive", title: "Finalization Failed" });
@@ -162,7 +192,7 @@ export function PayrollRunsView({
   const handleDeleteRun = (id: string) => {
     if (!confirm("Are you sure you want to permanently delete this payroll record?")) return;
     deleteDocumentNonBlocking(doc(db, "payrollRuns", id));
-    toast({ title: "Record Deleted", description: "The historical payroll run has been removed." });
+    toast({ title: "Record Deleted" });
     if (payrollRun.id === id) {
       startNewRun();
     }
@@ -276,8 +306,8 @@ export function PayrollRunsView({
         <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="h-6 w-1 bg-primary rounded-full" />
-              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Run Configuration</CardTitle>
+              <CalendarDays className="h-5 w-5 text-primary" />
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Schedule Configuration</CardTitle>
             </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" className="h-10 rounded-xl bg-white border-slate-200 font-bold" onClick={refreshFromRoutes} disabled={payrollRun.status === "Finalized"}>
@@ -288,17 +318,26 @@ export function PayrollRunsView({
         </CardHeader>
         <CardContent className="p-8">
           <div className="grid gap-8 md:grid-cols-3">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period Start</label>
-              <Input className="h-12 rounded-2xl bg-slate-50/50" type="date" value={payrollRun.payPeriodStart || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodStart: e.target.value }))} />
+            <div className="space-y-3">
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period Start</label>
+                <span className="text-[8px] font-black text-primary uppercase px-1">Sunday</span>
+              </div>
+              <Input className="h-12 rounded-2xl bg-slate-50/50" type="date" value={payrollRun.payPeriodStart || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => handlePeriodStartChange(e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period End</label>
-              <Input className="h-12 rounded-2xl bg-slate-50/50" type="date" value={payrollRun.payPeriodEnd || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payPeriodEnd: e.target.value }))} />
+            <div className="space-y-3">
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Period End</label>
+                <span className="text-[8px] font-black text-primary uppercase px-1">Saturday</span>
+              </div>
+              <Input className="h-12 rounded-2xl bg-slate-50/50" type="date" value={payrollRun.payPeriodEnd || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => handlePeriodEndChange(e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Pay Date</label>
-              <Input className="h-12 rounded-2xl bg-slate-50/50" type="date" value={payrollRun.payDate || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payDate: e.target.value }))} />
+            <div className="space-y-3">
+              <div className="flex flex-col">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Pay Date</label>
+                <span className="text-[8px] font-black text-emerald-600 uppercase px-1">Following Friday</span>
+              </div>
+              <Input className="h-12 rounded-2xl bg-slate-50/50 border-emerald-100 bg-emerald-50/20" type="date" value={payrollRun.payDate || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payDate: e.target.value }))} />
             </div>
           </div>
         </CardContent>
