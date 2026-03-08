@@ -271,16 +271,17 @@ export function PayrollRunsView({
                       <p className={cn("text-[10px] uppercase", payrollRun.id === r.id ? "text-white/70" : "text-slate-400")}>Paid: {r.payDate}</p>
                     </div>
                   </DropdownMenuItem>
-                  <div 
-                    className="h-10 w-10 flex items-center justify-center text-slate-300 hover:text-rose-500 cursor-pointer rounded-lg hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
-                    onClick={(e) => {
+                  <button 
+                    type="button"
+                    className="h-10 w-10 flex items-center justify-center text-slate-300 hover:text-rose-500 cursor-pointer rounded-lg hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100 shrink-0"
+                    onPointerDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       handleDeleteRun(r.id);
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </div>
+                  </button>
                 </div>
               ))}
               <DropdownMenuItem onClick={startNewRun} className="rounded-lg py-3 mt-2 border-t text-primary font-bold">
