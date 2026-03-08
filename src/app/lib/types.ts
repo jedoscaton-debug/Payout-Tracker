@@ -18,6 +18,7 @@ export type RouteTrackerRow = {
   insurance: number;
   driver: string;
   helper?: string;
+  status?: "Active" | "Closed";
 };
 
 export type EarningsLine = {

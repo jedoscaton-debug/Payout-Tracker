@@ -1,3 +1,4 @@
+
 import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollItem, ComputedTotals, FormulaSettings } from './types';
 import { evaluateFormula, DEFAULT_FORMULA_SETTINGS } from './formula-evaluator';
 
@@ -31,6 +32,21 @@ export function getDayOfWeek(input: string) {
   const d = new Date(`${input}T00:00:00`);
   if (isNaN(d.getTime())) return "";
   return d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+}
+
+/**
+ * Returns the Sunday-to-Saturday week range for a given date.
+ */
+export function getWeekRange(dateInput: string | Date = new Date()) {
+  const d = typeof dateInput === 'string' ? new Date(`${dateInput}T12:00:00`) : new Date(dateInput);
+  const start = new Date(d);
+  start.setDate(d.getDate() - d.getDay());
+  
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+  return { start: formatDate(start), end: formatDate(end) };
 }
 
 /**
