@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Settings2, 
-  RefreshCw, 
   RotateCcw, 
   Calculator, 
   ShieldCheck, 
@@ -19,14 +19,14 @@ import {
   Save,
   Info,
   Terminal,
-  Play,
   Building2,
   CalendarDays,
   Percent,
-  CheckCircle2,
-  XCircle,
   Truck,
-  Wallet
+  Wallet,
+  Upload,
+  Image as ImageIcon,
+  X
 } from "lucide-react";
 import { AdminSettings, AdminSettingsAuditLog } from "@/app/lib/types";
 import { DEFAULT_ADMIN_SETTINGS, evaluateFormula } from "@/app/lib/formula-evaluator";
@@ -42,6 +42,8 @@ interface AdminSettingsViewProps {
 
 export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProps) {
   const [formData, setFormData] = useState<Partial<AdminSettings>>(settings || DEFAULT_ADMIN_SETTINGS);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [testInputs, setTestInputs] = useState({
     stops: 27,
     miles: 68,
@@ -106,6 +108,28 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
   const resetToDefaults = () => {
     setFormData(DEFAULT_ADMIN_SETTINGS);
     toast({ title: "Reset to Defaults" });
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+      toast({ variant: "destructive", title: "File too large", description: "Please upload an image smaller than 1MB." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData(prev => ({ ...prev, companyLogo: reader.result as string }));
+      toast({ title: "Logo Uploaded", description: "New branding applied to the preview." });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearLogo = () => {
+    setFormData(prev => ({ ...prev, companyLogo: undefined }));
+    toast({ title: "Logo Removed" });
   };
 
   return (
@@ -236,7 +260,7 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
                   </div>
                 </div>
                 <div className="mt-8 space-y-2">
-                  <Label className="text-[10px) font-black uppercase text-slate-400">Pay Date Rule</Label>
+                  <Label className="text-[10px] font-black uppercase text-slate-400">Pay Date Rule</Label>
                   <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={formData.payDateRule} onChange={e => setFormData({...formData, payDateRule: e.target.value})} />
                 </div>
               </SettingsCard>
@@ -297,23 +321,64 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
 
             <TabsContent value="company">
               <SettingsCard title="Organization Identity" icon={Building2}>
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-slate-400">Legal Company Name</Label>
-                    <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} />
+                <div className="space-y-10">
+                  <div className="space-y-4">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 px-1">Brand Identity</Label>
+                    <div className="flex items-center gap-8 p-8 bg-slate-50 rounded-3xl border border-slate-100">
+                      <div className="relative group">
+                        <div className="h-32 w-32 rounded-[2rem] bg-white border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all group-hover:border-primary">
+                          {formData.companyLogo ? (
+                            <img src={formData.companyLogo} alt="Logo Preview" className="h-full w-full object-contain" />
+                          ) : (
+                            <ImageIcon className="h-10 w-10 text-slate-300" />
+                          )}
+                        </div>
+                        {formData.companyLogo && (
+                          <button 
+                            onClick={clearLogo}
+                            className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-lg border-4 border-white transition-transform hover:scale-110"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-4">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900">Official Company Logo</h4>
+                          <p className="text-[10px] font-medium text-slate-500 mt-1 leading-relaxed">
+                            Upload a high-resolution PNG or JPG. This logo will appear on all official payslips and the system dashboard. (Max 1MB)
+                          </p>
+                        </div>
+                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                        <Button 
+                          onClick={() => fileInputRef.current?.click()}
+                          variant="outline" 
+                          className="h-11 rounded-xl bg-white font-bold border-slate-200 shadow-sm"
+                        >
+                          <Upload className="mr-2 h-4 w-4" /> Upload New Image
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-slate-400">Official Address</Label>
-                    <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={formData.companyAddress} onChange={e => setFormData({...formData, companyAddress: e.target.value})} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-6">
+
+                  <div className="space-y-6">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-slate-400">Primary Timezone</Label>
-                      <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={formData.timeZone} onChange={e => setFormData({...formData, timeZone: e.target.value})} />
+                      <Label className="text-[10px] font-black uppercase text-slate-400">Legal Company Name</Label>
+                      <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-slate-400">Default Currency</Label>
-                      <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={formData.defaultCurrency} onChange={e => setFormData({...formData, defaultCurrency: e.target.value})} />
+                      <Label className="text-[10px] font-black uppercase text-slate-400">Official Address</Label>
+                      <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={formData.companyAddress} onChange={e => setFormData({...formData, companyAddress: e.target.value})} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-slate-400">Primary Timezone</Label>
+                        <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={formData.timeZone} onChange={e => setFormData({...formData, timeZone: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-slate-400">Default Currency</Label>
+                        <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={formData.defaultCurrency} onChange={e => setFormData({...formData, defaultCurrency: e.target.value})} />
+                      </div>
                     </div>
                   </div>
                 </div>

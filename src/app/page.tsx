@@ -106,10 +106,10 @@ export default function AppShell() {
       const existingIds = new Set(prev.map(i => i.employeeId));
       const newItems = employees
         .filter(e => !existingIds.has(e.id))
-        .map(e => createPayrollItem(e, payrollRun, routeTracker, deductions));
+        .map(e => createPayrollItem(e, payrollRun, routeTracker, deductions, adminSettings || undefined));
       return [...prev, ...newItems];
     });
-  }, [employees, isAdmin, payrollRun, routeTracker, deductions]);
+  }, [employees, isAdmin, payrollRun, routeTracker, deductions, adminSettings]);
 
   const payrollSummary = useMemo(() => {
     const totals = payrollItems.map(computeTotals);
@@ -164,7 +164,13 @@ export default function AppShell() {
     <div className="min-h-screen flex flex-col bg-slate-50/50">
       <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-md px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-black text-xl shadow-lg">S</div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-black text-xl shadow-lg overflow-hidden">
+            {adminSettings?.companyLogo ? (
+              <img src={adminSettings.companyLogo} alt="Logo" className="h-full w-full object-cover" />
+            ) : (
+              "S"
+            )}
+          </div>
           <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
             {navItems.map((item) => (
               <button key={item.id} onClick={() => setActiveView(item.id as ActiveView)} className={cn("flex items-center gap-2 px-4 h-10 rounded-xl font-bold text-[10px] uppercase whitespace-nowrap", activeView === item.id ? "bg-slate-100 text-primary" : "text-slate-500")}>
@@ -184,14 +190,14 @@ export default function AppShell() {
           <>
             {activeView === "dashboard" && <DashboardView summary={payrollSummary} deductions={deductions} />}
             {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={e => setDocumentNonBlocking(doc(db, "employees", e.id), e, {merge: true})} onUpdateEmployee={e => updateDocumentNonBlocking(doc(db, "employees", e.id), e)} onDeleteEmployee={id => deleteDocumentNonBlocking(doc(db, "employees", id))} />}
-            {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} deductions={deductions} adminSettings={adminSettings || undefined} />}
-            {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} adminSettings={adminSettings || undefined} />}
+            {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} deductions={deductions} settings={adminSettings || undefined} />}
+            {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} settings={adminSettings || undefined} />}
             {activeView === "deductions" && <DeductionBoard employees={employees} deductions={deductions} />}
-            {activeView === "fleet" && <FleetProfitabilityView routeTracker={routeTracker} adminSettings={adminSettings || undefined} />}
+            {activeView === "fleet" && <FleetProfitabilityView routeTracker={routeTracker} settings={adminSettings || undefined} />}
             {activeView === "rxo" && (
               <RXOSettlementView 
                 routes={routeTracker} 
-                adminSettings={adminSettings || undefined} 
+                settings={adminSettings || undefined} 
                 onAddInternalRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})}
               />
             )}

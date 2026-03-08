@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { PayrollItem, PayrollRun, DeductionLine } from "@/app/lib/types";
+import { PayrollItem, PayrollRun, DeductionLine, AdminSettings } from "@/app/lib/types";
 import { computeTotals, currency, shortDate } from "@/app/lib/payroll-utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,10 @@ import { Printer, Download, Loader2 } from "lucide-react";
 interface PaystubPreviewProps {
   item: PayrollItem;
   run: PayrollRun;
+  settings?: AdminSettings;
 }
 
-export function PaystubPreview({ item, run }: PaystubPreviewProps) {
+export function PaystubPreview({ item, run, settings }: PaystubPreviewProps) {
   const totals = computeTotals(item);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -81,15 +82,19 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
 
       <div className="no-print flex items-center justify-between p-6 border-b bg-slate-50/50 sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg">
-             <svg viewBox="0 0 100 100" className="h-6 w-6 fill-white">
-              <circle cx="50" cy="50" r="40" fill="#4461B5"/>
-              <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="24px" fill="white">S</text>
-            </svg>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white shadow-lg overflow-hidden">
+             {settings?.companyLogo ? (
+               <img src={settings.companyLogo} alt="Logo" className="h-full w-full object-cover" />
+             ) : (
+               <svg viewBox="0 0 100 100" className="h-6 w-6 fill-white">
+                <circle cx="50" cy="50" r="40" fill="#4461B5"/>
+                <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="24px" fill="white">S</text>
+              </svg>
+             )}
           </div>
           <div>
             <h3 className="text-sm font-black uppercase tracking-tighter text-slate-900">Payslip Statement</h3>
-            <p className="text-[10px] text-slate-500 font-bold tracking-wider uppercase">System Oriented LLC</p>
+            <p className="text-[10px] text-slate-500 font-bold tracking-wider uppercase">{settings?.companyName || "System Oriented LLC"}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -106,15 +111,19 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
       <ScrollArea className="flex-1 bg-slate-100/50 p-6 sm:p-8 min-h-0" id="paystub-print-container">
         <div id="paystub-document" className="mx-auto bg-white p-8 sm:p-10 shadow-2xl border border-slate-200 w-full max-w-[800px] flex flex-col gap-6 rounded-sm transition-all relative overflow-hidden">
           <div className="flex flex-col items-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl">
-               <svg viewBox="0 0 100 100" className="h-10 w-10 fill-white">
-                <circle cx="50" cy="50" r="40" fill="#4461B5"/>
-                <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="32px" fill="white">S</text>
-               </svg>
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-xl overflow-hidden">
+               {settings?.companyLogo ? (
+                 <img src={settings.companyLogo} alt="Logo" className="h-full w-full object-contain" />
+               ) : (
+                 <svg viewBox="0 0 100 100" className="h-10 w-10 fill-white">
+                  <circle cx="50" cy="50" r="40" fill="#4461B5"/>
+                  <text x="35" y="68" fontFamily="Inter" fontWeight="900" fontSize="32px" fill="white">S</text>
+                 </svg>
+               )}
             </div>
             <div className="text-center">
-              <h1 className="text-2xl font-black tracking-tight uppercase text-slate-900 leading-none">SYSTEM ORIENTED LLC</h1>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Upper Marlboro, MD</p>
+              <h1 className="text-2xl font-black tracking-tight uppercase text-slate-900 leading-none">{settings?.companyName || "SYSTEM ORIENTED LLC"}</h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">{settings?.companyAddress || "Upper Marlboro, MD"}</p>
             </div>
           </div>
 
@@ -217,7 +226,7 @@ export function PaystubPreview({ item, run }: PaystubPreviewProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="h-4 w-4 rounded bg-slate-900" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">SYSTEM ORIENTED OFFICIAL STATEMENT</span>
+                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{settings?.companyName || "SYSTEM ORIENTED"} OFFICIAL STATEMENT</span>
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Statement ID: {mmddyy}_{item.employeeId.slice(-4)}</span>

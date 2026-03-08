@@ -33,7 +33,7 @@ import {
   PayrollRun, 
   PayrollItem,
   DeductionRecord,
-  FormulaSettings
+  AdminSettings
 } from "@/app/lib/types";
 import { 
   computeTotals, 
@@ -58,7 +58,7 @@ interface PayrollRunsViewProps {
   employees: Employee[];
   routeTracker: RouteTrackerRow[];
   deductions: DeductionRecord[];
-  settings?: FormulaSettings;
+  settings?: AdminSettings;
 }
 
 export function PayrollRunsView({ 
@@ -483,7 +483,7 @@ export function PayrollRunsView({
             <DialogTitle>Paystub Preview</DialogTitle>
           </DialogHeader>
           {previewItem && (
-            <PaystubPreview item={previewItem} run={payrollRun} />
+            <PaystubPreview item={previewItem} run={payrollRun} settings={settings} />
           )}
         </DialogContent>
       </Dialog>
