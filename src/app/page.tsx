@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord, FormulaSettings, FormulaAuditLog } from "@/app/lib/types";
+import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord, AdminSettings, AdminSettingsAuditLog } from "@/app/lib/types";
 import { createPayrollItem, initialPayrollRun } from "@/app/lib/payroll-data-utils";
 import { computeTotals } from "@/app/lib/payroll-utils";
 
@@ -18,7 +18,7 @@ import { RouteTrackerView } from "@/components/payroll/RouteTrackerView";
 import { DeductionBoard } from "@/components/deductions/DeductionBoard";
 import { FleetProfitabilityView } from "@/components/fleet/FleetProfitabilityView";
 import { LoginView } from "@/components/auth/LoginView";
-import { FormulaSettingsView } from "@/components/settings/FormulaSettingsView";
+import { AdminSettingsView } from "@/components/settings/AdminSettingsView";
 import { RXOSettlementView } from "@/components/rxo/RXOSettlementView";
 
 import { useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking, useAuth, useUser } from "@/firebase";
@@ -48,12 +48,12 @@ export default function AppShell() {
   const { data: bootstrapDoc, isLoading: bootstrapLoading } = useDoc(bootstrapDocRef, { enabled: !!user });
   const isSystemFresh = !bootstrapLoading && !bootstrapDoc && !isMasterByEmail && !isAdmin && user;
 
-  // Formula Settings
-  const settingsDocRef = useMemoFirebase(() => doc(db, "payrollFormulaSettings", "global-payroll-settings"), [db]);
-  const { data: formulaSettings } = useDoc<FormulaSettings>(settingsDocRef, { enabled: isAdmin });
+  // Admin Settings
+  const settingsDocRef = useMemoFirebase(() => doc(db, "adminSettings", "global-config"), [db]);
+  const { data: adminSettings, isLoading: settingsLoading } = useDoc<AdminSettings>(settingsDocRef, { enabled: isAdmin });
 
-  const auditLogsQuery = useMemoFirebase(() => isAdmin ? query(collection(db, "payrollFormulaAuditLog"), orderBy("changedAt", "desc"), limit(20)) : null, [db, isAdmin]);
-  const { data: auditLogs } = useCollection<FormulaAuditLog>(auditLogsQuery, { enabled: isAdmin });
+  const auditLogsQuery = useMemoFirebase(() => isAdmin ? query(collection(db, "adminSettingsAuditLog"), orderBy("changedAt", "desc"), limit(20)) : null, [db, isAdmin]);
+  const { data: auditLogs } = useCollection<AdminSettingsAuditLog>(auditLogsQuery, { enabled: isAdmin });
 
   // Redirection Logic
   useEffect(() => {
@@ -106,10 +106,10 @@ export default function AppShell() {
       const existingIds = new Set(prev.map(i => i.employeeId));
       const newItems = employees
         .filter(e => !existingIds.has(e.id))
-        .map(e => createPayrollItem(e, payrollRun, routeTracker, deductions, formulaSettings || undefined));
+        .map(e => createPayrollItem(e, payrollRun, routeTracker, deductions));
       return [...prev, ...newItems];
     });
-  }, [employees, isAdmin, payrollRun, routeTracker, deductions, formulaSettings]);
+  }, [employees, isAdmin, payrollRun, routeTracker, deductions]);
 
   const payrollSummary = useMemo(() => {
     const totals = payrollItems.map(computeTotals);
@@ -157,7 +157,7 @@ export default function AppShell() {
     { id: "deductions", label: "Deductions", icon: Wallet },
     { id: "fleet", label: "Fleet Profitability", icon: BarChart3 },
     { id: "rxo", label: "RXO Settlement", icon: ClipboardCheck },
-    { id: "settings", label: "Formula Settings", icon: Settings },
+    { id: "settings", label: "Admin Settings", icon: Settings },
   ];
 
   return (
@@ -184,18 +184,18 @@ export default function AppShell() {
           <>
             {activeView === "dashboard" && <DashboardView summary={payrollSummary} deductions={deductions} />}
             {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={e => setDocumentNonBlocking(doc(db, "employees", e.id), e, {merge: true})} onUpdateEmployee={e => updateDocumentNonBlocking(doc(db, "employees", e.id), e)} onDeleteEmployee={id => deleteDocumentNonBlocking(doc(db, "employees", id))} />}
-            {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} deductions={deductions} settings={formulaSettings || undefined} />}
-            {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} settings={formulaSettings || undefined} />}
+            {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} deductions={deductions} adminSettings={adminSettings || undefined} />}
+            {activeView === "routes" && <RouteTrackerView routeTracker={routeTracker} onAddRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})} onUpdateRoute={r => updateDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r)} onDeleteRoute={id => deleteDocumentNonBlocking(doc(db, "routeTrackerRows", id))} employees={employees} adminSettings={adminSettings || undefined} />}
             {activeView === "deductions" && <DeductionBoard employees={employees} deductions={deductions} />}
-            {activeView === "fleet" && <FleetProfitabilityView routeTracker={routeTracker} settings={formulaSettings || undefined} />}
+            {activeView === "fleet" && <FleetProfitabilityView routeTracker={routeTracker} adminSettings={adminSettings || undefined} />}
             {activeView === "rxo" && (
               <RXOSettlementView 
                 routes={routeTracker} 
-                settings={formulaSettings || undefined} 
+                adminSettings={adminSettings || undefined} 
                 onAddInternalRoute={r => setDocumentNonBlocking(doc(db, "routeTrackerRows", r.id), r, {merge: true})}
               />
             )}
-            {activeView === "settings" && <FormulaSettingsView settings={formulaSettings || null} auditLogs={auditLogs || []} />}
+            {activeView === "settings" && <AdminSettingsView settings={adminSettings || null} auditLogs={auditLogs || []} />}
           </>
         )}
       </main>

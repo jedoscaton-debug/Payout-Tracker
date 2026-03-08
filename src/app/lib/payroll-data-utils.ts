@@ -1,12 +1,9 @@
 
-import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord, DeductionLine, FormulaSettings } from "./types";
+import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord, DeductionLine, AdminSettings } from "./types";
 import { autoBuildEarnings } from "./payroll-utils";
 
 /**
- * Generates a new unique payroll run state following fixed rules:
- * - Start: Sunday
- * - End: Saturday
- * - Pay Date: Following Friday
+ * Generates a new unique payroll run state
  */
 export function createNewPayrollRun(): PayrollRun {
   const now = new Date();
@@ -19,7 +16,7 @@ export function createNewPayrollRun(): PayrollRun {
   const end = new Date(start);
   end.setDate(start.getDate() + 6);
   
-  // Friday of the following week (6 days after Saturday)
+  // Friday of the following week
   const pay = new Date(end);
   pay.setDate(end.getDate() + 6);
 
@@ -37,18 +34,17 @@ export function createNewPayrollRun(): PayrollRun {
 export const initialPayrollRun: PayrollRun = createNewPayrollRun();
 
 /**
- * Generates a payroll item for an employee based on tracked routes and active deductions.
+ * Generates a payroll item for an employee
  */
 export function createPayrollItem(
   employee: Employee, 
   payrollRun: PayrollRun, 
   routes: RouteTrackerRow[],
   allDeductions: DeductionRecord[],
-  settings?: FormulaSettings
+  adminSettings?: AdminSettings
 ): PayrollItem {
-  const earningsLines = autoBuildEarnings(employee, payrollRun, routes, settings);
+  const earningsLines = autoBuildEarnings(employee, payrollRun, routes, adminSettings);
   
-  // Logic to fetch active, auto-apply deductions for this employee
   const deductionsLines: DeductionLine[] = allDeductions
     .filter(d => 
       d.employeeId === employee.id && 
@@ -63,17 +59,16 @@ export function createPayrollItem(
       type: d.type,
       originalDeductionId: d.id,
       installmentCount: d.installmentCount,
-      installmentsPaid: (d.installmentsPaid || 0) + 1, // This is the installment currently being paid
+      installmentsPaid: (d.installmentsPaid || 0) + 1,
       totalClaimAmount: d.totalClaimAmount
     }));
 
-  // Ensure system default "Direct Deposit Fee" exists if not already present
   const hasDD = deductionsLines.some(d => d.deductionName === "Direct Deposit Fee");
-  if (!hasDD) {
+  if (!hasDD && (adminSettings?.autoApplyDirectDepositFee !== false)) {
     deductionsLines.push({
       id: `${employee.id}-default-dd-${payrollRun.id}`,
       deductionName: "Direct Deposit Fee",
-      amount: settings?.directDepositFee || 4.00,
+      amount: adminSettings?.directDepositFee || 4.00,
       type: "Auto System Fee"
     });
   }

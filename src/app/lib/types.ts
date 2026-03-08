@@ -113,32 +113,68 @@ export type ComputedTotals = {
   netPay: number;
 };
 
-export type FormulaSettings = {
+export type AdminSettings = {
   id: string;
+  // Company Settings
+  companyName: string;
+  companyAddress: string;
+  companyLogo?: string;
+  defaultCurrency: string;
+  timeZone: string;
+  dateFormat: string;
+
+  // Payroll Formulas
   estimatedPayFormula: string;
-  gasEstimatedPayFormula: string;
+  driverPayFormula: string;
+  helperPayFormula: string;
+  combinedPayFormula: string;
+  negativeNetPayRule: 'block' | 'confirm' | 'allow';
+
+  // Route Formulas
   estimatedFuelFormula: string;
-  combinedPayMode: 'sum' | 'custom';
-  customCombinedFormula: string;
-  revenueSource: 'actualPayAudit' | 'estimatedPay' | 'manualOverride';
   deltaFormula: string;
-  redThreshold: number;
-  yellowThreshold: number;
+  revenueSource: 'estimatedPay' | 'actualPayAudit' | 'manualOverride';
+
+  // Deduction Defaults
+  directDepositFee: number;
+  autoApplyDirectDepositFee: boolean;
+  directDepositFeeEditable: 'locked' | 'superAdminOnly' | 'adminEditable';
+  installmentDeductionRule: string;
+  installmentCompletionRule: string;
+
+  // Payroll Schedule
+  payrollCycleStartDay: string;
+  payrollCycleEndDay: string;
+  payDateRule: string;
+
+  // RXO Audit Rules
+  negativeDeltaThreshold: number;
+  rxoRedStatusRule: string;
+  rxoGreenStatusRule: string;
+  rxoMatchStrategy: string;
+  rxoEVMatchingRule: string;
+  rxoGASMatchingRule: string;
+
+  // Fleet / Profitability
+  fleetRedThreshold: number;
+  fleetYellowThreshold: number;
   reserveRate: number;
   estimatedWeeklyInsurance: number;
   trueNetProfitFormula: string;
-  directDepositFee: number;
-  autoApplyDirectDepositFee: boolean;
-  directDepositFeeEditable: 'superAdminOnly' | 'adminEditable' | 'locked';
-  installmentCompletionRule: string;
+
+  // Display / Formatting
   currencyFormat: string;
   decimalPlaces: number;
   earningsDescriptionFormat: string;
+  weekDisplayFormat: string;
+  tableSortDefault: string;
+
+  createdAt: string;
   updatedAt: string;
-  updatedBy?: string;
+  updatedBy: string;
 };
 
-export type FormulaAuditLog = {
+export type AdminSettingsAuditLog = {
   id: string;
   settingName: string;
   oldValue: string;

@@ -1,6 +1,6 @@
 
-import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollItem, ComputedTotals, FormulaSettings } from './types';
-import { evaluateFormula, DEFAULT_FORMULA_SETTINGS } from './formula-evaluator';
+import { RouteTrackerRow, Employee, PayrollRun, EarningsLine, RoleType, PayrollItem, ComputedTotals, AdminSettings } from './types';
+import { evaluateFormula, DEFAULT_ADMIN_SETTINGS } from './formula-evaluator';
 
 export function currency(value: number) {
   const rounded = Math.round((value || 0) * 100) / 100;
@@ -58,12 +58,9 @@ export function truckRentalMileageCost(miles: number): number {
 }
 
 /**
- * Helper to determine if a route is EV based on rules:
- * 1. Route Type is explicitly "EV"
- * 2. Route ID contains "_EV" or starts with "DMPEV"
- * 3. Route ID is "EV" and Vehicle # is "EV"
+ * Helper to determine if a route is EV based on rules
  */
-function isEVRoute(route: string, vehicle: string, routeType?: string): boolean {
+function isEVRoute(route: string, vehicle: string, routeType?: string, adminSettings?: AdminSettings): boolean {
   const r = (route || "").toUpperCase();
   const v = (vehicle || "").toUpperCase();
   const rt = (routeType || "").toUpperCase();
@@ -71,82 +68,64 @@ function isEVRoute(route: string, vehicle: string, routeType?: string): boolean 
   if (rt === "EV") return true;
   if (rt === "GAS") return false;
   
-  const isEVSuffix = r.includes("_EV") || r.startsWith("DMPEV");
+  const evRule = adminSettings?.rxoEVMatchingRule || "starts with DMPEV";
+  const isEVSuffix = r.includes("_EV") || r.startsWith("DMPEV") || (evRule.includes("DMPEV") && r.startsWith("DMPEV"));
   const isPureEV = r === "EV" && v === "EV";
   
   return isEVSuffix || isPureEV;
 }
 
 /**
- * Dynamic Estimate Pay based on settings and route type (EV vs GAS)
+ * Dynamic Estimate Pay based on settings
  */
-export function estimatePay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", settings?: FormulaSettings, routeType?: string) {
-  const isEV = isEVRoute(route, vehicle, routeType);
-  let result = 0;
-
-  if (isEV) {
-    const formula = settings?.estimatedPayFormula || DEFAULT_FORMULA_SETTINGS.estimatedPayFormula;
-    result = evaluateFormula(formula, { stops, miles });
-  } else {
-    const formula = settings?.gasEstimatedPayFormula || DEFAULT_FORMULA_SETTINGS.gasEstimatedPayFormula;
-    result = evaluateFormula(formula, { stops, miles });
-  }
-
+export function estimatePay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", adminSettings?: AdminSettings, routeType?: string) {
+  const formula = adminSettings?.estimatedPayFormula || DEFAULT_ADMIN_SETTINGS.estimatedPayFormula;
+  const result = evaluateFormula(formula, { stops, miles });
   return Number(result.toFixed(2));
 }
 
-export function estimateFuel(miles: number, settings?: FormulaSettings) {
-  const formula = settings?.estimatedFuelFormula || DEFAULT_FORMULA_SETTINGS.estimatedFuelFormula;
+export function estimateFuel(miles: number, adminSettings?: AdminSettings) {
+  const formula = adminSettings?.estimatedFuelFormula || DEFAULT_ADMIN_SETTINGS.estimatedFuelFormula;
   const result = evaluateFormula(formula, { miles });
   return Number(result.toFixed(2));
 }
 
 /**
  * Driver Payout Logic
- * Priorities:
- * 1. Employee Specific Share -> Employee % (from Directory)
- * 2. Pure EV Node (EV/EV) -> 33% (System Incentive)
- * 3. Default -> 27%
  */
-export function driverPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings, routeType?: string, employee?: Employee) {
-  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings, routeType);
+export function driverPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, adminSettings?: AdminSettings, routeType?: string, employee?: Employee) {
+  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, adminSettings, routeType);
   
-  const r = (route || "").toUpperCase();
-  const v = (vehicle || "").toUpperCase();
-  
-  let percentage = 27; // Default
+  const formula = adminSettings?.driverPayFormula || DEFAULT_ADMIN_SETTINGS.driverPayFormula;
+  let percentage = 27; // Default fallback
   
   if (employee?.driverPayoutPercentage !== undefined) {
     percentage = employee.driverPayoutPercentage;
-  } else if (r === "EV" && v === "EV") {
-    percentage = 33; // Node incentive fallback
+  } else if (route.toUpperCase() === "EV" && vehicle.toUpperCase() === "EV") {
+    percentage = 33; // Node fallback
   }
   
-  return Number((estPay * (percentage / 100)).toFixed(2));
+  // If formula is percentage based, we use it. If hardcoded employee percent exists, we prioritize it.
+  const result = employee?.driverPayoutPercentage !== undefined 
+    ? estPay * (employee.driverPayoutPercentage / 100)
+    : evaluateFormula(formula, { estimatedPay: estPay, stops, miles });
+    
+  return Number(result.toFixed(2));
 }
 
 /**
  * Helper Payout Logic
- * Priorities:
- * 1. Employee Specific Share -> Employee % (from Directory)
- * 2. Pure EV Node (EV/EV) -> 27% (System Incentive)
- * 3. Default -> 23%
  */
-export function helperPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, settings?: FormulaSettings, routeType?: string, employee?: Employee) {
-  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, settings, routeType);
+export function helperPay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", estPayOverride?: number, adminSettings?: AdminSettings, routeType?: string, employee?: Employee) {
+  const estPay = (estPayOverride && estPayOverride > 0) ? estPayOverride : estimatePay(stops, miles, route, vehicle, adminSettings, routeType);
   
-  const r = (route || "").toUpperCase();
-  const v = (vehicle || "").toUpperCase();
+  const formula = adminSettings?.helperPayFormula || DEFAULT_ADMIN_SETTINGS.helperPayFormula;
   
-  let percentage = 23; // Default
-  
-  if (employee?.helperPayoutPercentage !== undefined) {
-    percentage = employee.helperPayoutPercentage;
-  } else if (r === "EV" && v === "EV") {
-    percentage = 27; // Node incentive fallback
-  }
-  
-  return Number((estPay * (percentage / 100)).toFixed(2));
+  const result = employee?.helperPayoutPercentage !== undefined 
+    ? estPay * (employee.helperPayoutPercentage / 100)
+    : evaluateFormula(formula, { estimatedPay: estPay, stops, miles });
+    
+  return Number(result.toFixed(2));
 }
 
 function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType | null {
@@ -158,8 +137,8 @@ function roleForEmployee(row: RouteTrackerRow, employeeName: string): RoleType |
   return null;
 }
 
-function amountForRole(row: RouteTrackerRow, role: RoleType, employee: Employee, settings?: FormulaSettings) {
-  const estPay = row.estimatedPay || estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, settings, row.routeType);
+function amountForRole(row: RouteTrackerRow, role: RoleType, employee: Employee, adminSettings?: AdminSettings) {
+  const estPay = row.estimatedPay || estimatePay(row.stops, row.miles, row.route, row.vehicleNumber, adminSettings, row.routeType);
   
   const isDriverPart = role === "Driver" || role === "Driver&Helper";
   const isHelperPart = role === "Helper" || role === "Driver&Helper";
@@ -168,30 +147,37 @@ function amountForRole(row: RouteTrackerRow, role: RoleType, employee: Employee,
   let hPay = 0;
 
   if (isDriverPart) {
-    dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType, employee);
+    dPay = driverPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, adminSettings, row.routeType, employee);
   }
 
   if (isHelperPart) {
-    hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, settings, row.routeType, employee);
+    hPay = helperPay(row.stops, row.miles, row.route, row.vehicleNumber, estPay, adminSettings, row.routeType, employee);
   }
 
   return Number((dPay + hPay).toFixed(2));
 }
 
-export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: RouteTrackerRow[], settings?: FormulaSettings): EarningsLine[] {
+export function autoBuildEarnings(employee: Employee, run: PayrollRun, routes: RouteTrackerRow[], adminSettings?: AdminSettings): EarningsLine[] {
   return routes
     .filter((row) => row.date >= run.payPeriodStart && row.date <= run.payPeriodEnd)
     .map((row) => {
       const role = roleForEmployee(row, employee.fullName);
       if (!role) return null;
       const displayDate = formatEarningsDate(row.date);
+      
+      const format = adminSettings?.earningsDescriptionFormat || DEFAULT_ADMIN_SETTINGS.earningsDescriptionFormat;
+      let description = format
+        .replace('{MMM d}', displayDate)
+        .replace('{client}', row.route)
+        .replace('{role}', role);
+
       return {
         id: `${employee.id}-${row.id}`,
         date: row.date,
         client: row.route,
         role,
-        description: `${displayDate} - ${row.routeType} ${role}`,
-        amount: amountForRole(row, role, employee, settings),
+        description,
+        amount: amountForRole(row, role, employee, adminSettings),
       } satisfies EarningsLine;
     })
     .filter(Boolean) as EarningsLine[];
