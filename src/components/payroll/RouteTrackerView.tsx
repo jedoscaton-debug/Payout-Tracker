@@ -27,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RouteTrackerRow, Employee, FormulaSettings } from "@/app/lib/types";
+import { RouteTrackerRow, Employee, AdminSettings } from "@/app/lib/types";
 import { 
   currency, 
   shortDate, 
@@ -40,7 +40,7 @@ import {
   getWeekRange
 } from "@/app/lib/payroll-utils";
 import { cn } from "@/lib/utils";
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Calendar as CalendarIcon, Download, Info, Archive, Lock, History, Loader2, ChevronDown, CheckCircle2 } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Calendar as CalendarIcon, Download, Info, Archive, Lock, History, Loader2, ChevronDown, CheckCircle2, CalendarDays } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -54,7 +54,7 @@ interface RouteTrackerViewProps {
   onUpdateRoute?: (route: RouteTrackerRow) => void;
   onDeleteRoute?: (id: string) => void;
   employees?: Employee[];
-  settings?: FormulaSettings;
+  settings?: AdminSettings;
 }
 
 export function RouteTrackerView({ 
@@ -74,7 +74,9 @@ export function RouteTrackerView({
   const currentWeek = useMemo(() => getWeekRange(new Date()), []);
   const [selectedWeekStart, setSelectedWeekStart] = useState(currentWeek.start);
   
-  const selectedWeekRange = useMemo(() => getWeekRange(selectedWeekStart), [selectedWeekStart]);
+  // Date Range State
+  const [startDate, setStartDate] = useState(currentWeek.start);
+  const [endDate, setEndDate] = useState(currentWeek.end);
   
   const [newRoute, setNewRoute] = useState<Partial<RouteTrackerRow>>({
     route: "",
@@ -93,16 +95,24 @@ export function RouteTrackerView({
 
   const [editingRoute, setEditingRoute] = useState<RouteTrackerRow | null>(null);
   
-  // Sync new route date with selected week if needed
+  // Sync startDate/endDate when Review Period dropdown changes
+  const handleWeekChange = (val: string) => {
+    setSelectedWeekStart(val);
+    const range = getWeekRange(val);
+    setStartDate(range.start);
+    setEndDate(range.end);
+  };
+
+  // Sync new route date with selected range if needed
   useEffect(() => {
     if (!isAddOpen) return;
     const today = new Date().toISOString().split('T')[0];
-    const isTodayInSelectedWeek = today >= selectedWeekRange.start && today <= selectedWeekRange.end;
+    const isTodayInRange = today >= startDate && today <= endDate;
     setNewRoute(prev => ({
       ...prev,
-      date: isTodayInSelectedWeek ? today : selectedWeekRange.start
+      date: isTodayInRange ? today : startDate
     }));
-  }, [isAddOpen, selectedWeekRange]);
+  }, [isAddOpen, startDate, endDate]);
 
   const availableWeeks = useMemo(() => {
     const weeksMap = new Map<string, { start: string, end: string }>();
@@ -125,11 +135,11 @@ export function RouteTrackerView({
         r.driver.toLowerCase().includes(search.toLowerCase()) ||
         (r.helper && r.helper.toLowerCase().includes(search.toLowerCase()));
       
-      const inWeek = r.date >= selectedWeekRange.start && r.date <= selectedWeekRange.end;
+      const inRange = r.date >= startDate && r.date <= endDate;
       
-      return matchesSearch && inWeek;
+      return matchesSearch && inRange;
     }).sort((a, b) => a.date.localeCompare(b.date));
-  }, [routeTracker, search, selectedWeekRange]);
+  }, [routeTracker, search, startDate, endDate]);
 
   const totals = useMemo(() => {
     const raw = filtered.reduce((acc, row) => {
@@ -174,20 +184,20 @@ export function RouteTrackerView({
 
   const handleFinalizeWeek = () => {
     if (filtered.length === 0) {
-      toast({ title: "No Data", description: "This week has no routes to archive." });
+      toast({ title: "No Data", description: "This range has no routes to archive." });
       return;
     }
     const toClose = filtered.filter(r => r.status !== "Closed");
     if (toClose.length === 0) {
-      toast({ title: "Already Archived", description: "This week's routes are already locked." });
+      toast({ title: "Already Archived", description: "These routes are already locked." });
       return;
     }
 
-    if (confirm(`Are you sure you want to finalize and archive ${toClose.length} routes for the week of ${shortDate(selectedWeekRange.start)}? This will lock the data for auditing.`)) {
+    if (confirm(`Are you sure you want to finalize and archive ${toClose.length} routes for this period? This will lock the data for auditing.`)) {
       toClose.forEach(r => {
         onUpdateRoute?.({ ...r, status: "Closed" });
       });
-      toast({ title: "Weekly Archive Complete", description: "All routes for this period have been locked." });
+      toast({ title: "Archive Complete", description: "Selected routes have been locked." });
     }
   };
 
@@ -224,7 +234,7 @@ export function RouteTrackerView({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `route_audit_week_${selectedWeekRange.start}.csv`);
+    link.setAttribute("download", `route_audit_${startDate}_to_${endDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -248,7 +258,7 @@ export function RouteTrackerView({
   const totalExpensesValue = Number(((currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue + dPayValue + hPayValue).toFixed(2));
   const netProfitValue = Number((totalExpensesValue - estPayValue).toFixed(2));
 
-  const isCurrentWeek = selectedWeekStart === currentWeek.start;
+  const isCurrentWeekInRange = startDate <= currentWeek.start && endDate >= currentWeek.end;
   const isWeekClosed = filtered.every(r => r.status === "Closed") && filtered.length > 0;
 
   return (
@@ -259,14 +269,14 @@ export function RouteTrackerView({
             <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Route Tracker</h3>
             {isWeekClosed && <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 uppercase text-[9px] font-black"><Lock className="h-3 w-3 mr-1" /> Archived</Badge>}
           </div>
-          <p className="text-sm text-slate-500 font-medium">Log and analyze daily route profitability. Data is automatically reset every Sunday.</p>
+          <p className="text-sm text-slate-500 font-medium">Log and analyze daily route profitability across weekly periods or custom ranges.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 bg-white px-4 h-11 rounded-xl border border-slate-200 shadow-sm">
             <History className="h-4 w-4 text-slate-400" />
             <span className="text-[9px] font-black uppercase text-slate-400 whitespace-nowrap">Review Period:</span>
-            <Select value={selectedWeekStart} onValueChange={setSelectedWeekStart}>
+            <Select value={selectedWeekStart} onValueChange={handleWeekChange}>
               <SelectTrigger className="h-8 border-none bg-transparent font-bold text-[10px] uppercase min-w-[200px] p-0 focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
@@ -280,6 +290,26 @@ export function RouteTrackerView({
             </Select>
           </div>
 
+          <div className="flex items-center gap-2 bg-white px-4 h-11 rounded-xl border border-slate-200 shadow-sm">
+            <CalendarDays className="h-4 w-4 text-slate-400" />
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-black uppercase text-slate-400">From</span>
+              <Input 
+                type="date" 
+                className="h-8 border-none bg-transparent font-bold text-[10px] uppercase p-0 focus-visible:ring-0 w-28" 
+                value={startDate} 
+                onChange={(e) => setStartDate(e.target.value)} 
+              />
+              <span className="text-[9px] font-black uppercase text-slate-400">To</span>
+              <Input 
+                type="date" 
+                className="h-8 border-none bg-transparent font-bold text-[10px] uppercase p-0 focus-visible:ring-0 w-28" 
+                value={endDate} 
+                onChange={(e) => setEndDate(e.target.value)} 
+              />
+            </div>
+          </div>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input placeholder="Search logs..." className="pl-10 h-11 w-48 rounded-xl border-slate-200" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -291,7 +321,7 @@ export function RouteTrackerView({
 
           {!isWeekClosed && (
             <Button variant="outline" className="rounded-xl h-11 border-primary text-primary bg-primary/5 font-bold px-6" onClick={handleFinalizeWeek}>
-              <Archive className="mr-2 h-4 w-4" /> Finalize Week
+              <Archive className="mr-2 h-4 w-4" /> Finalize Selection
             </Button>
           )}
 
@@ -387,7 +417,7 @@ export function RouteTrackerView({
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={19} className="py-20 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">No routes found for this week. {isCurrentWeek ? "Automatic reset active for new week." : ""}</td></tr>
+                    <tr><td colSpan={19} className="py-20 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">No routes found for this period. {isCurrentWeekInRange ? "Automatic reset active for new week." : ""}</td></tr>
                   ) : filtered.map((row) => {
                     const dObj = employees.find(e => e.fullName === row.driver);
                     const hObj = employees.find(e => e.fullName === row.helper);
@@ -446,7 +476,7 @@ export function RouteTrackerView({
                 </tbody>
                 <tfoot>
                   <tr className="bg-slate-900 text-white font-black text-[11px] h-16">
-                    <td className="sticky left-0 z-40 bg-slate-900 border-r-2 border-slate-800 px-4 py-2 text-center uppercase tracking-widest shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Week Totals</td>
+                    <td className="sticky left-0 z-40 bg-slate-900 border-r-2 border-slate-800 px-4 py-2 text-center uppercase tracking-widest shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Totals</td>
                     <td colSpan={4} className="border-r border-slate-800"></td>
                     <td className="px-3 py-2 text-center border-r border-slate-800">{totals.miles}</td>
                     <td className="px-3 py-2 text-center border-r border-slate-800">{totals.stops}</td>
