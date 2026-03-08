@@ -125,6 +125,7 @@ export type AdminSettings = {
 
   // Payroll Formulas
   estimatedPayFormula: string;
+  gasEstimatedPayFormula: string;
   driverPayFormula: string;
   helperPayFormula: string;
   combinedPayFormula: string;

@@ -59,6 +59,7 @@ export const DEFAULT_ADMIN_SETTINGS: Omit<import("./types").AdminSettings, 'id' 
   dateFormat: "YYYY-MM-DD",
 
   estimatedPayFormula: "27 * stops",
+  gasEstimatedPayFormula: "100 + (1.37 * ROUND(miles, 0)) + (12.5 * ROUND(stops, 0))",
   driverPayFormula: "estimatedPay * 0.27",
   helperPayFormula: "estimatedPay * 0.23",
   combinedPayFormula: "driverPay + helperPay",

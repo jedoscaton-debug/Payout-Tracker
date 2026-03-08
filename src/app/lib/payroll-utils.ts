@@ -60,7 +60,7 @@ export function truckRentalMileageCost(miles: number): number {
 /**
  * Helper to determine if a route is EV based on rules
  */
-function isEVRoute(route: string, vehicle: string, routeType?: string, adminSettings?: AdminSettings): boolean {
+export function isEVRoute(route: string, vehicle: string, routeType?: string, adminSettings?: AdminSettings): boolean {
   const r = (route || "").toUpperCase();
   const v = (vehicle || "").toUpperCase();
   const rt = (routeType || "").toUpperCase();
@@ -79,7 +79,12 @@ function isEVRoute(route: string, vehicle: string, routeType?: string, adminSett
  * Dynamic Estimate Pay based on settings
  */
 export function estimatePay(stops: number, miles: number = 0, route: string = "", vehicle: string = "", adminSettings?: AdminSettings, routeType?: string) {
-  const formula = adminSettings?.estimatedPayFormula || DEFAULT_ADMIN_SETTINGS.estimatedPayFormula;
+  const isEV = isEVRoute(route, vehicle, routeType, adminSettings);
+  
+  const formula = isEV
+    ? (adminSettings?.estimatedPayFormula || DEFAULT_ADMIN_SETTINGS.estimatedPayFormula)
+    : (adminSettings?.gasEstimatedPayFormula || DEFAULT_ADMIN_SETTINGS.gasEstimatedPayFormula);
+    
   const result = evaluateFormula(formula, { stops, miles });
   return Number(result.toFixed(2));
 }
@@ -101,7 +106,7 @@ export function driverPay(stops: number, miles: number = 0, route: string = "", 
   
   if (employee?.driverPayoutPercentage !== undefined) {
     percentage = employee.driverPayoutPercentage;
-  } else if (route.toUpperCase() === "EV" && vehicle.toUpperCase() === "EV") {
+  } else if (isEVRoute(route, vehicle, routeType, adminSettings)) {
     percentage = 33; // Node fallback
   }
   

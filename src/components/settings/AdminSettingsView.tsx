@@ -51,7 +51,8 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
     fleetRevenue: 3645,
     fleetNetProfit: 380,
     estimatedWeeklyInsurance: 600,
-    reserveRate: 0.15
+    reserveRate: 0.15,
+    isEV: false
   });
   
   const db = useFirestore();
@@ -60,12 +61,20 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
   const testOutputs = useMemo(() => {
     const scope = { stops: testInputs.stops, miles: testInputs.miles };
     
-    const estPay = evaluateFormula(formData.estimatedPayFormula || "", scope);
+    const formula = testInputs.isEV 
+      ? (formData.estimatedPayFormula || "")
+      : (formData.gasEstimatedPayFormula || "");
+
+    const estPay = evaluateFormula(formula, scope);
     const estFuel = evaluateFormula(formData.estimatedFuelFormula || "", scope);
     
     // Simulator uses standard defaults since it's now linked to specific employee shares
-    const dPay = estPay * 0.27;
-    const hPay = estPay * 0.23;
+    // EV uses 33%/27%, Gas uses 27%/23%
+    const dPercent = testInputs.isEV ? 0.33 : 0.27;
+    const hPercent = testInputs.isEV ? 0.27 : 0.23;
+
+    const dPay = estPay * dPercent;
+    const hPay = estPay * hPercent;
     
     const delta = evaluateFormula(formData.deltaFormula || "", { 
       rxoSettlementPay: testInputs.rxoSettlementPay, 
@@ -178,7 +187,8 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
             <TabsContent value="payroll">
               <SettingsCard title="Payroll Calculation Logic" icon={Calculator}>
                 <div className="space-y-8">
-                  <FormulaField label="EST. PAY Formula" value={formData.estimatedPayFormula || ""} onChange={v => setFormData({...formData, estimatedPayFormula: v})} hint="Variables: stops, miles" />
+                  <FormulaField label="EST. PAY Formula (EV)" value={formData.estimatedPayFormula || ""} onChange={v => setFormData({...formData, estimatedPayFormula: v})} hint="Variables: stops, miles" />
+                  <FormulaField label="GAS PAY Formula (Standard)" value={formData.gasEstimatedPayFormula || ""} onChange={v => setFormData({...formData, gasEstimatedPayFormula: v})} hint="Variables: stops, miles" />
                   
                   <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
                     <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Individual Payout Control</p>
@@ -473,6 +483,18 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
                   <TestInput label="Miles" value={testInputs.miles} onChange={v => setTestInputs({...testInputs, miles: v})} />
                 </div>
                 <TestInput label="RXO Settlement ($)" value={testInputs.rxoSettlementPay} onChange={v => setTestInputs({...testInputs, rxoSettlementPay: v})} />
+                
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10 mt-2">
+                  <div className="space-y-0.5">
+                    <p className="text-[9px] font-black text-white/50 uppercase">EV Test Mode</p>
+                    <p className="text-[8px] text-white/30 font-medium">Simulate EV Route Logic</p>
+                  </div>
+                  <Switch 
+                    checked={testInputs.isEV} 
+                    onCheckedChange={v => setTestInputs({...testInputs, isEV: v})}
+                    className="data-[state=checked]:bg-primary"
+                  />
+                </div>
               </div>
 
               <div className="space-y-4 pt-6 border-t border-white/5">
@@ -480,8 +502,8 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
                 <div className="space-y-3">
                   <ResultRow label="EST. PAY" value={testOutputs.estPay} />
                   <ResultRow label="EST. FUEL" value={testOutputs.estFuel} />
-                  <ResultRow label="DRIVER PAY (EST. 27%)" value={testOutputs.dPay} />
-                  <ResultRow label="HELPER PAY (EST. 23%)" value={testOutputs.hPay} />
+                  <ResultRow label={testInputs.isEV ? "EV DRIVER (33%)" : "GAS DRIVER (27%)"} value={testOutputs.dPay} />
+                  <ResultRow label={testInputs.isEV ? "EV HELPER (27%)" : "GAS HELPER (23%)"} value={testOutputs.hPay} />
                   <div className="h-px bg-white/5 my-2" />
                   <ResultRow label="DELTA Variance" value={testOutputs.delta} isNegative={testOutputs.delta < 0} />
                   <ResultRow label="TRUE NET PROFIT" value={testOutputs.trueNet} isTotal />
@@ -491,7 +513,7 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
               <div className="p-6 bg-primary/10 border border-primary/20 rounded-2xl flex items-start gap-3">
                 <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-[10px] font-medium text-slate-400 leading-relaxed italic">
-                  "Outputs update in real-time as you modify formulas. Driver/Helper previews use baseline percentages (27%/23%) for estimation."
+                  "Outputs update in real-time. Standard node percentages (33/27 for EV, 27/23 for GAS) are used for previews."
                 </p>
               </div>
             </CardContent>
