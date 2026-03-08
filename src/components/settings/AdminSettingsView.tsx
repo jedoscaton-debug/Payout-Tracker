@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -26,7 +25,8 @@ import {
   Percent,
   CheckCircle2,
   XCircle,
-  Truck
+  Truck,
+  Wallet
 } from "lucide-react";
 import { AdminSettings, AdminSettingsAuditLog } from "@/app/lib/types";
 import { DEFAULT_ADMIN_SETTINGS, evaluateFormula } from "@/app/lib/formula-evaluator";
@@ -236,7 +236,7 @@ export function AdminSettingsView({ settings, auditLogs }: AdminSettingsViewProp
                   </div>
                 </div>
                 <div className="mt-8 space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-slate-400">Pay Date Rule</Label>
+                  <Label className="text-[10px) font-black uppercase text-slate-400">Pay Date Rule</Label>
                   <Input className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={formData.payDateRule} onChange={e => setFormData({...formData, payDateRule: e.target.value})} />
                 </div>
               </SettingsCard>
