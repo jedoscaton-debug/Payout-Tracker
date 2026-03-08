@@ -3,15 +3,19 @@ import { Employee, RouteTrackerRow, PayrollRun, PayrollItem, DeductionRecord, De
 import { autoBuildEarnings } from "./payroll-utils";
 
 /**
- * Default state for a new payroll run.
+ * Generates a new unique payroll run state.
  */
-export const initialPayrollRun: PayrollRun = {
-  id: `run-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 5)}`,
-  payPeriodStart: new Date().toISOString().split('T')[0],
-  payPeriodEnd: new Date().toISOString().split('T')[0],
-  payDate: new Date().toISOString().split('T')[0],
-  status: "Draft",
-};
+export function createNewPayrollRun(): PayrollRun {
+  return {
+    id: `run-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 5)}`,
+    payPeriodStart: new Date().toISOString().split('T')[0],
+    payPeriodEnd: new Date().toISOString().split('T')[0],
+    payDate: new Date().toISOString().split('T')[0],
+    status: "Draft",
+  };
+}
+
+export const initialPayrollRun: PayrollRun = createNewPayrollRun();
 
 /**
  * Generates a payroll item for an employee based on tracked routes and active deductions.
@@ -60,7 +64,11 @@ export function createPayrollItem(
     payrollRunId: payrollRun.id,
     employeeId: employee.id,
     employeeNameSnapshot: employee.fullName,
+    employeeEmailSnapshot: employee.email || "",
     dailyRateSnapshot: employee.defaultDailyRate,
+    payDateSnapshot: payrollRun.payDate,
+    payPeriodStartSnapshot: payrollRun.payPeriodStart,
+    payPeriodEndSnapshot: payrollRun.payPeriodEnd,
     notes: "",
     earningsLines,
     otherEarningsLines: [],

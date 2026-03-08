@@ -53,6 +53,8 @@ export type Employee = {
   defaultDailyRate: string;
   paymentMethod?: string;
   authUid?: string;
+  email?: string;
+  contactNumber?: string;
   driverPayoutPercentage?: number;
   helperPayoutPercentage?: number;
 };
@@ -92,7 +94,11 @@ export type PayrollItem = {
   payrollRunId: string;
   employeeId: string;
   employeeNameSnapshot: string;
+  employeeEmailSnapshot?: string;
   dailyRateSnapshot: string;
+  payDateSnapshot?: string;
+  payPeriodStartSnapshot?: string;
+  payPeriodEndSnapshot?: string;
   notes: string;
   earningsLines: EarningsLine[];
   otherEarningsLines: OtherEarningLine[];
@@ -180,7 +186,7 @@ export type RXORouteDetail = {
   delta: number;
   deltaStatus: 'RED' | 'GREEN';
   internalRouteId?: string;
-  matchStatus: 'Matched' | 'Partial Match' | 'Unmatched';
+  matchStatus: 'Matched' | 'Partial Match' | 'Unmatched' | 'NOT MATCH' | 'VERIFIED MATCH';
   overrideEstimate?: number;
   finalEstimatedPay: number;
   notes?: string;

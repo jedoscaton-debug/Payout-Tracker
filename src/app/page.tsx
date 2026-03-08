@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
@@ -84,9 +85,23 @@ export default function AppShell() {
   const [payrollRun, setPayrollRun] = useState<PayrollRun>(initialPayrollRun);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
 
-  // Sync Payroll Items
+  // 1. Logic to Load Saved Items if Run is Finalized
+  const savedItemsQuery = useMemoFirebase(() => 
+    payrollRun.status === "Finalized" ? collection(db, "payrollRuns", payrollRun.id, "payrollItems") : null, 
+    [db, payrollRun.id, payrollRun.status]
+  );
+  const { data: savedItemsData } = useCollection<PayrollItem>(savedItemsQuery, { enabled: payrollRun.status === "Finalized" });
+
   useEffect(() => {
-    if (!isAdmin || employees.length === 0) return;
+    if (payrollRun.status === "Finalized" && savedItemsData) {
+      setPayrollItems(savedItemsData);
+    }
+  }, [payrollRun.status, savedItemsData]);
+
+  // 2. Logic to Sync Draft Items
+  useEffect(() => {
+    if (!isAdmin || employees.length === 0 || payrollRun.status === "Finalized") return;
+    
     setPayrollItems(prev => {
       const existingIds = new Set(prev.map(i => i.employeeId));
       const newItems = employees
