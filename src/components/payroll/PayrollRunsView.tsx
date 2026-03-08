@@ -258,7 +258,7 @@ export function PayrollRunsView({
             <DropdownMenuContent align="end" className="w-72 rounded-xl p-2">
               <p className="text-[9px] font-black uppercase text-slate-400 p-2 tracking-widest">Recent Saved Runs</p>
               {pastRuns?.map(r => (
-                <div key={r.id} className="flex items-center group px-1">
+                <div key={r.id} className="flex items-center gap-1 group px-1">
                   <DropdownMenuItem 
                     onClick={() => loadPastRun(r)} 
                     className={cn(
@@ -271,16 +271,16 @@ export function PayrollRunsView({
                       <p className={cn("text-[10px] uppercase", payrollRun.id === r.id ? "text-white/70" : "text-slate-400")}>Paid: {r.payDate}</p>
                     </div>
                   </DropdownMenuItem>
-                  <button 
-                    className="h-10 w-10 flex items-center justify-center text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                  <div 
+                    className="h-10 w-10 flex items-center justify-center text-slate-300 hover:text-rose-500 cursor-pointer rounded-lg hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
                     onClick={(e) => {
-                      e.stopPropagation();
                       e.preventDefault();
+                      e.stopPropagation();
                       handleDeleteRun(r.id);
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </div>
                 </div>
               ))}
               <DropdownMenuItem onClick={startNewRun} className="rounded-lg py-3 mt-2 border-t text-primary font-bold">
