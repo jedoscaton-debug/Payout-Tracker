@@ -17,12 +17,13 @@ import {
   History,
   ChevronDown,
   Loader2,
-  Save
+  Save,
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { doc, collection, query, orderBy, limit } from "firebase/firestore";
 
 import { 
@@ -155,8 +156,16 @@ export function PayrollRunsView({
 
   const loadPastRun = (run: PayrollRun) => {
     setPayrollRun(run);
-    // Note: Items will be synced by the parent AppShell when payrollRun ID changes if logic is added there
-    toast({ title: `Loading Run: ${run.payDate}` });
+    toast({ title: `Loaded Run: ${shortDate(run.payPeriodStart)}` });
+  };
+
+  const handleDeleteRun = (id: string) => {
+    if (!confirm("Are you sure you want to permanently delete this payroll record?")) return;
+    deleteDocumentNonBlocking(doc(db, "payrollRuns", id));
+    toast({ title: "Record Deleted", description: "The historical payroll run has been removed." });
+    if (payrollRun.id === id) {
+      startNewRun();
+    }
   };
 
   const updateItem = (itemId: string, updater: (item: PayrollItem) => PayrollItem) => {
@@ -216,15 +225,33 @@ export function PayrollRunsView({
                 <History className="mr-2 h-4 w-4" /> Run History <ChevronDown className="ml-2 h-3 w-3 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 rounded-xl p-2">
+            <DropdownMenuContent align="end" className="w-72 rounded-xl p-2">
               <p className="text-[9px] font-black uppercase text-slate-400 p-2 tracking-widest">Recent Saved Runs</p>
               {pastRuns?.map(r => (
-                <DropdownMenuItem key={r.id} onClick={() => loadPastRun(r)} className="rounded-lg py-3 cursor-pointer">
-                  <div className="space-y-0.5">
-                    <p className="font-bold text-xs">Week of {shortDate(r.payPeriodStart)}</p>
-                    <p className="text-[10px] text-slate-400 uppercase">Paid: {r.payDate}</p>
-                  </div>
-                </DropdownMenuItem>
+                <div key={r.id} className="flex items-center group px-1">
+                  <DropdownMenuItem 
+                    onClick={() => loadPastRun(r)} 
+                    className={cn(
+                      "flex-1 rounded-lg py-3 cursor-pointer transition-colors", 
+                      payrollRun.id === r.id ? "bg-primary text-white hover:bg-primary/90" : "hover:bg-slate-50"
+                    )}
+                  >
+                    <div className="space-y-0.5">
+                      <p className={cn("font-bold text-xs", payrollRun.id === r.id ? "text-white" : "text-slate-900")}>Week of {shortDate(r.payPeriodStart)}</p>
+                      <p className={cn("text-[10px] uppercase", payrollRun.id === r.id ? "text-white/70" : "text-slate-400")}>Paid: {r.payDate}</p>
+                    </div>
+                  </DropdownMenuItem>
+                  <button 
+                    className="h-10 w-10 flex items-center justify-center text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleDeleteRun(r.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               ))}
               <DropdownMenuItem onClick={startNewRun} className="rounded-lg py-3 mt-2 border-t text-primary font-bold">
                 <Plus className="mr-2 h-4 w-4" /> Start Fresh Run
