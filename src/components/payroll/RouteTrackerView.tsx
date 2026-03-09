@@ -163,7 +163,7 @@ export function RouteTrackerView({
         truckRental: acc.truckRental + (row.truckRental || 0),
         fuel: acc.fuel + fuel,
         totalExp: acc.totalExp + totalExp,
-        netProfit: acc.netProfit + (totalExp - estRev)
+        netProfit: acc.netProfit + (estRev - totalExp)
       };
     }, {
       miles: 0, stops: 0, estPay: 0, driverPay: 0, helperPay: 0, truckRental: 0, fuel: 0, totalExp: 0, netProfit: 0
@@ -219,7 +219,7 @@ export function RouteTrackerView({
       const mileageCost = truckRentalMileageCost(row.miles);
       const fuel = estimateFuel(row.miles, settings);
       const totalExp = (row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel + dPay + hPay;
-      const netProfit = Number((totalExp - estRev).toFixed(2));
+      const netProfit = Number((estRev - totalExp).toFixed(2));
 
       return [
         `"${row.route}"`, `"${row.routeType}"`, `"${row.vehicleNumber}"`, `"${row.date}"`, `"${getDayOfWeek(row.date)}"`,
@@ -256,7 +256,7 @@ export function RouteTrackerView({
   const mileageCostValue = truckRentalMileageCost(currentRoute?.miles || 0);
   const fuelValue = estimateFuel(currentRoute?.miles || 0, settings);
   const totalExpensesValue = Number(((currentRoute?.truckRental || 0) + (currentRoute?.insurance || 0) + mileageCostValue + fuelValue + dPayValue + hPayValue).toFixed(2));
-  const netProfitValue = Number((totalExpensesValue - estPayValue).toFixed(2));
+  const netProfitValue = Number((estPayValue - totalExpensesValue).toFixed(2));
 
   const isCurrentWeekInRange = startDate <= currentWeek.start && endDate >= currentWeek.end;
   const isWeekClosed = filtered.every(r => r.status === "Closed") && filtered.length > 0;
@@ -367,7 +367,7 @@ export function RouteTrackerView({
                   </div>
                 </div>
                 <div className={cn("rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl transition-colors", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-emerald-600 shadow-emerald-900/20")}>
-                  <div className="space-y-1"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Audit Net Profit</p><p className="text-[9px] font-bold text-white/50 italic">Profit = Negative Red</p></div>
+                  <div className="space-y-1"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Audit Net Profit</p><p className="text-[9px] font-bold text-white/50 italic">Profit = Estimated Pay - Expenses</p></div>
                   <div className="text-4xl font-black tracking-tighter text-white">{currency(netProfitValue)}</div>
                 </div>
                 <div className="flex items-center justify-end gap-4 pt-4">
@@ -427,7 +427,7 @@ export function RouteTrackerView({
                     const mileageCost = truckRentalMileageCost(row.miles);
                     const fuel = estimateFuel(row.miles, settings);
                     const totalExp = Number(((row.truckRental || 0) + mileageCost + (row.insurance || 0) + fuel + dPay + hPay).toFixed(2));
-                    const netProfit = Number((totalExp - estRev).toFixed(2));
+                    const netProfit = Number((estRev - totalExp).toFixed(2));
                     const isClosed = row.status === "Closed";
                     
                     return (
@@ -535,7 +535,7 @@ export function RouteTrackerView({
                 </div>
               </div>
               <div className={cn("rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl transition-colors", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-emerald-600 shadow-emerald-900/20")}>
-                <div className="space-y-1"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Audit Net Profit</p><p className="text-[9px] font-bold text-white/50 italic">Profit = Negative Red</p></div>
+                <div className="space-y-1"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Audit Net Profit</p><p className="text-[9px] font-bold text-white/50 italic">Profit = Estimated Pay - Expenses</p></div>
                 <div className="text-4xl font-black tracking-tighter text-white">{currency(netProfitValue)}</div>
               </div>
               <div className="flex items-center justify-end gap-4 pt-4">
