@@ -162,7 +162,7 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
-      <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-md px-6 h-16 flex items-center justify-between">
+      <header className="no-print sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-md px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-black text-xl shadow-lg overflow-hidden">
             {adminSettings?.companyLogo ? (
