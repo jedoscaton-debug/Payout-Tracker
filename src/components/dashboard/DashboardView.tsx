@@ -53,12 +53,12 @@ export function DashboardView({ summary, deductions }: DashboardViewProps) {
 
       <PayrollSummaryCards summary={summary} />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         <Card className="lg:col-span-2 rounded-[2rem] border-0 shadow-sm overflow-hidden bg-white">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6 sm:p-8">
             <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Net Pay Distribution</CardTitle>
           </CardHeader>
-          <CardContent className="p-8 h-[400px]">
+          <CardContent className="p-4 sm:p-8 h-[300px] sm:h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -91,10 +91,10 @@ export function DashboardView({ summary, deductions }: DashboardViewProps) {
         </Card>
 
         <Card className="rounded-[2rem] border-0 shadow-sm overflow-hidden bg-white">
-          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6 sm:p-8">
             <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Claims Widget</CardTitle>
           </CardHeader>
-          <CardContent className="p-8 space-y-6">
+          <CardContent className="p-6 sm:p-8 space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
                 <div className="flex items-center gap-3">

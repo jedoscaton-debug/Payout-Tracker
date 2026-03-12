@@ -266,124 +266,124 @@ export function RouteTrackerView({
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Route Tracker</h3>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tighter">Route Tracker</h3>
             {isWeekClosed && <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 uppercase text-[9px] font-black"><Lock className="h-3 w-3 mr-1" /> Archived</Badge>}
           </div>
-          <p className="text-sm text-slate-500 font-medium">Log and analyze daily route profitability across weekly periods or custom ranges.</p>
+          <p className="text-sm text-slate-500 font-medium">Log and analyze daily route profitability.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-white px-4 h-11 rounded-xl border border-slate-200 shadow-sm">
-            <History className="h-4 w-4 text-slate-400" />
-            <span className="text-[9px] font-black uppercase text-slate-400 whitespace-nowrap">Review Period:</span>
+          <div className="flex flex-1 sm:flex-none items-center gap-2 bg-white px-4 h-11 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <History className="h-4 w-4 text-slate-400 shrink-0" />
             <Select value={selectedWeekStart} onValueChange={handleWeekChange}>
-              <SelectTrigger className="h-8 border-none bg-transparent font-bold text-[10px] uppercase min-w-[200px] p-0 focus:ring-0">
-                <SelectValue />
+              <SelectTrigger className="h-8 border-none bg-transparent font-bold text-[10px] uppercase min-w-[140px] p-0 focus:ring-0">
+                <SelectValue placeholder="Period" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {availableWeeks.map(w => (
                   <SelectItem key={w.start} value={w.start} className="text-[10px] font-bold uppercase">
-                    {shortDate(w.start)} - {shortDate(w.end)} {w.start === currentWeek.start ? "(Active Week)" : ""}
+                    {shortDate(w.start)} - {shortDate(w.end)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex items-center gap-2 bg-white px-4 h-11 rounded-xl border border-slate-200 shadow-sm">
-            <CalendarDays className="h-4 w-4 text-slate-400" />
+          <div className="flex flex-1 sm:flex-none items-center gap-2 bg-white px-4 h-11 rounded-xl border border-slate-200 shadow-sm">
+            <CalendarDays className="h-4 w-4 text-slate-400 shrink-0" />
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-black uppercase text-slate-400">From</span>
               <Input 
                 type="date" 
-                className="h-8 border-none bg-transparent font-bold text-[10px] uppercase p-0 focus-visible:ring-0 w-28" 
+                className="h-8 border-none bg-transparent font-bold text-[10px] uppercase p-0 focus-visible:ring-0 w-24 sm:w-28" 
                 value={startDate} 
                 onChange={(e) => setStartDate(e.target.value)} 
               />
-              <span className="text-[9px] font-black uppercase text-slate-400">To</span>
+              <span className="text-[9px] font-black text-slate-300">TO</span>
               <Input 
                 type="date" 
-                className="h-8 border-none bg-transparent font-bold text-[10px] uppercase p-0 focus-visible:ring-0 w-28" 
+                className="h-8 border-none bg-transparent font-bold text-[10px] uppercase p-0 focus-visible:ring-0 w-24 sm:w-28" 
                 value={endDate} 
                 onChange={(e) => setEndDate(e.target.value)} 
               />
             </div>
           </div>
 
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-none min-w-[150px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input placeholder="Search logs..." className="pl-10 h-11 w-48 rounded-xl border-slate-200" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input placeholder="Search..." className="pl-10 h-11 w-full rounded-xl border-slate-200" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           
-          <Button variant="outline" className="rounded-xl h-11 border-slate-200 bg-white font-bold px-6 shadow-sm" onClick={handleExportAudit}>
-            <Download className="mr-2 h-4 w-4" /> Export CSV
-          </Button>
-
-          {!isWeekClosed && (
-            <Button variant="outline" className="rounded-xl h-11 border-primary text-primary bg-primary/5 font-bold px-6" onClick={handleFinalizeWeek}>
-              <Archive className="mr-2 h-4 w-4" /> Finalize Selection
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Button variant="outline" className="flex-1 sm:flex-none rounded-xl h-11 border-slate-200 bg-white font-bold px-4 shadow-sm" onClick={handleExportAudit}>
+              <Download className="mr-2 h-4 w-4" /> CSV
             </Button>
-          )}
 
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-            <DialogTrigger asChild>
-              <Button className="rounded-xl h-11 bg-primary px-6 font-bold shadow-lg shadow-primary/20 transition-all hover:-translate-y-0.5">
-                <Plus className="mr-2 h-4 w-4" /> Log Daily Route
+            {!isWeekClosed && (
+              <Button variant="outline" className="flex-1 sm:flex-none rounded-xl h-11 border-primary text-primary bg-primary/5 font-bold px-4" onClick={handleFinalizeWeek}>
+                <Archive className="mr-2 h-4 w-4" /> Finalize
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-[1000px] p-0 border-none shadow-2xl rounded-[2rem] overflow-hidden bg-white">
-              <DialogHeader className="sr-only"><DialogTitle>Log Daily Route Entry</DialogTitle></DialogHeader>
-              <div className="p-10 space-y-8">
-                <div className="grid grid-cols-5 gap-x-6 gap-y-8">
-                  <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Route ID</Label><Input placeholder="e.g. A01_EV" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.route || ""} onChange={(e) => setNewRoute({...newRoute, route: e.target.value})} /></div>
-                  <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Route Type</Label>
-                    <Select value={newRoute.routeType || "IKEA"} onValueChange={(v) => setNewRoute({...newRoute, routeType: v})}>
-                      <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="IKEA">IKEA</SelectItem><SelectItem value="EA">EA</SelectItem><SelectItem value="GAS">GAS</SelectItem><SelectItem value="EV">EV</SelectItem></SelectContent>
-                    </Select>
+            )}
+
+            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex-1 sm:flex-none rounded-xl h-11 bg-primary px-6 font-bold shadow-lg shadow-primary/20 transition-all">
+                  <Plus className="mr-2 h-4 w-4" /> Log Route
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[1000px] w-[calc(100vw-2rem)] p-0 border-none shadow-2xl rounded-[2rem] overflow-y-auto max-h-[90vh] bg-white">
+                <DialogHeader className="sr-only"><DialogTitle>Log Daily Route Entry</DialogTitle></DialogHeader>
+                <div className="p-6 sm:p-10 space-y-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-6 sm:gap-y-8">
+                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Route ID</Label><Input placeholder="e.g. A01_EV" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.route || ""} onChange={(e) => setNewRoute({...newRoute, route: e.target.value})} /></div>
+                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Route Type</Label>
+                      <Select value={newRoute.routeType || "IKEA"} onValueChange={(v) => setNewRoute({...newRoute, routeType: v})}>
+                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="IKEA">IKEA</SelectItem><SelectItem value="EA">EA</SelectItem><SelectItem value="GAS">GAS</SelectItem><SelectItem value="EV">EV</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Vehicle #</Label><Input placeholder="e.g. 2" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.vehicleNumber || ""} onChange={(e) => setNewRoute({...newRoute, vehicleNumber: e.target.value})} /></div>
+                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Date</Label><Input type="date" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.date || ""} onChange={(e) => setNewRoute({...newRoute, date: e.target.value})} /></div>
+                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Day of Week</Label>
+                      <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold uppercase text-xs">{getDayOfWeek(newRoute.date || "")}</div>
+                    </div>
+                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Miles</Label><Input type="number" step="0.1" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.miles || 0} onChange={(e) => setNewRoute({...newRoute, miles: Number(e.target.value)})} /></div>
+                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Stops</Label><Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.stops || 0} onChange={(e) => setNewRoute({...newRoute, stops: Number(e.target.value)})} /></div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-slate-400">Est. Pay (Override)</Label>
+                      <Input type="number" className="h-12 rounded-xl bg-slate-100 border-none font-bold" placeholder={estimatePay(newRoute.stops || 0, newRoute.miles || 0, newRoute.route || "", newRoute.vehicleNumber || "", settings, newRoute.routeType).toString()} value={newRoute.estimatedPay === 0 ? "" : newRoute.estimatedPay} onChange={(e) => setNewRoute({...newRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} />
+                    </div>
+                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Driver</Label>
+                      <Select value={newRoute.driver || ""} onValueChange={(v) => setNewRoute({...newRoute, driver: v})}>
+                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Select Driver" /></SelectTrigger>
+                        <SelectContent>{employees.map(e => <SelectItem key={e.id} value={e.fullName}>{e.fullName}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Helper</Label>
+                      <Select value={newRoute.helper || "No Helper"} onValueChange={(v) => setNewRoute({...newRoute, helper: v})}>
+                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="No Helper" /></SelectTrigger>
+                        <SelectContent><SelectItem value="No Helper">No Helper</SelectItem>{employees.map(e => <SelectItem key={e.id} value={e.fullName}>{e.fullName}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Vehicle #</Label><Input placeholder="e.g. 2" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.vehicleNumber || ""} onChange={(e) => setNewRoute({...newRoute, vehicleNumber: e.target.value})} /></div>
-                  <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Date</Label><Input type="date" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.date || ""} onChange={(e) => setNewRoute({...newRoute, date: e.target.value})} /></div>
-                  <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Day of Week</Label>
-                    <div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold uppercase text-xs">{getDayOfWeek(newRoute.date || "")}</div>
+                  <div className={cn("rounded-[1.5rem] p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl transition-colors", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-emerald-600 shadow-emerald-900/20")}>
+                    <div className="space-y-1 text-center sm:text-left"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Audit Net Profit</p><p className="text-[9px] font-bold text-white/50 italic">Profit = Estimated Pay - Expenses</p></div>
+                    <div className="text-3xl sm:text-4xl font-black tracking-tighter text-white">{currency(netProfitValue)}</div>
                   </div>
-                  <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Miles</Label><Input type="number" step="0.1" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.miles || 0} onChange={(e) => setNewRoute({...newRoute, miles: Number(e.target.value)})} /></div>
-                  <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Stops</Label><Input type="number" className="h-12 rounded-xl bg-slate-50 border-none font-bold" value={newRoute.stops || 0} onChange={(e) => setNewRoute({...newRoute, stops: Number(e.target.value)})} /></div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-slate-400">Est. Pay (Override)</Label>
-                    <Input type="number" className="h-12 rounded-xl bg-slate-100 border-none font-bold" placeholder={estimatePay(newRoute.stops || 0, newRoute.miles || 0, newRoute.route || "", newRoute.vehicleNumber || "", settings, newRoute.routeType).toString()} value={newRoute.estimatedPay === 0 ? "" : newRoute.estimatedPay} onChange={(e) => setNewRoute({...newRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} />
-                  </div>
-                  <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Driver</Label>
-                    <Select value={newRoute.driver || ""} onValueChange={(v) => setNewRoute({...newRoute, driver: v})}>
-                      <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Select Driver" /></SelectTrigger>
-                      <SelectContent>{employees.map(e => <SelectItem key={e.id} value={e.fullName}>{e.fullName}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Helper</Label>
-                    <Select value={newRoute.helper || "No Helper"} onValueChange={(v) => setNewRoute({...newRoute, helper: v})}>
-                      <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="No Helper" /></SelectTrigger>
-                      <SelectContent><SelectItem value="No Helper">No Helper</SelectItem>{employees.map(e => <SelectItem key={e.id} value={e.fullName}>{e.fullName}</SelectItem>)}</SelectContent>
-                    </Select>
+                  <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-4">
+                    <Button variant="ghost" onClick={() => setIsAddOpen(false)} className="w-full sm:w-auto px-8 font-bold text-slate-500 rounded-xl order-2 sm:order-1">Cancel</Button>
+                    <Button onClick={(e) => {
+                      e.preventDefault();
+                      if (onAddRoute) {
+                        onAddRoute({ id: `rt-${Date.now()}`, ...newRoute as RouteTrackerRow });
+                        setIsAddOpen(false);
+                        setNewRoute({ route: "", routeType: "IKEA", vehicleNumber: "", date: new Date().toISOString().split('T')[0], miles: 0, stops: 0, estimatedPay: 0, truckRental: TRUCK_RENTAL_FIXED, insurance: 0, driver: "", helper: "", status: "Active" });
+                      }
+                    }} className="w-full sm:w-auto bg-slate-900 text-white px-10 h-14 rounded-[1.25rem] font-bold shadow-xl transition-transform hover:-translate-y-0.5 order-1 sm:order-2">Save Log Entry</Button>
                   </div>
                 </div>
-                <div className={cn("rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl transition-colors", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-emerald-600 shadow-emerald-900/20")}>
-                  <div className="space-y-1"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Audit Net Profit</p><p className="text-[9px] font-bold text-white/50 italic">Profit = Estimated Pay - Expenses</p></div>
-                  <div className="text-4xl font-black tracking-tighter text-white">{currency(netProfitValue)}</div>
-                </div>
-                <div className="flex items-center justify-end gap-4 pt-4">
-                  <Button variant="ghost" onClick={() => setIsAddOpen(false)} className="px-8 font-bold text-slate-500 rounded-xl">Cancel</Button>
-                  <Button onClick={(e) => {
-                    e.preventDefault();
-                    if (onAddRoute) {
-                      onAddRoute({ id: `rt-${Date.now()}`, ...newRoute as RouteTrackerRow });
-                      setIsAddOpen(false);
-                      setNewRoute({ route: "", routeType: "IKEA", vehicleNumber: "", date: new Date().toISOString().split('T')[0], miles: 0, stops: 0, estimatedPay: 0, truckRental: TRUCK_RENTAL_FIXED, insurance: 0, driver: "", helper: "", status: "Active" });
-                    }
-                  }} className="bg-slate-900 text-white px-10 h-14 rounded-[1.25rem] font-bold shadow-xl transition-transform hover:-translate-y-0.5">Save Log Entry</Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
 
@@ -500,26 +500,26 @@ export function RouteTrackerView({
       </Card>
 
       <Dialog open={!!editingRoute} onOpenChange={(open) => !open && setEditingRoute(null)}>
-        <DialogContent className="max-w-[1000px] p-0 border-none shadow-2xl rounded-[2rem] overflow-hidden bg-white">
+        <DialogContent className="max-w-[1000px] w-[calc(100vw-2rem)] p-0 border-none shadow-2xl rounded-[2rem] overflow-y-auto max-h-[90vh] bg-white">
           <DialogHeader className="sr-only"><DialogTitle>Edit Route Entry</DialogTitle></DialogHeader>
           {editingRoute && (
-            <div className="p-10 space-y-8">
-              <div className="grid grid-cols-5 gap-x-6 gap-y-8">
-                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Route ID</Label><input className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.route || ""} onChange={(e) => setEditingRoute({...editingRoute, route: e.target.value})} /></div>
+            <div className="p-6 sm:p-10 space-y-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-6 sm:gap-y-8">
+                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Route ID</Label><Input className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.route || ""} onChange={(e) => setEditingRoute({...editingRoute, route: e.target.value})} /></div>
                 <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Route Type</Label>
                   <Select value={editingRoute.routeType || "IKEA"} onValueChange={(v) => setEditingRoute({...editingRoute, routeType: v})}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="IKEA">IKEA</SelectItem><SelectItem value="EA">EA</SelectItem><SelectItem value="GAS">GAS</SelectItem><SelectItem value="EV">EV</SelectItem></SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Vehicle #</Label><input className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.vehicleNumber || ""} onChange={(e) => setEditingRoute({...editingRoute, vehicleNumber: e.target.value})} /></div>
-                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Date</Label><input type="date" className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.date || ""} onChange={(e) => setEditingRoute({...editingRoute, date: e.target.value})} /></div>
+                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Vehicle #</Label><Input className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.vehicleNumber || ""} onChange={(e) => setEditingRoute({...editingRoute, vehicleNumber: e.target.value})} /></div>
+                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Date</Label><Input type="date" className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.date || ""} onChange={(e) => setEditingRoute({...editingRoute, date: e.target.value})} /></div>
                 <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Day of Week</Label><div className="h-12 flex items-center px-4 rounded-xl bg-slate-50 text-slate-400 font-bold uppercase text-xs">{getDayOfWeek(editingRoute.date || "")}</div></div>
-                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Miles</Label><input type="number" step="0.1" className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.miles || 0} onChange={(e) => setEditingRoute({...editingRoute, miles: Number(e.target.value)})} /></div>
-                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Stops</Label><input type="number" className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.stops || 0} onChange={(e) => setEditingRoute({...editingRoute, stops: Number(e.target.value)})} /></div>
+                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Miles</Label><Input type="number" step="0.1" className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.miles || 0} onChange={(e) => setEditingRoute({...editingRoute, miles: Number(e.target.value)})} /></div>
+                <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Stops</Label><Input type="number" className="flex h-12 w-full border-none bg-slate-50 px-4 rounded-xl font-bold text-sm focus:ring-2 focus:ring-primary outline-none" value={editingRoute.stops || 0} onChange={(e) => setEditingRoute({...editingRoute, stops: Number(e.target.value)})} /></div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-slate-400">Est. Pay (Override)</Label>
-                  <input type="number" className="flex h-12 w-full border-none bg-slate-100 px-4 rounded-xl font-bold text-sm text-slate-900 focus:bg-white outline-none" placeholder={estimatePay(editingRoute.stops || 0, editingRoute.miles || 0, editingRoute.route || "", editingRoute.vehicleNumber || "", settings, editingRoute.routeType).toString()} value={editingRoute.estimatedPay === 0 ? "" : editingRoute.estimatedPay} onChange={(e) => setEditingRoute({...editingRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} />
+                  <Input type="number" className="flex h-12 w-full border-none bg-slate-100 px-4 rounded-xl font-bold text-sm text-slate-900 focus:bg-white outline-none" placeholder={estimatePay(editingRoute.stops || 0, editingRoute.miles || 0, editingRoute.route || "", editingRoute.vehicleNumber || "", settings, editingRoute.routeType).toString()} value={editingRoute.estimatedPay === 0 ? "" : editingRoute.estimatedPay} onChange={(e) => setEditingRoute({...editingRoute, estimatedPay: e.target.value === "" ? 0 : Number(e.target.value)})} />
                 </div>
                 <div className="space-y-2"><Label className="text-[10px] font-black uppercase text-slate-400">Driver</Label>
                   <Select value={editingRoute.driver || ""} onValueChange={(v) => setEditingRoute({...editingRoute, driver: v})}>
@@ -534,12 +534,12 @@ export function RouteTrackerView({
                   </Select>
                 </div>
               </div>
-              <div className={cn("rounded-[1.5rem] p-8 flex items-center justify-between shadow-xl transition-colors", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-emerald-600 shadow-emerald-900/20")}>
-                <div className="space-y-1"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Audit Net Profit</p><p className="text-[9px] font-bold text-white/50 italic">Profit = Estimated Pay - Expenses</p></div>
-                <div className="text-4xl font-black tracking-tighter text-white">{currency(netProfitValue)}</div>
+              <div className={cn("rounded-[1.5rem] p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl transition-colors", netProfitValue < 0 ? "bg-rose-600 shadow-rose-900/20" : "bg-emerald-600 shadow-emerald-900/20")}>
+                <div className="space-y-1 text-center sm:text-left"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Audit Net Profit</p><p className="text-[9px] font-bold text-white/50 italic">Profit = Estimated Pay - Expenses</p></div>
+                <div className="text-3xl sm:text-4xl font-black tracking-tighter text-white">{currency(netProfitValue)}</div>
               </div>
-              <div className="flex items-center justify-end gap-4 pt-4">
-                <Button variant="ghost" onClick={() => setIsEditOpen(false)} className="px-8 font-bold text-slate-500 rounded-xl">Cancel</Button>
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-4 pt-4">
+                <Button variant="ghost" onClick={() => setIsEditOpen(false)} className="w-full sm:w-auto px-8 font-bold text-slate-500 rounded-xl order-2 sm:order-1">Cancel</Button>
                 <Button onClick={(e) => {
                   e.preventDefault();
                   if (onUpdateRoute && editingRoute) {
@@ -547,7 +547,7 @@ export function RouteTrackerView({
                     setIsEditOpen(false);
                     setEditingRoute(null);
                   }
-                }} className="bg-slate-900 text-white px-10 h-14 rounded-[1.25rem] font-bold shadow-xl transition-transform hover:-translate-y-0.5">Update System Log</Button>
+                }} className="w-full sm:w-auto bg-slate-900 text-white px-10 h-14 rounded-[1.25rem] font-bold shadow-xl transition-transform hover:-translate-y-0.5 order-1 sm:order-2">Update System Log</Button>
               </div>
             </div>
           )}

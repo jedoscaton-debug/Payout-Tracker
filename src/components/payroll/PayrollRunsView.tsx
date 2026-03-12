@@ -230,11 +230,11 @@ export function PayrollRunsView({
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-primary shadow-sm">
+          <div className="h-12 w-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-primary shadow-sm shrink-0">
             <History className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter leading-none">Weekly Payroll Run</h3>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tighter leading-none">Weekly Payroll Run</h3>
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="outline" className={cn(
                 "text-[10px] font-black uppercase px-3 py-1",
@@ -243,7 +243,7 @@ export function PayrollRunsView({
                 {payrollRun.status === "Finalized" ? <Lock className="h-3 w-3 mr-1.5" /> : <CheckCircle2 className="h-3 w-3 mr-1.5" />}
                 {payrollRun.status} RUN
               </Badge>
-              <span className="text-[10px] font-bold text-slate-400 uppercase">ID: {payrollRun.id.split('-').pop()}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase hidden sm:inline">ID: {payrollRun.id.split('-').pop()}</span>
             </div>
           </div>
         </div>
@@ -251,11 +251,11 @@ export function PayrollRunsView({
         <div className="flex flex-wrap items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="rounded-xl h-11 bg-white font-bold border-slate-200 shadow-sm transition-all hover:bg-slate-50">
+              <Button variant="outline" className="flex-1 sm:flex-none rounded-xl h-11 bg-white font-bold border-slate-200 shadow-sm transition-all hover:bg-slate-50">
                 <History className="mr-2 h-4 w-4" /> Run History <ChevronDown className="ml-2 h-3 w-3 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 rounded-[1.5rem] p-3 shadow-2xl border-slate-100 bg-white">
+            <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-80 rounded-[1.5rem] p-3 shadow-2xl border-slate-100 bg-white">
               <p className="text-[9px] font-black uppercase text-slate-400 p-2 tracking-widest mb-2 border-b border-slate-50">Recent Saved Runs</p>
               <div className="max-h-[350px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                 {pastRuns?.map(r => (
@@ -299,51 +299,49 @@ export function PayrollRunsView({
 
           {payrollRun.status !== "Finalized" && (
             <Button 
-              className="rounded-xl h-11 bg-slate-900 px-8 font-bold shadow-xl shadow-slate-200 transition-all hover:-translate-y-0.5 active:translate-y-0"
+              className="flex-1 sm:flex-none rounded-xl h-11 bg-slate-900 px-8 font-bold shadow-xl shadow-slate-200 transition-all hover:-translate-y-0.5 active:translate-y-0"
               onClick={handleFinalize}
               disabled={isFinalizing}
             >
               {isFinalizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Finalize & Complete Run
+              Finalize Run
             </Button>
           )}
         </div>
       </div>
 
       <Card className="rounded-[2.5rem] border-0 shadow-sm overflow-hidden bg-white">
-        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
-          <div className="flex items-center justify-between">
+        <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-primary" />
               <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Schedule Configuration</CardTitle>
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" className="h-10 rounded-xl bg-white border-slate-200 font-bold hover:bg-slate-50" onClick={refreshFromRoutes} disabled={payrollRun.status === "Finalized"}>
-                <RefreshCw className="mr-2 h-4 w-4" /> Sync Claims & Routes
-              </Button>
-            </div>
+            <Button variant="outline" className="h-10 rounded-xl bg-white border-slate-200 font-bold hover:bg-slate-50" onClick={refreshFromRoutes} disabled={payrollRun.status === "Finalized"}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Sync Claims & Routes
+            </Button>
           </div>
         </CardHeader>
-        <CardContent className="p-8">
-          <div className="grid gap-8 md:grid-cols-3">
+        <CardContent className="p-6 sm:p-8">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
             <div className="space-y-3">
               <div className="flex flex-col gap-1 px-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Period Start</label>
-                <span className="text-[8px] font-black text-primary uppercase leading-none">Sunday (Standard)</span>
+                <span className="text-[8px] font-black text-primary uppercase leading-none">Sunday</span>
               </div>
               <Input className="h-12 rounded-2xl bg-slate-50/50 border-slate-100 focus:bg-white transition-all font-bold" type="date" value={payrollRun.payPeriodStart || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => handlePeriodStartChange(e.target.value)} />
             </div>
             <div className="space-y-3">
               <div className="flex flex-col gap-1 px-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Period End</label>
-                <span className="text-[8px] font-black text-primary uppercase leading-none">Saturday (Standard)</span>
+                <span className="text-[8px] font-black text-primary uppercase leading-none">Saturday</span>
               </div>
               <Input className="h-12 rounded-2xl bg-slate-50/50 border-slate-100 focus:bg-white transition-all font-bold" type="date" value={payrollRun.payPeriodEnd || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => handlePeriodEndChange(e.target.value)} />
             </div>
             <div className="space-y-3">
               <div className="flex flex-col gap-1 px-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pay Date</label>
-                <span className="text-[8px] font-black text-emerald-600 uppercase leading-none">Following Friday (Fixed)</span>
+                <span className="text-[8px] font-black text-emerald-600 uppercase leading-none">Following Friday</span>
               </div>
               <Input className="h-12 rounded-2xl bg-emerald-50/20 border-emerald-100 focus:bg-white transition-all font-black text-emerald-700" type="date" value={payrollRun.payDate || ""} disabled={payrollRun.status === "Finalized"} onChange={(e) => setPayrollRun((current) => ({ ...current, payDate: e.target.value }))} />
             </div>

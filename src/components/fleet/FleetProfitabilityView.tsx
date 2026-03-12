@@ -177,7 +177,6 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
       stops: 0
     });
 
-    // Round everything to prevent precision noise
     return {
       daysActive: raw.daysActive,
       revenue: Number(raw.revenue.toFixed(2)),
@@ -211,7 +210,7 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
   }, [totals, settings]);
 
   const handleRecalculate = () => {
-    toast({ title: "Board Refreshed", description: "All calculations updated based on latest formula settings." });
+    toast({ title: "Board Refreshed", description: "All calculations updated." });
   };
 
   const handleExport = async () => {
@@ -234,17 +233,17 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
           scale: 2, 
           useCORS: true, 
           letterRendering: true,
-          windowWidth: 1600 // Match common desktop width for consistent layout
+          windowWidth: 1600 
         },
         jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape' },
         pagebreak: { mode: 'avoid-all' }
       };
 
       await html2pdf().from(element).set(opt).save();
-      toast({ title: "Report Exported", description: "PDF has been saved to your device." });
+      toast({ title: "Report Exported" });
     } catch (error) {
       console.error("PDF generation failed:", error);
-      toast({ variant: "destructive", title: "Export Failed", description: "System encountered an error generating the PDF." });
+      toast({ variant: "destructive", title: "Export Failed" });
     } finally {
       setIsExporting(false);
     }
@@ -263,25 +262,27 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
 
       <div className="no-print flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Fleet Profitability Board</h3>
+          <h3 className="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tighter">Fleet Profitability Board</h3>
           <p className="text-sm text-slate-500 font-medium">Weekly van performance and operational margin visibility.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-            <Calendar className="h-4 w-4 text-slate-400 ml-3" />
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9 border-none bg-transparent text-[10px] font-bold uppercase w-32" />
+          <div className="flex flex-1 sm:flex-none items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <Calendar className="h-4 w-4 text-slate-400 ml-3 shrink-0" />
+            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9 border-none bg-transparent text-[10px] font-bold uppercase w-28 sm:w-32 p-0 focus-visible:ring-0" />
             <span className="text-slate-300 text-[10px] font-black">TO</span>
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 border-none bg-transparent text-[10px] font-bold uppercase w-32" />
+            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 border-none bg-transparent text-[10px] font-bold uppercase w-28 sm:w-32 p-0 focus-visible:ring-0" />
           </div>
-          <Button variant="outline" className="h-11 rounded-xl bg-white font-bold" onClick={handleRecalculate}><RefreshCw className="mr-2 h-4 w-4" /> Recalculate</Button>
-          <Button 
-            className="h-11 rounded-xl bg-slate-900 px-8 font-bold shadow-lg text-white" 
-            onClick={handleExport}
-            disabled={isExporting}
-          >
-            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-            Export Board
-          </Button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Button variant="outline" className="flex-1 sm:flex-none h-11 rounded-xl bg-white font-bold" onClick={handleRecalculate}><RefreshCw className="mr-2 h-4 w-4" /> Sync</Button>
+            <Button 
+              className="flex-1 sm:flex-none h-11 rounded-xl bg-slate-900 px-8 font-bold shadow-lg text-white" 
+              onClick={handleExport}
+              disabled={isExporting}
+            >
+              {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Export
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -297,14 +298,14 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent className="p-6 border-t border-slate-200 space-y-4">
-            <div className="grid gap-6 md:grid-cols-4">
+            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-slate-400 uppercase">Revenue Formula (EV)</p>
                 <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.estimatedPayFormula || "27 * stops"}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-slate-400 uppercase">Revenue Formula (GAS)</p>
-                <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.gasEstimatedPayFormula || "100 + (1.37 * ROUND(miles, 0)) + (12.5 * ROUND(stops, 0))"}</p>
+                <p className="text-xs font-bold text-slate-700 leading-relaxed italic">{settings?.gasEstimatedPayFormula || "100 + (1.37 * miles) + (12.5 * stops)"}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-slate-400 uppercase">Fuel Ratio</p>
@@ -319,26 +320,26 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
         </Collapsible>
 
         <Card className="rounded-[2.5rem] border-0 shadow-xl overflow-hidden bg-white">
-          <CardHeader className="bg-slate-900 border-b border-slate-800 p-8">
-            <div className="flex items-center justify-between">
+          <CardHeader className="bg-slate-900 border-b border-slate-800 p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <Truck className="h-6 w-6 text-white" />
-                <CardTitle className="text-white font-black uppercase tracking-widest text-lg">
-                  Week of {shortDate(startDate)} – {shortDate(endDate)}
+                <Truck className="h-6 w-6 text-white shrink-0" />
+                <CardTitle className="text-white font-black uppercase tracking-widest text-sm sm:text-lg">
+                  {shortDate(startDate)} – {shortDate(endDate)}
                 </CardTitle>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-4">
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] font-black text-slate-400 uppercase">HEALTHY (&gt; ${settings?.fleetYellowThreshold ?? 300})</span>
+                  <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase">HEALTHY</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full bg-amber-500" />
-                  <span className="text-[10px] font-black text-slate-400 uppercase">WEAK (&gt; ${settings?.fleetRedThreshold ?? 100})</span>
+                  <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase">WEAK</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full bg-rose-500" />
-                  <span className="text-[10px] font-black text-slate-400 uppercase">CRITICAL (&lt; ${settings?.fleetRedThreshold ?? 100})</span>
+                  <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase">CRITICAL</span>
                 </div>
               </div>
             </div>
@@ -405,7 +406,7 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
                       <td colSpan={2} className="px-6 py-6">
                         <div className="flex items-center gap-3">
                           <StatusPill status={totals.netProfit < (settings?.fleetYellowThreshold ?? 300) ? (totals.netProfit < (settings?.fleetRedThreshold ?? 100) ? "RED" : "YELLOW") : "GREEN"} />
-                          <span className="text-[10px] font-black uppercase text-slate-400">Overall Portfolio Performance</span>
+                          <span className="text-[10px] font-black uppercase text-slate-400">Portfolio Performance</span>
                         </div>
                       </td>
                     </tr>
@@ -417,14 +418,14 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
           </CardContent>
         </Card>
 
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="grid gap-8 grid-cols-1 lg:grid-cols-2">
           <Card className="rounded-[2.5rem] border-0 shadow-lg bg-slate-900 text-white overflow-hidden">
-            <CardHeader className="bg-white/5 p-8 border-b border-white/5">
+            <CardHeader className="bg-white/5 p-6 sm:p-8 border-b border-white/5">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-[10px] font-black uppercase tracking-[0.4em] text-white/50">Reality Check Audit</CardTitle>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4">
                   <div className="flex flex-col items-end gap-1">
-                    <span className="text-[8px] font-black text-white/30 uppercase">Reserve Rate</span>
+                    <span className="text-[8px] font-black text-white/30 uppercase">Reserve</span>
                     <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg">
                       <Settings2 className="h-3 w-3 text-primary" />
                       <span className="text-[10px] font-black">{(realityCheck.reserveRate * 100).toFixed(0)}%</span>
@@ -433,38 +434,38 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-10 space-y-8">
+            <CardContent className="p-6 sm:p-10 space-y-8">
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <span className="text-xs font-bold text-white/60 uppercase">Fleet Net Profit (Before Reserve)</span>
+                  <span className="text-xs font-bold text-white/60 uppercase">Fleet Net Profit</span>
                   <span className="text-lg font-black">{currency(totals.netProfit)}</span>
                 </div>
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <span className="text-xs font-bold text-white/60 uppercase">Weekly Insurance (Fixed Cost)</span>
+                  <span className="text-xs font-bold text-white/60 uppercase">Insurance (Fixed)</span>
                   <span className="text-lg font-black text-rose-400">({currency(realityCheck.insurance)})</span>
                 </div>
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <span className="text-xs font-bold text-white/60 uppercase">RXO “Risk Reserve ({ (realityCheck.reserveRate * 100).toFixed(0) }%)”</span>
+                  <span className="text-xs font-bold text-white/60 uppercase">RXO Reserve</span>
                   <span className="text-lg font-black text-rose-400">({currency(realityCheck.rxoReserve)})</span>
                 </div>
               </div>
               
               <div className={cn(
-                "p-8 rounded-[2rem] flex items-center justify-between",
+                "p-6 sm:p-8 rounded-[2rem] flex flex-col sm:flex-row items-center justify-between gap-4",
                 realityCheck.trueNetProfit < 0 ? "bg-rose-600 shadow-xl shadow-rose-900/40" : "bg-emerald-600 shadow-xl shadow-emerald-900/40"
               )}>
-                <div>
+                <div className="text-center sm:text-left">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">True Net Profit</p>
-                  <p className="text-sm font-bold text-white/50 italic mt-1">Calculated via dynamic formula settings.</p>
+                  <p className="text-[10px] font-bold text-white/50 italic mt-1">Calculated via Admin formulas.</p>
                 </div>
-                <p className="text-4xl font-black tracking-tighter">{currency(realityCheck.trueNetProfit)}</p>
+                <p className="text-3xl sm:text-4xl font-black tracking-tighter">{currency(realityCheck.trueNetProfit)}</p>
               </div>
 
               {realityCheck.trueNetProfit < 0 && (
                 <div className="p-6 bg-rose-500/20 border border-rose-500/30 rounded-2xl flex items-center gap-4 animate-pulse">
                   <AlertCircle className="h-8 w-8 text-rose-500 shrink-0" />
                   <p className="text-xs font-black uppercase tracking-wide leading-relaxed">
-                    CRITICAL ALERT: Business is bleeding cash. Review route logs and formula settings immediately.
+                    CRITICAL ALERT: Business is bleeding cash.
                   </p>
                 </div>
               )}
@@ -472,10 +473,10 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
           </Card>
 
           <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="rounded-[2rem] border-0 shadow-sm bg-white p-8">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+              <Card className="rounded-[2rem] border-0 shadow-sm bg-white p-6 sm:p-8">
                 <div className="flex items-start gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary">
+                  <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary shrink-0">
                     <TrendingUp className="h-6 w-6" />
                   </div>
                   <div className="space-y-1">
@@ -485,9 +486,9 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
                   </div>
                 </div>
               </Card>
-              <Card className="rounded-[2rem] border-0 shadow-sm bg-white p-8">
+              <Card className="rounded-[2rem] border-0 shadow-sm bg-white p-6 sm:p-8">
                 <div className="flex items-start gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500">
+                  <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 shrink-0">
                     <TrendingDown className="h-6 w-6" />
                   </div>
                   <div className="space-y-1">
@@ -499,7 +500,7 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
               </Card>
             </div>
             
-            <Card className="rounded-[2.5rem] border-0 shadow-sm bg-white p-8">
+            <Card className="rounded-[2.5rem] border-0 shadow-sm bg-white p-6 sm:p-8">
               <div className="flex items-center justify-between mb-6">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Operational Metrics</p>
                 <Badge variant="outline" className="bg-slate-50 text-[10px] font-black uppercase">{vanStats.length} Active Nodes</Badge>
@@ -515,7 +516,7 @@ export function FleetProfitabilityView({ routeTracker, settings }: FleetProfitab
                 </div>
                 <div className="pt-4 border-t border-slate-50">
                   <p className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase italic">
-                    "Calculations are real-time and use active formula settings. Final audit requires all route tracker rows to be finalized."
+                    "Calculations are real-time based on Admin settings."
                   </p>
                 </div>
               </div>

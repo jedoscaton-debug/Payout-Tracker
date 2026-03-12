@@ -139,7 +139,7 @@ export default function AppShell() {
   if (isSystemFresh) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <div className="w-full max-md text-center space-y-6">
+        <div className="w-full max-w-md text-center space-y-6">
           <Shield className="h-10 w-10 mx-auto text-primary" />
           <h2 className="text-2xl font-black uppercase">System Initialization</h2>
           <Button onClick={handleBootstrapMaster} className="w-full h-14 rounded-2xl bg-slate-900 font-bold uppercase">Initialize Master Admin</Button>
@@ -162,32 +162,42 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
-      <header className="no-print sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-md px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white font-black text-xl shadow-lg overflow-hidden">
+      <header className="no-print sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur-md px-4 md:px-6 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-4 md:gap-8 overflow-hidden">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white font-black text-xl shadow-lg overflow-hidden">
             {adminSettings?.companyLogo ? (
               <img src={adminSettings.companyLogo} alt="Logo" className="h-full w-full object-cover" />
             ) : (
               "S"
             )}
           </div>
-          <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+          <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar mask-fade-right md:mask-none">
             {navItems.map((item) => (
-              <button key={item.id} onClick={() => setActiveView(item.id as ActiveView)} className={cn("flex items-center gap-2 px-4 h-10 rounded-xl font-bold text-[10px] uppercase whitespace-nowrap", activeView === item.id ? "bg-slate-100 text-primary" : "text-slate-500")}>
-                <item.icon className="h-4 w-4" /><span>{item.label}</span>
+              <button 
+                key={item.id} 
+                onClick={() => setActiveView(item.id as ActiveView)} 
+                className={cn(
+                  "flex items-center gap-2 px-3 md:px-4 h-10 rounded-xl font-bold text-[10px] uppercase whitespace-nowrap transition-colors", 
+                  activeView === item.id ? "bg-slate-100 text-primary" : "text-slate-500 hover:bg-slate-50"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{item.label}</span>
               </button>
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="rounded-full h-10 w-10" onClick={() => signOut(auth)}><LogOut className="h-5 w-5" /></Button>
+        <div className="flex items-center gap-2 md:gap-3 shrink-0 ml-2">
+          <Button variant="ghost" size="icon" className="rounded-full h-10 w-10" onClick={() => signOut(auth)}>
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
       </header>
-      <main className="flex-1 p-8 max-w-[1600px] mx-auto w-full">
+      <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-[1600px] mx-auto w-full">
         {!activeView ? (
           <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary/20" /></div>
         ) : (
-          <>
+          <div className="pb-10">
             {activeView === "dashboard" && <DashboardView summary={payrollSummary} deductions={deductions} />}
             {activeView === "employees" && <EmployeeManager employees={employees} onAddEmployee={e => setDocumentNonBlocking(doc(db, "employees", e.id), e, {merge: true})} onUpdateEmployee={e => updateDocumentNonBlocking(doc(db, "employees", e.id), e)} onDeleteEmployee={id => deleteDocumentNonBlocking(doc(db, "employees", id))} />}
             {activeView === "payroll" && <PayrollRunsView payrollRun={payrollRun} setPayrollRun={setPayrollRun} payrollItems={payrollItems} setPayrollItems={setPayrollItems} employees={employees} routeTracker={routeTracker} deductions={deductions} settings={adminSettings || undefined} />}
@@ -202,7 +212,7 @@ export default function AppShell() {
               />
             )}
             {activeView === "settings" && <AdminSettingsView settings={adminSettings || null} auditLogs={auditLogs || []} />}
-          </>
+          </div>
         )}
       </main>
     </div>
